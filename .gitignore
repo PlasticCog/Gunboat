@@ -1,0 +1,21 @@
+# Original game (copyrighted; supply your own copy). The port reads it at run time.
+/Original DOS version/
+
+# Reference projects and third-party material (not ours; large)
+/test-drive-3-sdl3/
+/reverse_engineering/references/
+
+# Archived prototypes and tools: only the index is tracked
+/archive/*
+!/archive/README.md
+
+# Generated output (tools and tests regenerate it; much of it is derived from the original data)
+/reverse_engineering/out/
+/reverse_engineering/decomp/
+/gunboat-port/build/
+/gunboat-port/build-*/
+/gunboat-port/out/
+/gunboat-port/deps/
+__pycache__/
+*.pyc
+*.log
