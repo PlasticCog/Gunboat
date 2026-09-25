@@ -1,9 +1,10 @@
 # Original game (copyrighted; supply your own copy). The port reads it at run time.
 /Original DOS version/
 
-# Reference projects and third-party material (not ours; large)
+# Reference projects, third-party material and tool installs (not ours; large)
 /test-drive-3-sdl3/
 /reverse_engineering/references/
+/_tools/
 
 # Archived prototypes and tools: only the index is tracked
 /archive/*
@@ -11,7 +12,6 @@
 
 # Generated output (tools and tests regenerate it; much of it is derived from the original data)
 /reverse_engineering/out/
-/reverse_engineering/decomp/
 /gunboat-port/build/
 /gunboat-port/build-*/
 /gunboat-port/out/

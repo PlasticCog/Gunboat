@@ -163,5 +163,9 @@ see `tests/smoke_sdl.py` for examples.
 
 `src/assets.cpp` contains recovered data/routine translations. Replacement game
 rules live separately in `src/simulation.cpp`; presentation lives in `src/game.cpp`.
-The existing Three.js viewer, reverse-engineering files and supplied TD3 source
-remain available for comparison.
+The Three.js viewer is archived in `/archive/threejs-lab/`.
+
+> **2026-09-25:** the port is being rebuilt as a function-by-function translation
+> on the original memory layout. See `/CLAUDE.md` and
+> `/reverse_engineering/RE_GUIDE.md`. `simulation.cpp` and `game.cpp` remain as a
+> playable reference until the new core replaces them.
