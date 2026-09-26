@@ -1,4 +1,4 @@
-"""The Tandy (mode 9) twins of the renderer and of the view copies (render3d.md §8, hud.md §6.1), on
+"""The Tandy (mode 9) twins of the renderer and of the view copies (render3d.md §11, hud.md §6), on
 the Tandy machine.
 
 States: the original's own, set up in mode 9. The game folder is copied to a temporary folder whose
@@ -191,8 +191,10 @@ def test_water_marks_tandy(h, rng, scale):
     for i in range(200 * scale):
         m = bytearray(base)
         es = draw_page(m, rng)
+        # the row table's rows, anywhere, or rows that reach the end test's bank offset 13DDh exactly
+        near_end = rng.randrange(4) << 13 | (0x13DD - 0xA0 * rng.randrange(8) + rng.choice([-1, 0, 0, 1])) & 0x1FFF
         di = rng.choice([get16(m, 0xD74D + 2 * rng.randrange(0x40)), get16(m, 0xD74D + 2 * rng.randrange(0x40)),
-                         rng.randrange(0x10000)])
+                         rng.randrange(0x10000), near_end])
         bx = rng.choice([rng.randrange(0x20), rng.randrange(0x20), rng.randrange(0x10000)])
         cx = rng.choice([0x20, 0x20, rng.randrange(1, 0x100), rng.randrange(0x10000)])
         for k in range(0x20):

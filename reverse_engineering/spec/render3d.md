@@ -38,8 +38,8 @@ Routines that touch pixels dispatch on it (`> 0Dh` VGA, `== 0Dh` EGA, `== 9` Tan
 Per-mode helpers: sky/water fill (`74c0` VGA / `4ce2` EGA / `5529` Tandy / `4587` CGA),
 water shimmer (`7458` / `4d64` / `55da` / `4639`), spotlight beam (`7bbd` / `4c18` / `5494` /
 `44f0`), and the row-drawer pair `DS:D8F8`/`D8FA` set at `0919:3fc6..4036` (VGA `788e`/`7943`,
-RE_GUIDE). Only the VGA routines are specified in detail; EGA (plane set-up at `7268`, `6e77`),
-Tandy and CGA paths are parked.
+RE_GUIDE). Only the VGA routines are specified in detail; EGA (plane set-up at `7268`, `6e77`)
+and CGA paths are parked. The Tandy routines and the exact dispatch conditions: §11 (ported).
 
 ### 1.3 The scene rebuild flag `D8BC` **verified**
 
@@ -559,3 +559,68 @@ differential-tested on all memory (`tests/difftest/test_render.py`), except `obj
 * `05bd:1fd4` (presenting the view and the cockpit) belongs to the hud spec.
 * The sprite blitter's placement arithmetic (`5d5a`): ported and differential-tested (§5.7);
   a scene check against DOSBox captures is still to do.
+
+## 11. Tandy (mode 9) **ported** (`gunboat-port/src/render/mode_tandy.cpp`, test `test_modes_tandy.py`)
+
+A Tandy page (the screen at `B800h` and the RAM pages 1 and 2, 32 KB each) holds 320 × 200
+pixels of 4 bits, two to a byte (the left pixel in the high nibble), 160 bytes a row in four banks
+2000h apart: row r at `2000h·(r & 3) + A0h·(r >> 2)`. The next row is `+ 2000h, and 7FFFh, + A0h`
+when that wrapped to bank 0; the view's rows are `view_row_table` (`D74D`, `video_mode_setup`: row
+64, column 40 = `0A14h`). The routines touch no port; colour c is the byte `11h·c`
+(`tandy_colour_pairs` `D852`). The game's real modes are 13h, 0Dh, 9 and 4 (Hercules stores 4);
+the callers' conditions differ for other values (a GUNBOAT.CFG written by hand):
+
+| Caller | Takes the Tandy routine when the mode's low byte is |
+|---|---|
+| `blit_place` (`5e3f`) | not 13h, 0Dh or 4 (CGA is 4 only) |
+| `terrain_setup` sky and water (`73be`) | 9 only (0Ah–0Ch take the CGA routine `4587`) |
+| `terrain_setup` water marks (`7438`), `spotlight_beam` (`7ba0`), `view_copy_*` (`8a4c`…) | 9–0Ch |
+| `fill_triangle` / `edge_setup` (`[D8F8]` / `[D8FA]`) | set by `video_mode_setup` for 9–0Ch: `5693` / `5756` |
+
+### 11.1 `blit_rows_tandy` (`4f96`, AL = row, SI = source)
+
+`B7E2 = AL + 30h` (the screen row); DI = `AL·28h` (8-bit MUL) `+ 1FD8h` if the row is odd `+ 3FB0h`
+if bit 1 is set, plus `(2·B7F7 + D873) >> 1` (or 28h >> 1 with SI += D875 when clipped left); the
+column's parity to `B7E3`; nothing from screen row 80h. Per row on page `D9B8`: D862 source bytes
+from `D887:SI`, zero transparent, else the low nibble rotated by `D848[parity]` into the byte kept
+with `D84A[parity]`; DI + 1 after each right nibble. Then DI += 2000h (− 7F60h after bank 3), `B7E2`
++1; `D86F` counts down **in memory** (the next count from `D87B` + 1, SI += B7F8); it stops at
+screen row 80h or when `B7F9` runs out.
+
+### 11.2 `spotlight_beam_tandy` (`5494`, ES, BX = widths in CS, DX = column)
+
+As `spotlight_beam_vga` (§6) with DI = `view_row_table[B7E2] − 10h` and the same clipping; the
+covered pixels get bit 3: the first byte ORs `D84C` = 08h (a start on a right nibble) or `D84D` =
+88h, then 88h a byte while 2 or more pixels are left, then `D84E[rest]` (00h / 80h). No test of
+bit 4 (the VGA beam sets bit 3 only where bit 4 is clear).
+
+### 11.3 `sky_water_tandy` (`5529`, ES, AL = sky, BL = horizon, CL = sky top) → DI
+
+Rows CL..BL−1 of `D852[AL & 0Fh]`, then (DI returned) two rows of 88h, then `D852[D950 & 0Fh]`
+(EEh during a flash `D9B5`) for `40h − D953 − 2` rows; D953 is decremented. 128 bytes a row.
+
+### 11.4 `water_marks_tandy` (`55da`, ES, BX = mark, CL = rows, DI = row)
+
+Per row, ended when the row's bank offset `DI & 1FFFh` reaches 13DDh (row 128; VGA stops a row
+earlier): the mark's size 0..4 from its age and CL as the VGA marks (1 from 0Bh at CL ≤ 16h; 2/3/4
+from 11h/17h/1Bh at CL ≤ 0Eh); four pixels at `D90D[mark]` + the offsets `water_mark_patterns`
+(`D816` + 10·size, words: +1 a pixel right, ±140h a row down / up, corrected for the bank), each
+ORed with `D850[parity]` (70h / 07h). AX and DX are not used.
+
+### 11.5 `span_tandy_a` (`5693`) and `span_tandy_b` (`5756`)
+
+As `span_vga_a` / `span_vga_b` (§3.4) with the rows from `view_row_table[D8FC − 40h]` (D8FC
+counted up in memory; rows before 40h skipped, a row from 80h to BFh ends it), the colour
+`D852[D954 & 0Fh]` and 4-bit pixels: a start on a right nibble draws that nibble first (nothing for
+a count of 0), then whole bytes, then a last left nibble for an odd rest. The line routine makes a
+count of 0 one pixel.
+
+**Tests** (`test_modes_tandy.py`, Tandy machine, all memory and the card state): the original's own
+states in mode 9 (the game folder copied with a Tandy `GUNBOAT.CFG`; missions stopped where
+game_frame enters each routine) plus targeted random cases: `blit_rows_tandy` 315 cases,
+`spotlight_beam_tandy` 256, `sky_water_tandy` 164, `water_marks_tandy` 214, `span_tandy_a` 370,
+`span_tandy_b` 314; the dispatch points and whole `terrain_frame` / `object_frame` passes in mode 9
+449; the view copies (hud §6) 168. Planted bugs (a bank step, a nibble order, the row limit, a beam
+mask, a clip limit, a flash colour, the horizon decrement, the end test 13DDh, a bank correction, an
+age limit, a nibble mask, the one-pixel line, the last step, the view copies' steps) are each
+reported.

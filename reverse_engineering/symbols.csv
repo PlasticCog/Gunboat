@@ -235,21 +235,21 @@ func,0919:4989,ega_gc_setup,,video,td3-match,"TD3 0c1c:1b6f ega_gc_setup, score 
 func,0919:4c18,spotlight_beam_ega,near void(),render3d,spec:render3d,§1.2
 func,0919:4ce2,sky_water_ega,near void(),render3d,spec:render3d,§1.2
 func,0919:4d64,water_marks_ega,near void(),render3d,spec:render3d,§1.2
-func,0919:4f96,blit_rows_tandy,near void(),render3d,spec:render3d,§5.7
-func,0919:5062,view_copy_1_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_1_vga
-func,0919:5104,view_copy_2_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_2_vga
-func,0919:514a,view_copy_3_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_3_vga
-func,0919:51f2,view_copy_4_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_4_vga
-func,0919:52e6,view_copy_5_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_5_vga
-func,0919:5344,view_copy_6_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_6_vga
-func,0919:53a2,view_copy_7_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_7_vga
-func,0919:5400,view_copy_head_tandy,near (ES DS)->DI SI,hud,spec:hud,§6.1 nine rows of 104 bytes shared by view_copy_5..8_tandy; leaves DI/SI for the caller and CX = 0
-func,0919:5436,view_copy_8_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 Tandy twin of view_copy_8_vga
-func,0919:5494,spotlight_beam_tandy,near void(),render3d,spec:render3d,§1.2
-func,0919:5529,sky_water_tandy,near void(),render3d,spec:render3d,§1.2
-func,0919:55da,water_marks_tandy,near void(),render3d,spec:render3d,§1.2
-func,0919:5693,span_tandy_a,near void(),render3d,spec:render3d,§8.5 DS:D8F8 in Tandy
-func,0919:5756,span_tandy_b,near void(),render3d,spec:render3d,§8.5 DS:D8FA in Tandy
+func,0919:4f96,blit_rows_tandy,near void(AL row SI source),render3d,spec:render3d,§11.1 Tandy twin of blit_rows_vga (ported) | §5.7
+func,0919:5062,view_copy_1_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_1_vga | §6.1 Tandy twin of view_copy_1_vga
+func,0919:5104,view_copy_2_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_2_vga | §6.1 Tandy twin of view_copy_2_vga
+func,0919:514a,view_copy_3_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_3_vga | §6.1 Tandy twin of view_copy_3_vga
+func,0919:51f2,view_copy_4_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_4_vga | §6.1 Tandy twin of view_copy_4_vga
+func,0919:52e6,view_copy_5_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_5_vga | §6.1 Tandy twin of view_copy_5_vga
+func,0919:5344,view_copy_6_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_6_vga | §6.1 Tandy twin of view_copy_6_vga
+func,0919:53a2,view_copy_7_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_7_vga | §6.1 Tandy twin of view_copy_7_vga
+func,0919:5400,view_copy_head_tandy,near (ES DS)->DI SI,hud,spec:hud,§6 nine rows of 104 bytes shared by view_copy_5..8_tandy; leaves DI/SI for the caller and CX = 0 | §6.1 nine rows of 104 bytes shared by view_copy_5..8_tandy; leaves DI/SI for the caller and CX = 0
+func,0919:5436,view_copy_8_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_8_vga | §6.1 Tandy twin of view_copy_8_vga
+func,0919:5494,spotlight_beam_tandy,near void(ES BX widths DX column),render3d,spec:render3d,§11.2 Tandy twin of spotlight_beam_vga (ported) | §1.2
+func,0919:5529,sky_water_tandy,near (ES AX BL CL)->DI,render3d,spec:render3d,§11.3 Tandy twin of sky_water_vga (ported) | §1.2
+func,0919:55da,water_marks_tandy,near void(ES BX CX DI),render3d,spec:render3d,§11.4 Tandy twin of water_marks_vga (ported) | §1.2
+func,0919:5693,span_tandy_a,near void(),render3d,spec:render3d,§11.5 DS:D8F8 in Tandy | §8.5 DS:D8F8 in Tandy
+func,0919:5756,span_tandy_b,near void(),render3d,spec:render3d,§11.5 DS:D8FA in Tandy | §8.5 DS:D8FA in Tandy
 func,0919:5a9f,sprite_cache_invalidate,far void(),world,spec:world,§3.3
 func,0919:5acc,sprite_prepare,near void(BX entry),render3d,spec:render3d,§5.7
 func,0919:5aeb,sprite_cache_build,,render3d,codex,Codex-era note: EC7B: sprite cache
@@ -870,13 +870,13 @@ global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
 global,DS:D74C,hit_kind,u8,simulation,spec:simulation,§7.2 kind of the object hit_objects is damaging (friendly test for the message)
 global,DS:D74D,view_row_table,u16[64],world,spec:world,§5 row start offsets for the span drawers
-global,DS:D816,water_mark_patterns,u16[5][5],render3d,spec:render3d,§8.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too
-global,DS:D848,tandy_nibble_shift,u8[2],render3d,spec:render3d,§8.1 rotate count of a sprite pixel by its column parity (4: the left nibble)
-global,DS:D84A,tandy_nibble_keep,u8[2],render3d,spec:render3d,§8.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h)
-global,DS:D84C,tandy_beam_start,u8[2],render3d,spec:render3d,§8.2 the beam's first byte: 08h from a right nibble; 88h
-global,DS:D84E,tandy_beam_end,u8[2],render3d,spec:render3d,§8.2 the beam's last byte by the parity of the rest: 00h; 80h
-global,DS:D850,tandy_mark_pixels,u8[2],render3d,spec:render3d,§8.4 a water mark pixel by its parity: 70h; 07h
-global,DS:D852,tandy_colour_pairs,u8[16],render3d,spec:render3d,§8.3 colour c as a byte of two pixels (11h * c)
+global,DS:D816,water_mark_patterns,u16[5][5],render3d,spec:render3d,§11.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too | §8.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too
+global,DS:D848,tandy_nibble_shift,u8[2],render3d,spec:render3d,§11.1 rotate count of a sprite pixel by its column parity (4: the left nibble) | §8.1 rotate count of a sprite pixel by its column parity (4: the left nibble)
+global,DS:D84A,tandy_nibble_keep,u8[2],render3d,spec:render3d,§11.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h) | §8.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h)
+global,DS:D84C,tandy_beam_start,u8[2],render3d,spec:render3d,§11.2 the beam's first byte: 08h from a right nibble; 88h | §8.2 the beam's first byte: 08h from a right nibble; 88h
+global,DS:D84E,tandy_beam_end,u8[2],render3d,spec:render3d,§11.2 the beam's last byte by the parity of the rest: 00h; 80h | §8.2 the beam's last byte by the parity of the rest: 00h; 80h
+global,DS:D850,tandy_mark_pixels,u8[2],render3d,spec:render3d,§11.4 a water mark pixel by its parity: 70h; 07h | §8.4 a water mark pixel by its parity: 70h; 07h
+global,DS:D852,tandy_colour_pairs,u8[16],render3d,spec:render3d,§11.3 colour c as a byte of two pixels (11h * c) | §8.3 colour c as a byte of two pixels (11h * c)
 global,DS:D862,sprite_blit_width,u8,render3d,spec:render3d,§5.7 columns to copy after clipping
 global,DS:D863,sprite_slot,u8,render3d,spec:render3d,§5.7 cache slot of the sprite being built (1-based)
 global,DS:D864,sprite_size,u8,render3d,spec:render3d,§5.7 apparent size (atan of size / distance)

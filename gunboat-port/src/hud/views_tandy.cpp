@@ -1,4 +1,4 @@
-// The view copies of Tandy (mode 9) (hud.md §6.1, views.cpp dispatch): the twins of the VGA
+// The view copies of Tandy (mode 9) (hud.md §6, views.cpp dispatch): the twins of the VGA
 // routines on Tandy pages (4 bits a pixel, 160 bytes a row, four banks 2000h apart, render/mode_tandy.cpp).
 // Each is a fixed sequence of REP MOVSW runs from DS:SI to ES:DI (the same outline as its VGA twin,
 // in half as many bytes); the next row is + 2000h less the bytes done, and 7FFFh, + A0h back in bank

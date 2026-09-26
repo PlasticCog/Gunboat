@@ -1,4 +1,4 @@
-// The renderer's Tandy (mode 9) routines (render/modes.hpp, render3d.md §8): the twins of the VGA
+// The renderer's Tandy (mode 9) routines (render/modes.hpp, render3d.md §11): the twins of the VGA
 // sprite row copier, spotlight beam, sky and water, water marks and span fillers.
 //
 // Tandy pages (the screen at B800h and the RAM pages alike) hold 320 x 200 pixels of 4 bits, two to
@@ -97,7 +97,7 @@ void span_fill(u16 es, u16 di, u16 ax, u16 cx, u8 dh)
 
 } // namespace
 
-// 0919:4f96 blit_rows_tandy (render3d.md §8.1): the Tandy twin of blit_rows_vga. Screen row B7E2 =
+// 0919:4f96 blit_rows_tandy (render3d.md §11.1): the Tandy twin of blit_rows_vga. Screen row B7E2 =
 // AL + 30h of the drawing page D9B8 (the first address: AL * 28h, + 1FD8h for an odd row, + 3FB0h
 // for rows 2 and 3 of a bank group), pixel column 2 x B7F7 + D873 (40 when clipped at the left, the
 // source then skipping D875 columns; its parity in B7E3); D862 pixels a row from the cache record in
@@ -149,7 +149,7 @@ void blit_rows_tandy(u8 al, u16 si)
     } while (--ds_u8(DS_sprite_rows_left) != 0);
 }
 
-// 0919:5494 spotlight_beam_tandy (render3d.md §8.2): the Tandy twin of spotlight_beam_vga: ten rows
+// 0919:5494 spotlight_beam_tandy (render3d.md §11.2): the Tandy twin of spotlight_beam_vga: ten rows
 // (B7E3) from view row B7E2 (it ends at row 40h), each 2 * (A0h - width byte) pixels around column
 // DX + width - 20h from column 8 (the widths from CS:BX), clipped to the view as the VGA beam: the
 // covered pixels get bit 3 set (OR 88h a byte; a start on a right nibble ORs D84C = 08h, else D84D
@@ -209,7 +209,7 @@ void spotlight_beam_tandy(u16 es, u16 bx, u16 dx)
     } while (--ds_u8(BEAM_ROWS) != 0);
 }
 
-// 0919:5529 sky_water_tandy (render3d.md §8.3): the Tandy twin of sky_water_vga: from view row CL
+// 0919:5529 sky_water_tandy (render3d.md §11.3): the Tandy twin of sky_water_vga: from view row CL
 // to BL - 1 the sky (the colour pair D852[AL & 0Fh]), two rows of colour 8 (the horizon line), then
 // the water D852[D950 & 0Fh] (EEh during a flash D9B5) to row 63; D953 is decremented after use.
 // Returns DI = the address of the horizon line's first row.
@@ -238,7 +238,7 @@ u16 sky_water_tandy(u16 es, u16 ax, u8 bl, u8 cl)
     return horizon_di;
 }
 
-// 0919:55da water_marks_tandy (render3d.md §8.4): one water mark per row from DI down, CL rows,
+// 0919:55da water_marks_tandy (render3d.md §11.4): one water mark per row from DI down, CL rows,
 // mark BX (wrapping at 20h): four pixels at the column D90D[mark] plus the offsets of the pattern
 // by its size (D816 + 10 x size, in pixels, +-140h a row; 0: one pixel four times; the size grows
 // with the age as the VGA marks do: 1 from age 0Bh when CL <= 16h, 2..4 from ages 11h / 17h / 1Bh
@@ -288,7 +288,7 @@ void water_marks_tandy(u16 es, u16, u16 bx, u16 cx, u16, u16 di)
     } while (u8(cx) != 0);
 }
 
-// 0919:5693 span_tandy_a (render3d.md §8.5; [DS:D8F8] in Tandy): the twin of span_vga_a: the rows of
+// 0919:5693 span_tandy_a (render3d.md §11.5; [DS:D8F8] in Tandy): the twin of span_vga_a: the rows of
 // a triangle half from row D8FC (counted up in memory), B7E2 rows, between the edges D956 and D958
 // stepped by D95A/D95C per row, in the colour pair D852[D954 & 0Fh]. Rows above the view (D8FC <
 // 40h) are skipped; the first row past it (D8FC from 80h up to BFh) ends it.
@@ -310,7 +310,7 @@ void span_tandy_a(u16 es)
     } while (--ds_u8(SPAN_ROWS) != 0);
 }
 
-// 0919:5756 span_tandy_b (render3d.md §8.5; [DS:D8FA] in Tandy): the twin of span_vga_b: a line from
+// 0919:5756 span_tandy_b (render3d.md §11.5; [DS:D8FA] in Tandy): the twin of span_vga_b: a line from
 // row D8FC, B7E2 rows, one span per row between the edge D956 (+40h) and where it will be on the
 // next row (at least one pixel), in the colour pair D852[D954 & 0Fh]; the step D95A becomes +-80h
 // for the last row.
