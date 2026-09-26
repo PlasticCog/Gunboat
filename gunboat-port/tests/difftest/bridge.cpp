@@ -39,6 +39,7 @@ GB_EXPORT u32 gb_mem_size() { return MEM_SIZE; }
 GB_EXPORT const char *gb_error() { return last_error.c_str(); }
 GB_EXPORT void gb_set_game_dir(const char *dir) { host_stub_set_game_dir(dir); }
 GB_EXPORT void gb_set_pit2(int v) { host_stub_set_pit2(u8(v)); }
+GB_EXPORT void gb_set_joy(int present, int x, int y, int buttons) { host_stub_set_joy(present != 0, s16(x), s16(y), u8(buttons)); }
 
 // Loads GB.EXE into mem[] as the game does at start-up. Returns 1, or 0 with gb_error().
 GB_EXPORT int gb_load_exe(const char *path)

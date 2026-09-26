@@ -21,6 +21,7 @@ struct HostExit : std::runtime_error {
 
 void host_stub_set_game_dir(const char *dir);
 void host_stub_set_pit2(u8 v);  // what IN 42h reads in the tests
+void host_stub_set_joy(bool present, s16 x, s16 y, u8 buttons);  // the gamepad host_joy_read reports
 
 // The test's timer model: host_pump() runs this once per call (the game's own host_set_timer calls
 // are recorded, not run: a test decides what one tick is on both sides).

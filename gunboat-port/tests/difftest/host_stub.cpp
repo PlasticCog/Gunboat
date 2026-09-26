@@ -60,7 +60,26 @@ void host_pump()
 void host_wait_vretrace() {}
 void host_set_kbd_handler(void (*handler)(u8)) { kbd_handler = handler; }
 void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handler; }
-bool host_joy_read(s16 *, s16 *, u8 *) { return false; }
+namespace {
+bool joy_present;
+s16 joy_x, joy_y;
+u8 joy_buttons;
+} // namespace
+void host_stub_set_joy(bool present, s16 x, s16 y, u8 buttons)
+{
+    joy_present = present;
+    joy_x = x;
+    joy_y = y;
+    joy_buttons = buttons;
+}
+bool host_joy_read(s16 *x, s16 *y, u8 *buttons)
+{
+    if (!joy_present) return false;
+    if (x) *x = joy_x;
+    if (y) *y = joy_y;
+    if (buttons) *buttons = joy_buttons;
+    return true;
+}
 void host_opl_write(u8, u8) {}
 namespace {
 u8 pit2_low;

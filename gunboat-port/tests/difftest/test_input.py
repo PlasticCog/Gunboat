@@ -1,5 +1,7 @@
 """Keyboard (platform.md §2): install, restore and the INT 9 handler on byte sequences."""
-from gbdiff import put8
+import contextlib
+
+from gbdiff import put8, put16
 
 # make codes, their breaks, grey keys, Pause, locks, the ACK, shifts, keypad directions
 BYTES = ([0x1E, 0x9E, 0x1C, 0x9C, 0x39, 0xB9, 0x01, 0x81, 0x2A, 0xAA, 0x36, 0xB6, 0x1D, 0x9D, 0x0E, 0x8E,
@@ -30,4 +32,49 @@ def test_isr_sequences(h, rng, scale):
     return n
 
 
-TESTS = [test_install_restore, test_isr_sequences]
+def axis_count(v):
+    """The port's gamepad axis -> game-port count (joystick.cpp axis_count; C++ division truncates)."""
+    q = abs(v * 248) // 32768
+    return (256 + (-q if v < 0 else q)) & 0xFFFF
+
+
+@contextlib.contextmanager
+def joystick_stubs(h, present, x, y, buttons):
+    """The original's port-201h routines replaced by the port's host mapping (PORT: the gamepad),
+    and the port's host stub given the same gamepad."""
+    def axis(v):
+        return lambda args: ((0xFFFF if ((args(0) - 1) & 1) or not present else axis_count(v)), None)
+    hooks = [h.orig.stub(0x146A, 0x000B, axis(x)), h.orig.stub(0x15EA, 0x0003, axis(y)),
+             h.orig.stub(0x15D7, 0x000D, lambda args: ((0 if ((args(0) - 1) & 1) or not present else buttons & 3), None))]
+    h.port.dll.gb_set_joy(int(present), x, y, buttons)
+    try:
+        yield
+    finally:
+        for k in hooks:
+            h.orig.uc.hook_del(k)
+        h.port.dll.gb_set_joy(0, 0, 0, 0)
+
+
+def test_joystick(h, rng, scale):
+    """joystick_calibrate and joystick_read over gamepad positions, both sticks, present or not."""
+    n = 0
+    m0 = h.fresh_memory()
+    values = [-32768, -32767, -20000, -1, 0, 1, 131, 20000, 32767]
+    for _ in range(40 * scale):
+        present = rng.random() < 0.85
+        x, y = rng.choice(values + [rng.randrange(-32768, 32768)]), rng.choice(values + [rng.randrange(-32768, 32768)])
+        buttons = rng.randrange(4)
+        stick = rng.choice([1, 2, 0, 3])
+        with joystick_stubs(h, present, x, y, buttons):
+            m = bytearray(m0)
+            for off in range(0xDD13, 0xDD23, 2):
+                put16(m, off, rng.choice([0xFFFF, 0, 64, 128, 256, 320, rng.randrange(0x10000)]))
+            h.check('joystick_calibrate', m, stack_args=[stick], outputs=['ax'],
+                    label='stick %d present %d (%d, %d)' % (stick, present, x, y))
+            h.check('joystick_read', m, stack_args=[stick, 0xF626, 0xF627],
+                    label='stick %d present %d (%d, %d) buttons %d' % (stick, present, x, y, buttons))
+            n += 2
+    return n
+
+
+TESTS = [test_install_restore, test_isr_sequences, test_joystick]

@@ -78,6 +78,7 @@ void menu_timer_isr();                               // 121b:0ce2
 void timer_interrupt();                              // PORT: the host's timer interrupt
 void run_int8_handler(FarPtr vector);                // PORT: the INT 8 handler at `vector`
 u16 joystick_axis(u16 stick);                        // 146a:000b
+u16 joystick_calibrate(u16 stick);                   // 146e:000e  0, or FFFFh without a stick
 u16 joystick_axis_y(u16 stick);                      // 15ea:0003
 u16 joystick_button(u16 stick);                      // 15d7:000d
 void joystick_read(u16 stick, u8 *code, u8 *dir);    // 1473:0008

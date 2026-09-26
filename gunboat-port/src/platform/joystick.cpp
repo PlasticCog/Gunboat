@@ -45,6 +45,26 @@ u16 joystick_button(u16 stick)
     return buttons & 3;
 }
 
+// 146e:000e joystick_calibrate (platform.md §3): the stick's centre read once, at start-up; the
+// thresholds of joystick_read are half the centre (low) and 1.25 times it (high), per axis.
+// Returns 0, or FFFFh (without touching the thresholds) when the x count is not positive.
+u16 joystick_calibrate(u16 stick)
+{
+    const u16 slot = u16(((stick - 1) & 1) << 1);
+    u16 ax = joystick_axis(stick);
+    if (s16(ax) <= 0) return 0xFFFF;
+    u16 dx = u16(ax >> 1);
+    ds_u16(u16(DS_joy_x_low + slot)) = dx;
+    dx = u16(dx >> 1);
+    ds_u16(u16(DS_joy_x_high + slot)) = u16(ax + dx);
+    ax = joystick_axis_y(stick);
+    dx = u16(ax >> 1);
+    ds_u16(u16(DS_joy_y_low + slot)) = dx;
+    dx = u16(dx >> 1);
+    ds_u16(u16(DS_joy_y_high + slot)) = u16(ax + dx);
+    return 0;
+}
+
 // 1473:0008 joystick_read (platform.md §3): *code = 0Dh while a button is down (else 0); *dir = a
 // keypad-style direction 47h..51h from the axes against the calibration limits, or 0 in the middle.
 // A stick whose joy_x_low is FFFFh is absent: both 0.
