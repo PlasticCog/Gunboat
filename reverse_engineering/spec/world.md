@@ -75,6 +75,15 @@ input_read_key; flash latches; game_frame; view_present(1, 0) (stations 1-4, not
     key_dispatch; …   (simulation §1.1)
 ```
 
+**Ported** (`src/mission/mission_run.cpp`). PORT: on the 3D stations each pass starts with
+`host_frame_pace()` (the original ran as fast as the PC drew; the port defaults to 15 passes per
+second, the mission clock's real time, `--fps`); every pass pumps the host once at the loop's tick
+read (05bd:0204), and the full-screen stations' wait pumps once per tick read (05bd:0450). SI is a
+register the loop keeps: the mission text pointer after the copy, the map's objective offset
+(station 5), what `key_dispatch` leaves (F1, F9) and what the station screens and `view_present`
+leave (the view copies' source offset); `game_frame` receives it and stores it in `caller_si`
+(DS:D6F6) through the world group (simulation §13).
+
 ### 3.3 Returning to a 3D station (`view_restore`, 05bd:144a) **verified**
 
 The full-screen stations use DGROUP memory from `DS:53A8` upward (the world B data) as scratch.

@@ -20,8 +20,9 @@ src/platform/           platform.md and video.md: dos (DOS memory, files, the C 
                         timer dispatch, BIOS waits), joystick, vga (DAC/CRTC model), helpers
 src/game/               the game: flow_* (game_flow.md: main, files, keys, screens, title, music,
                         flow_hq the headquarters (020d), flow_office and flow_front the front end
-                        (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md);
-                        pending.cpp: placeholders for calls not ported yet
+                        (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md:
+                        sim_frame.cpp game_frame, keys, controls, crew, routes, engines, damage,
+                        enemies, weapons, messages, clock)
 src/hud/                hud.md: the cockpit panel and gauges, the view copies, the station screens
 src/mission/            world.md: the mission segment 05bd (mission.hpp); view_present.cpp the present
                         of the 3D stations (hud.md §6)
@@ -95,7 +96,8 @@ helper when the first such function is ported.
   until it returns to a sentinel address.
 * **The machine models** (`dosmodel.py`, `biosmodel.py`) give the original the same machine the
   port has: INT 21h (files on the real game folder, memory on the MCB chain), INT 10h and INT 1Ah
-  on the BIOS data area, a VGA DAC, the ports the code touches (3DAh reads "in retrace", 61h, the
+  on the BIOS data area (0040:0063 = 3D4h, the CRTC), a VGA DAC, the ports the code touches (3DAh:
+  the retrace bit alternates on each read, starting in the retrace; 3D4h writes accepted; 61h, the
   graphics registers). Anything else (`INT`, `IN`, `OUT`) stops the run with an error, so a
   function never silently depends on hardware. The C runtime functions the port replaces with
   models (`crt_fopen`, `crt_fmalloc`, ...) are replaced on the Unicorn side too, by
@@ -130,8 +132,8 @@ helper when the first such function is ported.
   there as the state for other tests (`test_front.front_state`: the front end after its set-up),
   then remove the hook with `h.orig.uc.hook_del`.
 * **Callees** run for real on both sides. A port that calls a function not ported yet goes through
-  `src/game/pending.cpp`: a placeholder that is exact in the tested states (and says so), or a
-  fatal "not ported yet" error if it could be reached otherwise.
+  a placeholder file (`src/game/pending.cpp`, now removed: nothing on the VGA path is left) was
+  used while the port was incomplete.
 * **Bridge entries** live in `tests/difftest/bridge_<subsystem>.cpp` (`BRIDGE(name) { ... }`, see
   `bridge.hpp`); a test calls `h.check(name, m, regs=..., stack_args=[...], outputs=[...])`.
 * The tests were checked by planting bugs (a wrong clip limit, a missing sign flip, a wrong mask, a
@@ -156,3 +158,22 @@ helper when the first such function is ported.
   `host_joy_read`; OPL and speaker writes go to `host_opl_write`/`host_speaker`.
 * In the test DLL, `host_pump()` runs the test's tick, `host_fatal()` and `host_exit()` return an
   error to the harness.
+
+## Registers across routines
+
+Gunboat's 0919 and 05bd assembly routines pass values in registers that are not C arguments, and
+some of those values end up in memory (the lamps store the caller's AH in scratch_b7e3,
+`caller_si` DS:D6F6 stores SI, the view copies leave their source offset in SI). Such inputs and
+outputs are explicit parameters and return values of the C++ functions (`u16 f(u16 ax)`,
+`AxSi`, `CxDx`, `DiSi`, `RoutePoint`); a caller passes exactly what the original has in the
+register at the call. `test_frame.py` checks the whole chain in complete missions. When a new
+test captures a state inside the original (`test_render.capture`, `test_frame.loop_capture`), it
+passes the captured registers too.
+
+## Mission states for tests
+
+`tests/difftest/mission_states.py` runs the original from main into a mission and stops it at the
+k-th `game_frame`; `test_sim2.run_mission` and `combat` deliver keys at the loop's passes (enemies
+alerted and shooting); `test_render.capture` snapshots registers and memory where the original's
+frame enters any routine; `test_frame.loop_capture` does the same across whole `mission_run`
+runs. Night states come from the missions' start times, not from a flag.

@@ -1,7 +1,7 @@
 @echo off
 setlocal
-rem The faithful port: the title sequence and the main menu so far; what is not ported yet stops
-rem with a message. The Codex prototype is Run Gunboat.cmd.
+rem The faithful port of Gunboat (VGA). Options: --fps N (3D stations, default 15), --sound adlib|speaker,
+rem --scale N, --fullscreen. The Codex prototype is Run Gunboat.cmd.
 if not exist "%~dp0build\gunboat.exe" (
   echo Build the port first with Build.ps1.
   pause
