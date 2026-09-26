@@ -9,10 +9,12 @@ func,0919:48da,blit_rows_ega,near void(),§5.7
 func,0919:4c18,spotlight_beam_ega,near void(),§1.2
 func,0919:4ce2,sky_water_ega,near void(),§1.2
 func,0919:4d64,water_marks_ega,near void(),§1.2
-func,0919:4f96,blit_rows_tandy,near void(),§5.7
-func,0919:5494,spotlight_beam_tandy,near void(),§1.2
-func,0919:5529,sky_water_tandy,near void(),§1.2
-func,0919:55da,water_marks_tandy,near void(),§1.2
+func,0919:4f96,blit_rows_tandy,near void(AL row SI source),§11.1 Tandy twin of blit_rows_vga (ported)
+func,0919:5494,spotlight_beam_tandy,near void(ES BX widths DX column),§11.2 Tandy twin of spotlight_beam_vga (ported)
+func,0919:5529,sky_water_tandy,near (ES AX BL CL)->DI,§11.3 Tandy twin of sky_water_vga (ported)
+func,0919:55da,water_marks_tandy,near void(ES BX CX DI),§11.4 Tandy twin of water_marks_vga (ported)
+func,0919:5693,span_tandy_a,near void(),§11.5 DS:D8F8 in Tandy
+func,0919:5756,span_tandy_b,near void(),§11.5 DS:D8FA in Tandy
 func,0919:5acc,sprite_prepare,near void(BX entry),§5.7
 func,0919:5d5a,blit_place,near void(),§5.7
 func,0919:5e66,blit_rows_vga,near void(),§5.7 TD3 match sprite_rows_mirror (wrong role here)
@@ -126,6 +128,13 @@ global,DS:D730,atan_raw,u8,§3.3 raw atan table value of the last projection
 global,DS:D731,octant_negate,u8[8],§3.3 1 = the octant angle is subtracted
 global,DS:D739,octant_base,u8[8],§3.3 octant base angle (atan)
 global,DS:D741,octant_base_view,u8[8],§3.3 octant base of the bearing high byte (project)
+global,DS:D816,water_mark_patterns,u16[5][5],§11.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too
+global,DS:D848,tandy_nibble_shift,u8[2],§11.1 rotate count of a sprite pixel by its column parity (4: the left nibble)
+global,DS:D84A,tandy_nibble_keep,u8[2],§11.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h)
+global,DS:D84C,tandy_beam_start,u8[2],§11.2 the beam's first byte: 08h from a right nibble; 88h
+global,DS:D84E,tandy_beam_end,u8[2],§11.2 the beam's last byte by the parity of the rest: 00h; 80h
+global,DS:D850,tandy_mark_pixels,u8[2],§11.4 a water mark pixel by its parity: 70h; 07h
+global,DS:D852,tandy_colour_pairs,u8[16],§11.3 colour c as a byte of two pixels (11h * c)
 global,DS:D862,sprite_blit_width,u8,§5.7 columns to copy after clipping
 global,DS:D863,sprite_slot,u8,§5.7 cache slot of the sprite being built (1-based)
 global,DS:D864,sprite_size,u8,§5.7 apparent size (atan of size / distance)

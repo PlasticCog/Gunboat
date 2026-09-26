@@ -604,14 +604,12 @@ void blit_place(u16 es, u16 bx, u16 si)
     }
     ds_u16(DS_sprite_repeat_ptr) = di;
     ds_u8(BLIT_ROW) = row;
-    // The mode's row copier: VGA 13h, EGA 0Dh, Tandy 9-0Ch, CGA below.
-    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    // The mode's row copier (0919:5e3f): VGA 13h, EGA 0Dh, CGA 4, Tandy any other mode.
     const u8 mode = u8(ds_u16(DS_video_mode));
     if (mode == 0x13) blit_rows_vga(row, si);
     else if (mode == 0x0D) blit_rows_ega(row, si);
-    else if (mode >= 9 && mode < 0x0D) blit_rows_tandy(row, si);
-    else if (mode < 9) blit_rows_cga(row, si);
-    else render_parked("the sprite row copier");
+    else if (mode == 4) blit_rows_cga(row, si);
+    else blit_rows_tandy(row, si);
 }
 
 // 0919:5c71 blit_record (render3d.md §5.7): draws entry BX's cached image (not kind 39h): the

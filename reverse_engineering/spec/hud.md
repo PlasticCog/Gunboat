@@ -329,6 +329,13 @@ content.
    48h, 4 + 30h + 4, 4 rows of 30h); `8d13`..`8e87` share `view_copy_head_vga` (`0919:8e29`, 9 rows
    of 68h words from 8880h to 4778h) and add rows of 18h words and rows of two short runs (5: 4 + 6
    rows of 4 + 4 words 20h apart; 6: 4 + 6 rows of 8 + 8 words 10h apart; 7: 6 + 4; 8: 2 + 2).
+   **Tandy** (ported, `hud/views_tandy.cpp`; render3d §11 for the page layout): `5062`, `5104`,
+   `514a`, `51f2`, `52e6`, `5344`, `53a2`, `5436` (5..8 share `view_copy_head_tandy` `5400`: 9 rows
+   of 34h words from 3100h to 28DCh), the same outlines in half the bytes, each next row
+   `+ 2000h − the bytes done, and 7FFFh, + A0h` back in bank 0 (tested on SI; both offsets moved);
+   `5062`/`514a` step their 5 pieces up / down a row across the banks. SI is returned as for VGA.
+   Test: `test_modes_tandy.test_view_copies_tandy` (the eight dispatchers in modes 9–0Ch on the
+   original's mode 9 pages, and each routine by itself).
 2. **`gun_frame_draw`** (`05bd:2cde`, argument: the gun's bearing relative to the hull, + 20h or
    − 60h by the station): b = low byte. Within 30h of 40h (v = 2·(30h − (b − 40h))) the left frame
    piece `F112` at (20h + v, 7Fh), and for v > 8 a second one at (18h + v, 5Fh) with a fill

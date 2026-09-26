@@ -31,7 +31,7 @@ void movsw(u16 es, u16 &di, u16 ds, u16 &si, u16 cx)
 // SI, caller_si), so it is returned.
 using Copy = u16 (*)(u16 es, u16 ds);
 
-// TODO(verify): the dispatch of the other modes (mode 0Dh EGA, 9-0Ch Tandy, below 9 CGA).
+// The other modes (0919:8a4c ...): 0Dh EGA, 9-0Ch Tandy, below 9 CGA.
 u16 dispatch(u16 src_page, u16 dst_page, Copy vga, Copy ega, Copy tandy, Copy cga, u16)
 {
     const u8 mode = u8(ds_u16(DS_video_mode));
