@@ -463,7 +463,7 @@ def terrain_mutate(m, regs, rng):
 
 def test_terrain_setup(h, rng, scale):
     n = check_captured(h, rng, scale, 'terrain_setup', [0], variants=6)
-    n += check_captured(h, rng, scale, 'terrain_setup', [0], variants=10, mutate=terrain_mutate)
+    n += check_captured(h, rng, scale, 'terrain_setup', [0], variants=30, mutate=terrain_mutate)
     return n
 
 
@@ -477,7 +477,7 @@ def test_sky_water_vga(h, rng, scale):
         regs['cx'] = rng.randrange(256) << 8 | rng.randrange(horizon + 1)
         regs['ax'] = rng.randrange(0x10000)
         put8(m, 0xD9B5, rng.choice([0, 1]))
-    n += check_captured(h, rng, scale, 'sky_water_vga', [0], outputs=['di'], variants=10, mutate=mutate)
+    n += check_captured(h, rng, scale, 'sky_water_vga', [0], outputs=['di'], variants=30, mutate=mutate)
     return n
 
 
@@ -526,12 +526,22 @@ def test_order_sort(h, rng, scale):
                 put16(m, 0x3C96 + 2 * k, rng.randrange(0x200))
             for k in range(0x200):
                 put8(m, 0x1096 + k, rng.choice([0, 0x05, 0x45, 0x85, 0xC5, rng.randrange(256)]))
-    n += check_captured(h, rng, scale, 'order_sort', [0], variants=12, mutate=mutate)
+    n += check_captured(h, rng, scale, 'order_sort', [0], variants=30, mutate=mutate)
     return n
 
 
 def test_draw_group_b(h, rng, scale):
-    return check_captured(h, rng, scale, 'draw_group_b', [0], variants=8)
+    n = check_captured(h, rng, scale, 'draw_group_b', [0], variants=8)
+
+    def mutate(m, regs, rng):
+        """Other group B counts (up to the 1FEh limit and past it), modes, colours and rows."""
+        put16(m, 0xD962, rng.choice([0, 1, 2, 3, 0x1FE, 0x1FF, 0x200, rng.randrange(0x200)]))
+        for _ in range(40):
+            v = 0x200 + rng.randrange(0x200)
+            put8(m, 0x1096 + v, rng.choice([0, 0x05, 0x45, 0x85, 0xC5, rng.randrange(256)]))
+            put16(m, 0x3496 + 2 * v, rng.choice([rng.randrange(0x40), rng.randrange(0x80), rng.randrange(0x10000)]))
+    n += check_captured(h, rng, scale, 'draw_group_b', [0], variants=24, mutate=mutate)
+    return n
 
 
 def test_draw_primitive(h, rng, scale):
@@ -863,6 +873,47 @@ def test_sprite_rows(h, rng, scale):
     return n
 
 
+ROW_CLASS = {'box': 0x00, 'turn': 0x80, 'flat': 0x40}
+
+
+def test_sprite_rows_random(h, rng, scale):
+    """The nine row scalers from captured calls with other patterns, views, widths, side widths
+    and row lengths (a zero length runs the loop 256 or 65536 times, as the original)."""
+    n = 0
+    names = ['sprite_row_%s%s' % (kind, zoom) for kind in ('box', 'turn', 'flat') for zoom in ('', '_up', '_up2')]
+    seeds = {}
+    for label, s in build_states(h, rng, scale, 6):
+        for name in names:
+            if len(seeds.get(name, ())) < 3:
+                for regs, words, snap in capture(h, s, name, [0], caller='sprite_cache_build'):
+                    seeds.setdefault(name, []).append((regs, snap))
+    missing = [name for name in names if name not in seeds]
+    if missing:
+        raise Mismatch('no captured call of %s' % ', '.join(missing))
+    for name in names:
+        kind = name.split('_')[2]
+        for regs, snap in seeds.get(name, []):
+            for i in range(25 * scale):
+                m = bytearray(snap)
+                r = dict(regs)
+                randomize(m, DS_BASE + 0xD889, 0x1E, rng)                    # column and row patterns
+                if rng.random() < 0.3:
+                    randomize(m, DS_BASE + 0xD8A7, 0x10, rng)                # box face patterns
+                put8(m, 0xD86A, rng.choice([rng.randrange(0x40), rng.randrange(256)]))
+                put8(m, 0xB7F8, rng.choice([rng.randrange(1, 0x40), rng.randrange(256)]))
+                put8(m, 0xD866, rng.randrange(0x30))
+                length = rng.choice([rng.randrange(1, 0x20), rng.randrange(1, 0x40), 1])
+                if kind == 'box':
+                    put8(m, r['si'] + 1, rng.randrange(1, 0x20))            # the second face's length
+                    length &= 0x3F
+                elif kind == 'flat':
+                    length &= 0x3F
+                r['cx'] = r['cx'] & 0xFF00 | ROW_CLASS[kind] | length
+                h.check(name, m, regs=r, outputs=['di'], label='%s case %d' % (name, i), max_insns=BIG)
+                n += 1
+    return n
+
+
 def test_sprite_prepare(h, rng, scale):
     return check_captured(h, rng, scale, 'sprite_prepare', PICKS[:9], variants=6)
 
@@ -943,5 +994,6 @@ TESTS = [test_atan, test_polar_small, test_route_rotate, test_shore_edge_test, t
          test_draw_group_b, test_draw_primitive, test_fill_triangle, test_span_vga_a, test_edge_setup,
          test_shore_contact_test, test_visible_list_rebuild, test_empty_window, test_visible_project, test_list_sorts,
          test_sprite_lod, test_sprite_slot_alloc, test_sprite_cache_invalidate, test_sprite_view_angle,
-         test_sprite_cache_build, test_sprite_scale_rows, test_sprite_rows, test_sprite_prepare,
+         test_sprite_cache_build, test_sprite_scale_rows, test_sprite_rows, test_sprite_rows_random,
+         test_sprite_prepare,
          test_blit_record, test_blit_place, test_blit_rows_vga, test_spotlights]

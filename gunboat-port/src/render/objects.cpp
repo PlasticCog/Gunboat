@@ -254,7 +254,9 @@ void list_bubble_range(u16 first, u16 last)
 
 // 0919:8ece list_quicksort_range (render3d.md §5.3): quicksort of the entries first..last (byte
 // offsets, the stride AX = 2 of every caller) by descending distance, the first entry as the
-// pivot; partitions of up to 20 entries go to list_bubble_range.
+// pivot; partitions of up to 20 entries go to list_bubble_range. The game never passes a range
+// of fewer than two entries (list_quicksort's list has 35 or more); the original's recursion
+// would then run over all of DGROUP.
 void list_quicksort_range(u16 first, u16 last)
 {
     const u16 pivot = dist(first);

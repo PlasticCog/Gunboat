@@ -150,8 +150,8 @@ void tile_load(u8 al)
     if (total != 0) {
         si = u16(si + 3);
         ds_u8(TILE_STRIDE) = total;
-        // PORT: vertex_load leaves SI where group A's vertices ended; if it loads none (group
-        // full, or an empty group), group B reads from the same place, as in the original.
+        // vertex_load leaves SI where group A's vertices ended; if it loads none (group full, or
+        // an empty group), group B reads from the same place (a quirk, kept).
         si = vertex_load(es, DS_group_a_count, 0, count_a, si);
         si = vertex_load(es, DS_group_b_count, 0x200, u8(total - count_a), si);
     }
