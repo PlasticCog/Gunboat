@@ -1,26 +1,158 @@
 kind,address,name,type,notes
-func,12ed:0000,engine_sound_on,far void(),§2
-func,12ed:0018,sfx_play_far,far void(u16 id),§2 C wrapper of sfx_play
-func,12ed:0063,engine_sound_off,far void(),§2
-func,12ed:08c0,sfx_install,near void(),§2 timer 13B1h
-func,12ed:08f3,sfx_remove,near void(),§2
-func,1ace:005c,cms_silence,far void(),§4
-func,1ace:00e8,sound_detect,far void(u8 mask ...),§3 DS:F2A0
-func,1af5:0006,music_tick,far void(),§4 from the menu timer
-func,1af5:0192,mpu_command,far u16(u8 cmd),§3 ports 330h/331h
-func,1af5:01be,mpu_reset,far u16(),§3 MT-32 detection
-func,1af5:01cf,mpu_write,near void(AL data),§3
-func,1af5:0290,adlib_driver_present,far u16(),§3 INT 65h signature
-func,1af5:02b0,adlib_driver_init,far void(),§3 INT 65h function 0
-func,1af5:02b9,adlib_call,far void(u16 ...),§4 INT 65h SI=15h
-func,1b37:0002,tandy_detect,far void(),§3
-func,1b37:00c0,speaker_music_tick,far void(),§4 PC speaker / Tandy music
-func,1b5f:000e,cms_detect,far u16(),§3
+func,12ed:0000,engine_sound_on,far void(),§2.2 installs the effects timer once (DA46)
+func,12ed:0018,sfx_play_far,far void(u16 id),§2.2 C wrapper of sfx_play
+func,12ed:0025,sfx_play,far void(AX id),§2.2 program DB1E[id] (id > 12: the id itself)
+func,12ed:0063,engine_sound_off,far void(),§2.2
+func,12ed:00eb,sfx_timer_tick,near void(),§2.3 one effects step per timer interrupt
+func,12ed:0284,sfx_secondary_step,near void(DI),§2.3 the unused secondary sequence (DAFC)
+func,12ed:02b8,sfx_channel_transfer,near void(DI),§2.3 voice DI's registers in and out of the work registers
+func,12ed:02f4,sfx_channel_step,near void(DI),§2.3
+func,12ed:0302,sfx_channel_start,near void(DI),§2.3
+func,12ed:033d,sfx_channel_run,near void(DI),§2.3 release gap; the command loop
+func,12ed:03c4,sfx_parse_command,far void(DI),§2.4 one 2-byte command
+func,12ed:0472,sfx_note_on,near void(AX DI),§2.4 PIT divisor DA88[note-1] >> octave; gate on
+func,12ed:0523,sfx_note_duration,near void(DI),§2.4 DAEE from the duration byte
+func,12ed:0586,sfx_tandy_envelope,near void(),§2.5 Tandy volume envelopes (returns at once otherwise)
+func,12ed:0655,sfx_control,near void(AX DI),§2.4 command xD: sub-command AH
+func,12ed:06d1,sfx_cmd_legato,near void(AL),§2.4 D0
+func,12ed:06ec,sfx_cmd_tempo_shift,near void(AX),§2.4 D1/D2
+func,12ed:0726,sfx_cmd_tempo,near void(AL),§2.4 D4
+func,12ed:0732,sfx_cmd_envelope,near void(AL DI),§2.4 D5 (Tandy)
+func,12ed:0747,sfx_cmd_volume,near void(AL DI),§2.4 D6 (Tandy)
+func,12ed:074e,sfx_cmd_raw_length,near void(AL),§2.4 D3
+func,12ed:0752,sfx_raw_pitch,near void(AX DI),§2.4 command xE
+func,12ed:0800,sfx_speaker_init,near void(),§2.2 PC speaker or Tandy tables
+func,12ed:089d,sfx_silence,near void(),§2.2
+func,12ed:08c0,sfx_install,near void(),§2.2 INT DA8F vector and PIT divisor 13B1h
+func,12ed:08f3,sfx_remove,near void(),§2.2
+func,1ace:000e,music_play,far void(u16 off u16 seg u16 loop),§4.2 stream = seg:off+1
+func,1ace:005c,music_silence,far void(),§4.2 note off on every voice; device reset
+func,1ace:00b4,music_resume,far void(),§4.2 unreached
+func,1ace:00e8,sound_detect,far void(u16 mask; far cms_buf; far adlib_buf),§3 DS:F2A0
+func,1af5:0006,music_tick,far void(),§4.3 from the menu timer
+func,1af5:0125,mt32_program,far void(u16 ch u16 program),§4.5 parked
+func,1af5:013f,mt32_note_on,far void(u16 ch u16 note u16 vel),§4.5 parked
+func,1af5:0163,mt32_note_off,far void(u16 ch),§4.5 parked
+func,1af5:0192,mpu_command,far u16(u16 cmd),§3.1 ports 330h/331h; 0 = no acknowledge
+func,1af5:01be,mpu_reset,far u16(),§3.1 MT-32 detection: FFh twice
+func,1af5:01cf,mpu_write,near void(AL data),§4.5 parked
+func,1af5:01e5,adlib_note_on,far void(u16 ch u16 note u16 vel),§4.5 parked: INT 65h SI=13h
+func,1af5:01fe,adlib_note_off,far void(u16 ch),§4.5 parked: INT 65h SI=14h
+func,1af5:0213,adlib_program,far void(u16 ch u16 program),§4.5 parked: adlib_call(ch; timbre)
+func,1af5:0238,adlib_load_bin,far u16(far timbres),§3.2 ADLIB.BIN: 80h map bytes + 340h timbres; never closed
+func,1af5:0290,adlib_driver_present,far u16(),§3.2 INT 65h signature
+func,1af5:02b0,adlib_driver_init,far void(),§3.2 parked: INT 65h SI=0
+func,1af5:02b9,adlib_call,far void(u16 a u16 b u16 c),§4.5 parked: INT 65h SI=15h
+func,1af5:02ce,cms_note_on,far void(u16 ch u16 note u16 vel),§4.5 parked
+func,1af5:02f0,cms_note_off,far void(u16 ch),§4.5 parked
+func,1af5:030c,cms_program,far void(),§4.5 parked (does nothing)
+func,1af5:0311,cms_driver_init,far void(),§4.5 parked: CMS.DRV functions 2 5 6 9
+func,1af5:033f,speaker_note_on,far void(u16 ch u16 note u16 vel),§4.4
+func,1af5:0394,speaker_note_off,far void(u16 ch),§4.4
+func,1af5:03b8,speaker_program,far void(u16 ch u16 program),§4.4 does nothing
+func,1af5:03bd,mus_open,far u16(u16 name),§4.1 INT 21h 3D00h; FFFFh on an error
+func,1af5:03d0,mus_close,far void(u16 fh),§4.1 INT 21h 3Eh
+func,1af5:03dc,mus_read,far u16(u16 fh far buf u16 n),§4.1 INT 21h 3Fh; 0 on an error
+func,1af5:03f4,snd_dos_alloc,far u32(u16 bytes),§4.1 unreached: INT 21h 48h
+func,1af5:0411,snd_dos_free,far u16(far p),§4.1 unreached: INT 21h 49h
+func,1b37:0002,speaker_music_reset,far void(),§4.4 clears voice 0; speaker off; Tandy ROM test
+func,1b37:003c,speaker_voice_start,far void(u16 script u16 priority u16 voice),§4.4
+func,1b37:00a6,speaker_voice_play,far void(u16 script),§4.4 unreached: priority 64h; any voice
+func,1b37:00c0,speaker_music_tick,far void(),§4.4 PC speaker / Tandy music
+func,1b37:01e3,spk_op_end,near CF(),§4.4 op 0
+func,1b37:01e5,spk_op_set,near CF(AL DI ES:SI),§4.4 op 1
+func,1b37:01f3,spk_op_wait,near CF(DI ES:SI),§4.4 op 2
+func,1b37:01fb,spk_op_return,near CF(DI ES:SI),§4.4 op 3
+func,1b37:0218,spk_op_add,near CF(AL DI ES:SI),§4.4 op 4
+func,1b37:0226,spk_op_branch,near CF(AL DI ES:SI),§4.4 op 5
+func,1b37:0266,spk_op_compare,near CF(AL DI ES:SI),§4.4 op 6
+func,1b37:027a,spk_op_poke,near CF(ES:SI),§4.4 op 7
+func,1b5f:000e,cms_detect,far u16(),§3.3 CMS / SB DSP / OPL at DS:E56E
+func,1b5f:00b3,cms_opl_wait,near CF(AL),§3.3
+func,1b5f:00d4,cms_opl_write,near void(AX),§3.3 AL register AH value
+func,1b5f:00e7,cms_opl_delay,near void(),§3.3
+func,1b5f:00f8,cms_dsp_read,near CF(),§3.3 AL
+func,1b5f:0116,cms_dsp_write,near CF(AL),§3.3
 global,DS:007E,sound_muted,u16,§2
+global,DS:DA46,sfx_timer_on,u8,§2.2 1 while the effects timer is installed
 global,DS:DA47,sfx_device_tandy,u8,§2
+global,DS:DA48,sfx_loop_count,u16[4],§2.4 D7/D8 per voice
+global,DS:DA50,sfx_range_count,u8,§2.4 Tandy notes out of range
+global,DS:DA51,sfx_bad_command_count,u8,§2.4 never incremented (unreachable)
+global,DS:DA54,sfx_old_vector,u16[2],§2.2 far pointer
+global,DS:DA58,sfx_speaker_divisors,u16[12],§2.4 PIT divisors of the 12 notes
+global,DS:DA70,sfx_tandy_divisors,u16[12],§2.4
+global,DS:DA88,sfx_divisor_table,u16,§2.4 DA58 or DA70
+global,DS:DA8A,sfx_pitch_shift,u8,§2.4 7 speaker / 1 Tandy
+global,DS:DA8B,sfx_voice_count,u16,§2.2 1 / 4 (written only)
+global,DS:DA8D,sfx_last_voice,u16,§2.3 0 / 6: the last DI
+global,DS:DA90,sfx_envelope,u16[4],§2.5
+global,DS:DA98,sfx_saved_envelope,u16,§2.3
+global,DS:DA9A,sfx_envelope_pos,u16[4],§2.5
+global,DS:DAA2,sfx_envelope_end,u16[4],§2.5
+global,DS:DAAA,sfx_volume,u16[4],§2.5
+global,DS:DAB2,sfx_saved_volume,u16,§2.3
+global,DS:DAB4,sfx_note_started,u16[4],§2.4
+global,DS:DABC,sfx_saved_note_started,u16,§2.3
+global,DS:DABE,sfx_rest,u16[4],§2.4
+global,DS:DAC6,sfx_saved_rest,u16,§2.3
+global,DS:DAC8,sfx_tie,u16[4],§2.4
+global,DS:DAD0,sfx_saved_tie,u16,§2.3
+global,DS:DAD2,sfx_program,u16[4],§2.3 program pointer per voice
+global,DS:DADA,sfx_secondary_program,u16,§2.3
+global,DS:DADC,sfx_pc,u16,§2.3 work register: program pointer
+global,DS:DADE,sfx_tempo,u16,§2.3
+global,DS:DAE0,sfx_secondary_tempo,u16,§2.3
+global,DS:DAE2,sfx_tempo_work,u16,§2.3
+global,DS:DAE4,sfx_remaining,u16[4],§2.3 ticks left in the note per voice
+global,DS:DAEC,sfx_secondary_remaining,u16,§2.3
+global,DS:DAEE,sfx_remaining_work,u16,§2.3
+global,DS:DAF0,sfx_state,u16,§2.3 0 idle 1 started 2 playing
+global,DS:DAF2,sfx_voice_state,u16[4],§2.3 0 done 1 start 2 running
+global,DS:DAFA,sfx_saved_voice_state,u16,§2.3
+global,DS:DAFC,sfx_secondary_state,u16,§2.3 always 0 in the game
+global,DS:DAFE,sfx_legato,u16[4],§2.4
+global,DS:DB06,sfx_secondary_legato,u16,§2.3
+global,DS:DB08,sfx_legato_work,u16,§2.4
+global,DS:DB0A,sfx_gap,u16[4],§2.4
+global,DS:DB12,sfx_secondary_gap,u16,§2.3
+global,DS:DB14,sfx_gap_work,u16,§2.4
+global,DS:DB16,sfx_tempo_shift,u16,§2.3
+global,DS:DB18,sfx_secondary_tempo_shift,u16,§2.3
+global,DS:DB1A,sfx_tempo_shift_work,u16,§2.4
+global,DS:DB1C,sfx_raw_length,u16,§2.4
+global,DS:DB1E,sfx_programs,u16[13],§2.1 effect programs 0..12
+global,DS:DC3C,sfx_tandy_envelopes,u16[],§2.5
+global,DS:E56E,cms_base_port,u16,§3.3 220h
+global,DS:E570,music_loop_point,u16[2],§4.3 far pointer
+global,DS:E574,cms_drv_name,char[8],§3 CMS.DRV
+global,DS:E57C,music_voice_note,u8[16],§4.5 last note per voice (MT-32 / CMS)
+global,DS:E58C,adlib_bin_name,char[10],§3.2 adlib.bin
+global,DS:E596,adlib_timbres,u16[2],§3.2 far pointer
+global,DS:E59A,music_program_map,u8[128],§3.2 program -> timbre
+global,DS:E61A,adlib_signature,char[19],§3.2 SOUND-DRIVER-AD-LIB
+global,DS:E636,speaker_note_divisors,u16[12],§4.4
+global,DS:E64E,speaker_note_scripts,u8[36],§4.4 one 12-byte script per voice
+global,DS:E672,speaker_sustain_script,u8[11],§4.4
+global,DS:E67D,speaker_release_script,u8,§4.4 op 3
+global,DS:E67E,speaker_voice_scripts,u16[3],§4.4
+global,DS:E684,speaker_voices,u8[66],§4.4 3 records of 16h bytes
+global,DS:E6C6,speaker_divisor,u16,§4.4 the divisor in PIT channel 2
+global,DS:E6C8,speaker_music_tandy,u8,§4.4
+global,DS:E6C9,speaker_music_enabled,u8,§4.4 always 1
+global,DS:E6CA,speaker_branch_xor,u8[6],§4.4
+global,DS:E6D0,speaker_branch_mask,u8[6],§4.4
+global,DS:E6D6,speaker_script_ops,u16[8],§4.4 near handlers in 1b37
+global,DS:F0E8,cms_driver_entry,u16[2],§4.5 far pointer to the loaded CMS.DRV
+global,DS:F288,music_pos,u16[2],§4.3 far pointer to the next event
+global,DS:F28C,music_start_pos,u16,§4.2
+global,DS:F28E,music_wait,u16,§4.3 ticks to the next event
+global,DS:F290,music_playing,u8,§4.2
+global,DS:F291,music_status,u8,§4.3 running status
 global,DS:F292,music_voices,u16,§3
 global,DS:F294,music_note_on,u16[2],§3 far pointer
 global,DS:F298,music_note_off,u16[2],§3 far pointer
 global,DS:F29C,music_control,u16[2],§3 far pointer
 global,DS:F2A0,sound_device,u16,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
-global,DS:F5D8,music_stream,u16[2],§4 far pointer
+global,DS:F2A2,music_loop,u16,§4.2 music_play's third argument
+global,DS:F5D8,cms_driver_tick,u16[2],§4.5 far pointer from CMS.DRV function 5

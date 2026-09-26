@@ -36,7 +36,16 @@ bool host_init(const char *dir, int, bool)
     return true;
 }
 void host_shutdown() {}
-void host_set_timer(u16, void (*handler)()) { tick_handler = handler; }
+namespace {
+std::vector<u16> timer_log;
+}
+void host_set_timer(u16 divisor, void (*handler)())
+{
+    timer_log.push_back(divisor);
+    tick_handler = handler;
+}
+const std::vector<u16> &host_stub_timer_log() { return timer_log; }
+void host_stub_timer_clear() { timer_log.clear(); }
 void host_set_frame_source(bool (*)(u32 *), int, int) {}
 void host_pump()
 {

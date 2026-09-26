@@ -29,4 +29,8 @@ struct SpeakerEvent {
 const std::vector<SpeakerEvent> &host_stub_speaker_log();
 void host_stub_speaker_clear();
 
+// Every host_set_timer() divisor since the last clear, in order.
+const std::vector<u16> &host_stub_timer_log();
+void host_stub_timer_clear();
+
 } // namespace gb
