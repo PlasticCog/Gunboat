@@ -21,6 +21,8 @@ u8 last_vram[65536];
 u8 last_dac[256][3];
 u16 last_start = 0xFFFF;
 
+void (*dac_trace)(u8, u8, u8, u8);
+
 bool compose(u32 *xrgb)
 {
     const u8 *vram = mp(VRAM_SEG, 0);
@@ -59,7 +61,10 @@ void vga_dac_write(u8 index, u8 r, u8 g, u8 b)
     dac[index][0] = r & 0x3F;
     dac[index][1] = g & 0x3F;
     dac[index][2] = b & 0x3F;
+    if (dac_trace) dac_trace(index, dac[index][0], dac[index][1], dac[index][2]);
 }
+
+void vga_set_dac_trace(void (*trace)(u8, u8, u8, u8)) { dac_trace = trace; }
 
 void vga_dac_read(u8 index, u8 *r, u8 *g, u8 *b)
 {

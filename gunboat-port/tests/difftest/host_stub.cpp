@@ -42,7 +42,8 @@ void host_pump()
 {
     if (tick_handler) tick_handler();
 }
-void host_wait_vretrace() { host_pump(); }
+// The Unicorn tests model port 3DAh as always in the vertical retrace: no wait, no timer tick.
+void host_wait_vretrace() {}
 void host_set_kbd_handler(void (*handler)(u8)) { kbd_handler = handler; }
 void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handler; }
 bool host_joy_read(s16 *, s16 *, u8 *) { return false; }

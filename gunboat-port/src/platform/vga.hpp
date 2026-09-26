@@ -11,6 +11,8 @@ namespace gb {
 void vga_init();  // installs the frame source; DAC black, start 0
 
 void vga_dac_write(u8 index, u8 r, u8 g, u8 b);  // 6-bit components, as port 3C9h
+// Development aid (the differential tests): called with every DAC write, in order. Null = off.
+void vga_set_dac_trace(void (*trace)(u8 index, u8 r, u8 g, u8 b));
 void vga_dac_read(u8 index, u8 *r, u8 *g, u8 *b);
 
 // CRTC start address in bytes (mode 13h: register 0Ch/0Dh value x 4). The screen shows 64000

@@ -288,8 +288,9 @@ func,121b:036e,world_a_base,far u16(),world,spec:world,§3.1 returns 6E54h
 func,121b:0372,pit_random,far u16(u16 base),world,spec:world,reads PIT counter 2 (port 42h) + base (platform spec)
 func,121b:0380,far_normalize,,platform,td3-match,"TD3 0c1c:071c far_normalize, score 1.00"
 func,121b:0397,text_set_colours,,platform,td3-match,"TD3 0c1c:0733 text_set_colours, score 1.00"
-func,121b:03b0,text_goto_cell,far void(u8 col u8 row),platform,spec:platform,§7
-func,121b:03d8,text_draw_char,far void(u8 *c),platform,spec:platform,§7
+func,121b:03b0,text_goto_cell,far void(u16 row u16 col),platform,spec:platform,§7 D9C2 = row * 8 (y); D9C1 = col | §7
+func,121b:03c7,text_goto,far void(u16 y u16 col),platform,spec:platform,§7 D9C2 = y; D9C1 = col
+func,121b:03d8,text_draw_char,far void(u8 *c),platform,spec:platform,§7 fixed 8x8 cell: glyph CS:006E + 8(c-20h) at x = col*8 | §7 fixed 8x8 cell: glyph CS:006E + 8(c-20h) at (col*8 + 0 .. 7 | §7
 func,121b:050a,dos_seek,,platform,td3-match,"TD3 0c1c:084e dos_seek, score 1.00"
 func,121b:0524,dos_open_read,,platform,td3-match,"TD3 0c1c:0868 dos_open_read, score 1.00"
 func,121b:0536,dos_file_size,,platform,td3-match,"TD3 0c1c:087a dos_file_size, score 1.00"
@@ -328,8 +329,9 @@ func,1390:0000,picture_draw,far void(u16 src u16 size u16 width),platform,spec:p
 func,13d5:000d,gfx_line_to,,video,td3-match,"TD3 16d9:0002 gfx_line_to, score 0.95"
 func,13e2:0002,gfx_draw_bitmap,,video,td3-match,"TD3 185f:000b gfx_draw_bitmap, score 0.88"
 func,142c:0009,gfx_free_page,,video,td3-match,"TD3 1736:0004 gfx_free_page, score 1.00"
+func,1432:0008,gfx_get_draw_seg,far u16(),video,spec:video,§2 returns DD2D
 func,1432:000c,gfx_read_bitmap,,video,td3-match,"TD3 18b3:0004 gfx_read_bitmap, score 0.85"
-func,1469:0008,gfx_saved_mode,far u16(),platform,spec:platform,§8 DS:DCFC
+func,1469:0008,gfx_saved_mode,far s16(),platform,spec:platform,§8 library mode DCFC; if negative (FFh at start) the BIOS mode (INT 10h AH=0Fh) | §8 DS:DCFC
 func,146a:000b,joystick_axis,far u16(u16 axis),platform,spec:platform,§3 port 201h
 func,146e:000e,joystick_calibrate,far void(u16),platform,spec:platform,§3
 func,1473:0008,joystick_read,far void(u16 stick u8 *code u8 *dir),platform,spec:platform,§3
@@ -341,8 +343,8 @@ func,14ae:0005,ega_pal_set,far void(u16 u16),video,spec:video,§2 parked
 func,14b5:000d,gfx_put_pixel,,video,td3-match,"TD3 173c:0005 gfx_put_pixel, score 0.89"
 func,14cf:0008,gfx_fill_rect,,video,td3-match,"TD3 1785:000b gfx_fill_rect, score 0.57; low score: confirm in the spec"
 func,14ff:0001,text_exit_clear,,video,td3-match,"TD3 16fc:000b text_exit_clear, score 0.69; low score: confirm in the spec"
-func,1502:0001,gfx_copy_rect_to_copy_page,,video,td3-match,"TD3 17be:0009 gfx_copy_rect_to_copy_page, score 0.69; low score: confirm in the spec"
-func,1522:000e,gfx_copy_rect_to_copy_page_b,,video,td3-match,"TD3 17be:0009 gfx_copy_rect_to_copy_page, score 0.69; low score: confirm in the spec"
+func,1502:0001,gfx_copy_rect_from_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),video,td3-match+spec:video,"§2 copy page -> draw page (mode 13h: rows y1 up to y0) | was gfx_copy_rect_to_copy_page | TD3 17be:0009 gfx_copy_rect_to_copy_page, score 0.69; low score: confirm in the spec"
+func,1522:000e,gfx_copy_rect_to_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),video,td3-match+spec:video,"§2 draw page -> copy page | was gfx_copy_rect_to_copy_page_b | TD3 17be:0009 gfx_copy_rect_to_copy_page, score 0.69; low score: confirm in the spec"
 func,1543:000b,gfx_set_colour,,video,td3-match,"TD3 1703:0001 gfx_set_colour, score 0.61; low score: confirm in the spec"
 func,154e:000b,gfx_set_copy_page,,video,td3-match,"TD3 170e:0002 gfx_set_copy_page, score 1.00"
 func,1555:0005,gfx_set_mode,,video,td3-match,"TD3 1905:000b gfx_set_mode, score 0.62; low score: confirm in the spec"
@@ -424,6 +426,8 @@ cglobal,0919:7dbf,water_shift_table,u8[16][10],simulation,spec:simulation,§5.1 
 cglobal,0919:8399,neighbour_records,u8[][5],render3d,spec:render3d,§2
 cglobal,0919:83c6,tile_visibility,u8[34],render3d,spec:render3d,§2
 cglobal,0919:83e4,neighbour_order,u8[4][9],render3d,spec:render3d,§2
+cglobal,121b:000e,dac_buffer,u8[96],video,spec:video,§3 DAC 0..31 as uploaded
+cglobal,121b:006e,font_8x8,u8[][8],platform,spec:platform,§7 glyphs from 20h
 cglobal,121b:093e,scancode_e0_table,u8[20],simulation,spec:simulation,§3.1
 cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
@@ -712,6 +716,12 @@ global,DS:D9B3,frame_counter,u16,simulation,spec:simulation,§1.2
 global,DS:D9B5,screen_shake,u8,simulation,spec:simulation,§8.6
 global,DS:D9B6,page_segments,u16[3],hud,spec:hud,§1
 global,DS:D9B8,draw_page_segment,u16,render3d,spec:render3d,§1.1
+global,DS:D9BC,text_transparent,u8,platform,spec:platform,§7 0 = draw the background too
+global,DS:D9BD,text_bg,u16,platform,spec:platform,§7 colour << 8
+global,DS:D9BF,text_fg,u16,platform,spec:platform,§7 colour << 8
+global,DS:D9C1,text_col,u8,platform,spec:platform,§7 character column (advanced by text_draw_char)
+global,DS:D9C2,text_y,u8,platform,spec:platform,§7 pixel row of the glyph top
+global,DS:D9C3,text_glyph,u8[8],platform,spec:platform,§7
 global,DS:DA39,fast_forward_key,u8,simulation,spec:simulation,§3.1 Backspace held
 global,DS:DA3A,ctrl_held,u8,simulation,spec:simulation,§3.1
 global,DS:DA3F,kbd_prefix_state,u8,platform,spec:platform,§2
@@ -723,8 +733,40 @@ global,DS:DA44,menu_timer_divider,u8,platform,spec:platform,§1
 global,DS:DA47,sfx_device_tandy,u8,sound,spec:sound,§2
 global,DS:DA52,sfx_timer_divider,u16,platform,spec:platform,§1
 global,DS:DA8F,sfx_timer_vector,u8,platform,spec:platform,§1
-global,DS:DCFC,gfx_saved_mode_byte,u8,platform,spec:platform,§8
+global,DS:DCF4,gfx_draw_page,u8,video,spec:video,§1
+global,DS:DCF5,gfx_colour,u8,video,spec:video,§2 colour used by the drawing routines
+global,DS:DCF6,gfx_colour_raw,u8,video,spec:video,§2
+global,DS:DCF7,gfx_copy_page,u8,video,spec:video,§1
+global,DS:DCF8,gfx_mode_x2,u16,video,spec:video,§1 library mode * 2 (dispatch index)
+global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
+global,DS:DCFD,gfx_visible_page,u8,video,spec:video,§1
+global,DS:DCFF,gfx_pen_x,u16,video,spec:video,§2
+global,DS:DD01,gfx_pen_y,u16,video,spec:video,§2
+global,DS:DD03,clip_x_max,u16,video,spec:video,§1
+global,DS:DD05,clip_x_min,u16,video,spec:video,§1
+global,DS:DD07,clip_y_max,u16,video,spec:video,§1
+global,DS:DD09,clip_y_min,u16,video,spec:video,§1
+global,DS:DD0B,view_x_max,u16,video,spec:video,§1
+global,DS:DD0D,view_x_min,u16,video,spec:video,§1
+global,DS:DD0F,view_y_max,u16,video,spec:video,§1
+global,DS:DD11,view_y_min,u16,video,spec:video,§1
 global,DS:DD17,joystick_limits,u16[4],platform,spec:platform,§3
+global,DS:DD23,fill_x1,u16,video,spec:video,§2 gfx_fill_rect arguments
+global,DS:DD27,fill_x0,u16,video,spec:video,§2
+global,DS:DD29,fill_y0,u16,video,spec:video,§2
+global,DS:DD2B,gfx_copy_seg,u16,video,spec:video,§1
+global,DS:DD2D,gfx_draw_seg,u16,video,spec:video,§1
+global,DS:DD2F,gfx_visible_seg,u16,video,spec:video,§1
+global,DS:DD31,gfx_page_seg,u16[8],video,spec:video,§1 page segments (mode 13h: 0 = A000h)
+global,DS:DEF1,mode_interleave,u16[21],video,spec:video,§1 [0] current; [1 + mode] per mode
+global,DS:DF1B,mode_page_bytes,u16[21],video,spec:video,§1 FA00h in mode 13h
+global,DS:DF45,mode_row_bytes,u16[21],video,spec:video,§1 140h in mode 13h
+global,DS:DF6F,mode_text_cols,u16[21],video,spec:video,§1
+global,DS:DF99,mode_video_seg,u16[21],video,spec:video,§1 A000h in mode 13h
+global,DS:DFC3,mode_width,u16[21],video,spec:video,§1 0 in text modes
+global,DS:DFED,mode_height,u16[21],video,spec:video,§1
+global,DS:E124,gfx_e124,u16,video,spec:video,§1 cleared by gfx_set_mode
+global,DS:E16F,mode_text_rows,u8,video,spec:video,§1 19h; 1Eh in modes 11h/12h
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA

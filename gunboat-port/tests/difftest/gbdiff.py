@@ -24,6 +24,7 @@ import shutil
 import struct
 import subprocess
 
+import biosmodel
 import dosmodel
 
 from unicorn import (Uc, UcError, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE, UC_HOOK_INTR, UC_HOOK_INSN,
@@ -297,6 +298,7 @@ class Port:
         self.dll.gb_call.argtypes = [ctypes.c_char_p, ctypes.POINTER(_Regs), ctypes.POINTER(ctypes.c_uint16)]
         self.dll.gb_load_exe.argtypes = [ctypes.c_char_p]
         self.dll.gb_has.argtypes = [ctypes.c_char_p]
+        self.dll.gb_dac_trace_data.restype = ctypes.c_void_p
         self.ptr = self.dll.gb_mem()
         assert self.dll.gb_mem_size() == MEM_SIZE
 
@@ -345,6 +347,7 @@ class Harness:
         self.orig = Original()
         self.port = Port(dll)
         self.dos = dosmodel.DosModel(self.orig, GAME_DIR)
+        self.bios = biosmodel.BiosModel(self.orig)
         self.port.dll.gb_set_game_dir(str(GAME_DIR).encode())
         self.cases = {}
 
@@ -353,7 +356,29 @@ class Harness:
         leaves it), BSS and everything else zero."""
         m = bytearray(load_image())
         dosmodel.heap_init(m)
+        biosmodel.bios_init(m)
         return m
+
+    TICK_KINDS = {None: 0, 'tick_counter': 1}
+
+    def set_tick(self, tick):
+        """The timer model of the next check: None (no ticks), or (poll points, kind); kind
+        'tick_counter' = DS:08C0 += 1 per tick (the menu timer's count)."""
+        for h in getattr(self, '_tick_hooks', []):
+            self.orig.uc.hook_del(h)
+        self._tick_hooks = []
+        points, kind = tick if tick else ((), None)
+        self.port.dll.gb_set_tick(self.TICK_KINDS[kind])
+
+        def on_poll(uc, address, size, _):
+            if kind == 'tick_counter':
+                a = DS_BASE + 0x08C0
+                v = struct.unpack('<H', uc.mem_read(a, 2))[0]
+                uc.mem_write(a, struct.pack('<H', (v + 1) & 0xFFFF))
+        for p in points:
+            s, o = (int(x, 16) for x in p.split(':'))
+            at = lin(seg_of(s), o)
+            self._tick_hooks.append(self.orig.uc.hook_add(UC_HOOK_CODE, on_poll, None, at, at))
 
     def reset_files(self):
         """Closes every DOS file on both sides."""
@@ -373,12 +398,22 @@ class Harness:
         port = {fh: self.port.dll.gb_dos_tell(fh) for fh in range(dosmodel.FIRST_HANDLE, dosmodel.MAX_HANDLES)}
         return model, {fh: pos for fh, pos in port.items() if pos >= 0}
 
-    def check(self, name, m, regs=None, stack_args=(), outputs=(), label='', keep_files=False):
-        """Runs `name` on both sides from memory m and compares all memory, `outputs` and the open
-        DOS files. Files are closed first unless keep_files (after open_both)."""
+    def check(self, name, m, regs=None, stack_args=(), outputs=(), label='', keep_files=False, dac=None,
+              tick=None):
+        """Runs `name` on both sides from memory m and compares all memory, `outputs`, the open DOS
+        files and the VGA DAC. Files are closed first unless keep_files (after open_both). Both DACs
+        start as `dac` (768 bytes, default black). `tick` = (list of file_seg:off poll points,
+        kind): the original gets one timer tick each time it executes a poll point, the port one per
+        host_pump() (see set_tick)."""
         regs = regs or {}
         if not keep_files:
             self.reset_files()
+        start_dac = bytes(dac) if dac is not None else bytes(768)
+        self.bios.dac[:] = start_dac
+        self.port.dll.gb_dac_write(start_dac)
+        self.bios.trace = bytearray()
+        self.port.dll.gb_dac_trace_start()
+        self.set_tick(tick)
         if not self.port.has(name):
             raise Mismatch('%s is not in bridge.cpp' % name)
         file_seg, off, far = self.sym.func(name)
@@ -396,6 +431,20 @@ class Harness:
         for r in outputs:
             if want[r] != got[r]:
                 problems.append('%s: original %04X, port %04X' % (r.upper(), want[r], got[r]))
+        port_trace = ctypes.string_at(self.port.dll.gb_dac_trace_data(), self.port.dll.gb_dac_trace_size())
+        if bytes(self.bios.trace) != port_trace:
+            k = next((i for i in range(0, min(len(port_trace), len(self.bios.trace)), 4)
+                      if self.bios.trace[i:i + 4] != port_trace[i:i + 4]), min(len(port_trace), len(self.bios.trace)))
+            problems.append('DAC writes differ from write %d of %d (original) / %d (port): original %s, port %s' % (
+                k // 4, len(self.bios.trace) // 4, len(port_trace) // 4, bytes(self.bios.trace[k:k + 4]).hex(),
+                port_trace[k:k + 4].hex()))
+        port_dac = ctypes.create_string_buffer(768)
+        self.port.dll.gb_dac_read(port_dac)
+        if bytes(self.bios.dac) != port_dac.raw:
+            diff = [i // 3 for i in range(768) if self.bios.dac[i] != port_dac.raw[i]]
+            problems.append('DAC differs at colours %s: original %s, port %s' % (
+                sorted(set(diff))[:8], bytes(self.bios.dac[3 * diff[0]:3 * diff[0] + 3]).hex(),
+                port_dac.raw[3 * diff[0]:3 * diff[0] + 3].hex()))
         model_files, port_files = self.files_state()
         if model_files != port_files:
             problems.append('open files (handle: position): original %s, port %s' % (model_files, port_files))

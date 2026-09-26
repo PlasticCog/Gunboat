@@ -6,6 +6,7 @@
 #include <map>
 #include <string>
 
+#include "host.hpp"
 #include "host_stub.hpp"
 #include "mem.hpp"
 #include "platform/platform.hpp"
@@ -68,10 +69,29 @@ GB_EXPORT int gb_call(const char *name, Regs *regs, const u16 *stack_args)
     return 1;
 }
 
+// The timer model of a test (gbdiff.Harness.set_tick): host_pump() runs one tick of this kind.
+namespace {
+void tick_counter() { ds_u16(0x08C0) = u16(ds_u16(0x08C0) + 1); }
+} // namespace
+GB_EXPORT void gb_set_tick(int kind) { host_set_timer(0, kind == 1 ? tick_counter : nullptr); }
+
 // DOS files: close everything, open a game file, and the position of a handle (-1 = closed).
 GB_EXPORT void gb_dos_reset() { dos_close_all(); }
 GB_EXPORT int gb_dos_open(const char *name, const char *mode) { return dos_open_name(name, mode, false); }
 GB_EXPORT int gb_dos_tell(int fh) { return dos_tell(s16(fh)); }
+
+// The DAC writes of a call, in order (index, r, g, b): gb_dac_trace_start before the call.
+namespace {
+std::string dac_log;
+void dac_logger(u8 i, u8 r, u8 g, u8 b) { dac_log += std::string{char(i), char(r), char(g), char(b)}; }
+} // namespace
+GB_EXPORT void gb_dac_trace_start()
+{
+    dac_log.clear();
+    vga_set_dac_trace(dac_logger);
+}
+GB_EXPORT int gb_dac_trace_size() { return int(dac_log.size()); }
+GB_EXPORT const char *gb_dac_trace_data() { return dac_log.data(); }
 
 // The VGA DAC, 256 x RGB 6-bit, for tests of palette code.
 GB_EXPORT void gb_dac_read(u8 *rgb768)

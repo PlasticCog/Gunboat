@@ -53,4 +53,27 @@ void crt_ffree(FarPtr p);                               // 15ee:06ac
 s16 lzw_alloc();  // 08e1:018e  DOS 48h 300h paragraphs -> DS:1078; 1 ok, 0 fail
 void lzw_free();  // 08e1:01aa  DOS 49h on DS:1078
 
+// ---- BIOS model (bios.cpp): INT 10h video and INT 1Ah on the BIOS data area in mem[]
+void bios_init();                                        // as DOS leaves it: text mode 3
+void bios_set_mode(u8 al);                               // INT 10h AH=00h
+u16 bios_get_mode(u8 *bh);                               // INT 10h AH=0Fh: AX
+u16 bios_get_cursor(u8 page);                            // INT 10h AH=03h: DX
+u16 bios_display_combination();                          // INT 10h AX=1A00h: BX
+void bios_dac_set(u16 index, u8 r, u8 g, u8 b);          // INT 10h AX=1010h
+void bios_dac_set_block(u16 first, u16 count, FarPtr table);  // INT 10h AX=1012h
+u32 bios_ticks();                                        // INT 1Ah AH=00h
+void bios_tick();                                        // the BIOS timer interrupt's count
+
+// ---- text and pictures (text.cpp, pal.cpp), segment 121b
+FarPtr far_normalize(FarPtr p);             // 121b:0380
+void text_set_colours(s16 fg, s16 bg);      // 121b:0397
+void text_goto_cell(s16 row, s16 col);      // 121b:03b0
+void text_goto(s16 y, s16 col);             // 121b:03c7
+void text_draw_char(const u8 *c);           // 121b:03d8  (&ds_u8(off) for a DGROUP character)
+void pal_fade_out();                        // 121b:07ae
+void pal_fade_in();                         // 121b:0804
+void pal_black();                           // 121b:085d
+void pal_apply();                           // 121b:087f
+void picture_draw_vga(u16 src_ds, u16 runs, u16 y_bottom);  // 121b:08a8
+
 } // namespace gb

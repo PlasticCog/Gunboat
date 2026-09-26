@@ -22,8 +22,9 @@ mode through per-mode tables (TD3 platform §4.2). Pages: 0 = screen (A000h), 1 
 
 `gfx_set_colour` `1543:000b`, `gfx_move_to` `147b:000c`, `gfx_line_to` `13d5:000d`,
 `gfx_put_pixel` `14b5:000d`, `gfx_fill_rect` `14cf:0008`, `gfx_fill_rect_clipped` `15d9:0003`,
-`gfx_clear_page` `15e2:0001`, `gfx_copy_rect` `15a4:0006`, `gfx_copy_rect_to_copy_page`
-`1502:0001` / `1522:000e` (two copies of the same routine linked twice), `gfx_draw_bitmap`
+`gfx_clear_page` `15e2:0001`, `gfx_copy_rect` `15a4:0006`, `gfx_copy_rect_from_copy_page`
+`1502:0001` (copy page → draw page) and `gfx_copy_rect_to_copy_page` `1522:000e` (draw page →
+copy page; both copy the rows from y1 up to y0), `gfx_draw_bitmap`
 `13e2:0002`, `gfx_read_bitmap` `1432:000c`, `gfx_set_pal_reg` `157d:0078`,
 `gfx_set_ega_palette` `148c:000d`, `gfx_free_page` `142c:0009`, `text_exit_clear` `14ff:0001`.
 Gunboat-only helpers in the same range: `1390:0000` (picture draw, all modes; platform §6),
