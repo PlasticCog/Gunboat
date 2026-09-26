@@ -22,6 +22,9 @@ src/game/               the game: flow_* (game_flow.md: main, files, keys, scree
                         (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md);
                         pending.cpp: placeholders for calls not ported yet
 src/sound/              sound.md: effects and music
+src/render/             render3d.md: the 3D renderer (camera, terrain window and projection, terrain
+                        primitives and VGA spans, visible-object list, sprite cache and blitter,
+                        spotlights, flash); platform/gfx_display.cpp: gfx_set_display_offset
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
 legacy/                 the Codex prototype (reference only)

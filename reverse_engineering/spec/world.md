@@ -93,9 +93,13 @@ if not chase view: present (05bd:1fd4); draw page 0
 `DS:F13A` as their loop counter (left equal to the byte count). The front end also uses
 `F13A`; keep the side effect.
 
-`sprite_cache_invalidate` clears the first byte of each of the 183 sprite cache slots (pointers
-`CS:583D`, slots below 69h in segment `D883`, the rest in `D885`) and resets the slot bitmaps
-(`0919:6f3d`), so all sprites are rebuilt after a full-screen station.
+`sprite_cache_invalidate` clears the first byte (the cached kind) of the sprite cache slot
+records (pointers `CS:583D`; slots 1..68h are in segment `D885`, slots from 69h in `D883`,
+render3d §5.6) and resets the slot bitmaps (`sprite_slots_reset` `0919:6f3d`), so all sprites are
+rebuilt after a full-screen station. Port-verified quirk (kept): it walks from slot B8h down and
+switches to `D885` at slot 6Ah, which it skips, so slot 69h's byte is cleared at `D885:D000`
+instead of its record at `D883:D000` (slot 69h is reserved anyway) and slot 6Ah (`D883:0000`) is
+not cleared.
 
 ## 4. `mission_load` (05bd:14d6) **verified**
 
