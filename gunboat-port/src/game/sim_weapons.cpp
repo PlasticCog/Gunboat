@@ -2,7 +2,10 @@
 #include "game/sim.hpp"
 
 #include "game/flow.hpp"
+#include "hud/hud.hpp"
 #include "mem.hpp"
+#include "platform/gfx.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 #include <utility>
@@ -37,7 +40,8 @@ u16 sine_word(u16 off) { return seg_u16(CSSEG_sine_table, u16(CS_sine_table + of
 // 0919:0ee2 projectile_launch (simulation.md §7.1): BX = weapon, CH = heading, CL = fraction. A slot
 // from projectile_alloc; the elevation is the camera pitch above its reference plus the gun's
 // elevation (shot_elevation), clamped to 0..FFh and to the weapon's limit; then projectile_aim.
-void projectile_launch(u16 bx, u16 cx)
+// Returns AX as projectile_aim leaves it.
+u16 projectile_launch(u16 bx, u16 cx)
 {
     const SlotBxCx slot = projectile_alloc();
     const u16 si = slot.cx;
@@ -45,7 +49,7 @@ void projectile_launch(u16 bx, u16 cx)
     al = elevation_add_clamped(al);
     const u8 limit = ds_u8(u16(DS_weapon_elevation_limit + bx));
     if (al >= limit) al = limit;
-    projectile_aim(u16(u8(bx) << 8 | al), slot.bx, cx, si);
+    return projectile_aim(u16(u8(bx) << 8 | al), slot.bx, cx, si);
 }
 
 // 0919:1fc3 move_toward (simulation.md §5.2): moves object BX toward (CX, DX) by at most the steps
@@ -141,8 +145,9 @@ SlotBxCx projectile_alloc()
 // byte is -AL - 13h (at least 0); the distance factor 7FFFh (range <= 1) or FFFFh / range; the
 // impact point is the boat's position plus that factor times the sine and cosine of the heading
 // (interpolated between table words by the fraction's two low bits), rotated into the heading's
-// quadrant, each >> 3 (arithmetic).
-void projectile_aim(u16 ax, u16 bx, u16 cx, u16 si)
+// quadrant, each >> 3 (arithmetic). Returns AX as the original leaves it: AH from the low word of
+// the second product, AL = 1 in the fourth quadrant, else 0 (what the quadrant count-down leaves).
+u16 projectile_aim(u16 ax, u16 bx, u16 cx, u16 si)
 {
     u8 al = u8(ax);
     const u8 ah = u8(ax >> 8);
@@ -178,9 +183,11 @@ void projectile_aim(u16 ax, u16 bx, u16 cx, u16 si)
     if (f & 0x40) c = u16(c - step);
 
     u16 hc = u16((u32(factor) * c) >> 16);                         // mul dx; mov cx,dx
-    u16 hd = u16((u32(factor) * ds_u16(DS_scratch_b7dc)) >> 16);  // mul dx
+    const u32 product = u32(factor) * ds_u16(DS_scratch_b7dc);    // mul dx
+    u16 hd = u16(product >> 16);
     u16 rdx = hc, rcx = hd;                                          // xchg dx,cx
     u8 q = ds_u8(DS_scratch_b7f5);
+    const u16 ax_out = u16((u16(product) & 0xFF00) | (q == 3 ? 1 : 0));
     if (q != 0) {
         std::swap(rdx, rcx);
         rdx = u16(-rdx);
@@ -201,6 +208,7 @@ void projectile_aim(u16 ax, u16 bx, u16 cx, u16 si)
     rdx = u16(rdx + ds_u16(DS_object_y));
     record(si, REC_Y) = u8(rdx);
     record(si, REC_Y + 1) = u8(rdx >> 8);
+    return ax_out;
 }
 
 // 0919:3b3b elevation_add_clamped (simulation.md §7.1): AL (signed) + shot_elevation, clamped to
@@ -302,6 +310,190 @@ void muzzle_flash_tick()
     for (u16 off : {DS_flash_midship, u16(DS_flash_bow), u16(DS_flash_bow + 1), DS_flash_stern}) {
         if (ds_u8(off) != 0) ds_u8(off)--;
     }
+}
+
+// 0919:38cc projectile_tick (simulation.md §7.1, once per frame): nothing while the scene is rebuilt;
+// otherwise the flight countdowns of slots 31..0, and projectile_impact for each that reaches 0. SI is
+// the caller's (projectile_impact passes it on to caller_si).
+void projectile_tick(u16 si)
+{
+    if (ds_u8(DS_scene_rebuild) != 0) return;
+    for (s16 bx = 0x1F; bx >= 0; bx--) {
+        u8 &timer = ds_u8(u16(DS_projectile_timer + bx));
+        if (timer == 0) continue;
+        if (--timer == 0) projectile_impact(u16(bx), si);
+    }
+}
+
+// 0919:38ed projectile_impact (simulation.md §7.2): slot BX lands. The weapon goes to vec_product_hi
+// (DS:B7EA), the shot's bearing (heading:fraction) and range to shot_bearing / shot_range; an
+// explosion object (kind 42h, 4Bh for weapons 2 and 3, flags 3) at the impact point in a free
+// temporary slot; then mark_near_objects and the hit tests.
+void projectile_impact(u16 bx, u16 si)
+{
+    bx = u16(bx << 3);
+    ds_u8(DS_vec_product_hi) = record(bx, REC_WEAPON);
+    ds_u16(DS_shot_bearing) = u16(record(bx, REC_HEADING) << 8 | record(bx, REC_FRACTION));
+    ds_u8(DS_shot_range) = record(bx, REC_RANGE);
+    const u16 cx = u16(record(bx, REC_X + 1) << 8 | record(bx, REC_X));
+    const u16 dx = u16(record(bx, REC_Y + 1) << 8 | record(bx, REC_Y));
+    const u16 slot = free_temp_object();
+    u8 al = 0x42;
+    const u8 weapon = ds_u8(DS_vec_product_hi);
+    if (weapon > 1 && weapon < 4) al = 0x4B;
+    object_word(slot) = u16(0x0300 | al);
+    object_x(slot) = cx;
+    object_y(slot) = dx;
+    mark_near_objects(si);
+}
+
+// 0919:3948 mark_near_objects (simulation.md §7.2): SI goes to caller_si. Every visible entry with a
+// kind below 19h and a distance class below 7 is alerted (flag bit 80h); then hit_objects.
+void mark_near_objects(u16 si)
+{
+    ds_u16(DS_caller_si) = si;
+    u16 bx = u16(ds_u16(DS_visible_count) - 1);
+    if (s16(bx) >= 0) {
+        bx = u16(bx << 1);
+        do {
+            const u16 obj = ds_u16(u16(DS_visible_object + bx));
+            if (ds_u8(u16(DS_object_word + obj)) < 0x19 && ds_u8(u16(DS_visible_distance + bx)) < 7)
+                ds_u8(u16(DS_object_word + 1 + obj)) |= 0x80;
+            bx = u16(bx - 2);
+        } while (s16(bx) >= 0);
+    }
+    hit_objects();
+}
+
+// 0919:3977 hit_objects (simulation.md §7.2): the visible list from its last entry down; the first
+// entry the shot hits (hit_test) takes it, and the routine ends with it. Skipped: kind 0, kinds 3Fh
+// and above, the boat and the temporary objects (offset below 48h) except a missile (12h), wrecks
+// 30h/31h (the shot goes on), and kinds 17h and above three times in four (RNG byte 0089 & 0Ch). A
+// hit on a kind above 31h stops the shot. A friendly (19h..27h) hit counts, stops the crew's fire and
+// says "HEY! That's friendly!". Class byte 0: nothing more; class 1 (exactly): weapons 2 and 3 wreck it
+// (31h, 30h below kind 2Ah). Otherwise damage_matrix[(class & 18h) | weapon] (bit 7: OR into the
+// damage bits, else added) below 38h: "Good shot." (0Eh); at 38h the object is destroyed into its
+// wreck (class & 7: 30h + n, 0, 38h, 37h, 4Bh for class 7 or 18h), a fire object beside it unless the
+// wreck is 32h, 33h or 37h or it was a missile (12h/13h) (when the temporary slots are full, not in
+// the last slot nor the missile's), its score word, the objectives, and "Target destroyed." or
+// "MISSION ACCOMPLISHED!". The message goes to page 0 unless the object was friendly.
+void hit_objects()
+{
+    u16 bx = ds_u16(DS_visible_count);
+    for (;;) {
+        bx--;
+        if (s16(bx) < 0) return;
+        const u16 si = ds_u16(u16(DS_visible_object + u16(bx << 1)));
+        u8 al = ds_u8(u16(DS_object_word + si));
+        if (al != 0x12 && si < 0x48) continue;
+        if (al == 0 || al >= 0x3F) continue;
+        if (hit_test(bx) == 0) continue;
+        if (al > 0x31) return;
+        if (al >= 0x30) continue;
+        const u16 word = object_word(si);
+        al = u8(word);
+        u8 ah = u8(word >> 8) & 0x38;
+        if (al == 0x12) {
+            ah = 0x30;
+            ds_u8(DS_missile_age) = 0;
+            ds_u16(DS_missile_source) = 0;
+            ds_u16(DS_missile_object) = 0;
+        }
+        ds_u8(DS_shot_elevation) = ah;  // DS:B7F8: here the object's damage bits
+        ds_u8(DS_hit_kind) = al;
+        if (al >= 0x17) {
+            if (ds_u8(DS_rng_state + 1) & 0x0C) continue;
+            if (al >= 0x19 && al < 0x28) {
+                ds_u8(DS_friendly_hits)++;
+                // (the original reloads SI from caller_si around the message: no effect on memory)
+                ds_u16(DS_fire_at_will) = 0;
+                show_message_page0(0x15);
+            }
+        }
+        // 39fc: the damage
+        const u16 k2 = u8(al << 1);
+        u8 cls = ds_u8(u16(DS_object_class + k2));
+        if (cls == 0) return;
+        u8 wreck;
+        const u8 variant = cls & 7;
+        if (variant < 4) wreck = u8(variant + 0x30);
+        else if (variant == 4) wreck = 0;
+        else if (variant == 5) wreck = 0x38;
+        else if (variant == 6) wreck = 0x37;
+        else wreck = cls == 7 ? 0x4B : 0x18;
+        ds_u8(DS_scratch_b7e2) = wreck;
+        cls = ds_u8(u16(DS_object_class + k2));
+        if (cls == 1) {
+            const u8 weapon = ds_u8(DS_vec_product_hi);
+            if (weapon == 1 || weapon >= 4) return;
+            const u8 old = ds_u8(u16(DS_object_word + si));
+            ds_u8(u16(DS_object_word + si)) = 0x31;
+            if (old < 0x2A) ds_u8(u16(DS_object_word + si)) = 0x30;
+            return;
+        }
+        u8 m = seg_u8(CSSEG_damage_matrix, u16(CS_damage_matrix + u8((cls & 0x18) | ds_u8(DS_vec_product_hi))));
+        if (m & 0x80) m = u8((m & 0x7F) | ds_u8(DS_shot_elevation));
+        else m = u8(m + ds_u8(DS_shot_elevation));
+        u8 message;
+        if (m < 0x38) {
+            ds_u8(DS_shot_elevation) = m;
+            u8 &flags = ds_u8(u16(DS_object_word + 1 + si));
+            flags = u8((flags & 0xC7) | ds_u8(DS_shot_elevation));
+            message = 0x0E;
+        } else {
+            if (ds_u8(DS_scratch_b7e2) == 0x4B) {
+                ds_u8(u16(DS_object_word + 1 + si)) = 1;
+                sfx_play(8);
+            }
+            const u8 old = ds_u8(u16(DS_object_word + si));
+            const u8 kind = ds_u8(DS_scratch_b7e2);
+            ds_u8(u16(DS_object_word + si)) = kind;
+            terrain_structure_break(old, si);
+            u8 ah_left = old;  // AH: the old kind, or 04h after the fire object (MOV AX,0448h)
+            if (!(kind == 0x33 || kind == 0x32 || kind == 0x37 || old == 0x12 || old == 0x13)) {
+                const u16 x = object_x(si), y = object_y(si);
+                u16 slot = free_temp_object();
+                if (slot == 0x46) {
+                    slot = u16((slot & 0xFF00) | u8(slot - 2));
+                    if (slot == ds_u16(DS_missile_object)) slot = u16((slot & 0xFF00) | u8(slot - 2));
+                }
+                object_word(slot) = 0x0448;
+                object_x(slot) = x;
+                object_y(slot) = y;
+                ah_left = 0x04;
+            }
+            u8 score = ds_u8(u16(DS_object_score_index + old));
+            if (score != 0) {
+                score = u8(score << 1);
+                ds_u8(DS_scratch_b7e2) = ah_left;  // quirk: 04h instead of the old kind after a fire
+                score_add(score);
+            }
+            message = mission_target_check(si);
+        }
+        if (ds_u8(DS_hit_kind) < 0x19 || ds_u8(DS_hit_kind) >= 0x28) show_message_page0(message);
+        return;
+    }
+}
+
+// 0919:3b51 mission_target_check (simulation.md §7.2): object SI destroyed. If it is one of the five
+// objective objects, the objective progress counts; at 3 the objective lamp (3) is set on page 0,
+// sound 4, and the message is "MISSION ACCOMPLISHED!" (16h). Otherwise "Target destroyed." (0Fh).
+u8 mission_target_check(u16 si)
+{
+    for (s16 bx = 8; bx >= 0; bx = s16(bx - 2)) {
+        if (si != ds_u16(u16(DS_objective_objects + bx))) continue;
+        ds_u8(DS_objective_progress)++;
+        if (ds_u8(DS_objective_progress) != 3) return 0x0F;
+        const u16 page = ds_u16(DS_draw_page);
+        ds_u16(DS_draw_page) = 0;
+        gfx_set_draw_page(0);
+        indicator_draw(0x0303);
+        ds_u16(DS_draw_page) = page;
+        gfx_set_draw_page(s16(page));
+        sfx_play(4);
+        return 0x16;
+    }
+    return 0x0F;
 }
 
 } // namespace gb

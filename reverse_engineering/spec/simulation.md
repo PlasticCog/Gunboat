@@ -238,12 +238,18 @@ the scripted demo can visit every station.
 key_dispatch()                                   far
   code = DS:EE9C
   if code in 01h..7Fh: call near [CS:0290 + 2*(code-1)]    (127 entries, default 0919:03c7)
-  elif code in 81h..8Ah and station < 5: call near [DS:D615 + 2*(code-81h)]
-  else: controls_poll()                            (0919:0953)
+  elif code in 81h..8Ah and station (word) < 5: call near [DS:D615 + 2*(code-81h)]
+  else: controls_poll()                            (0919:0953; also codes 0 and 80h)
 ```
 
 The default handler `0919:03c7` also calls `controls_poll`. So the held controls are polled on
-every pass **except** when a key with its own handler was pressed.
+every pass **except** when a key with its own handler was pressed. **verified** (port, differential
+test of every code)
+
+Registers: the handlers are near assembly routines. F1 at the pilot's station (`0919:0520`) and F9
+(`0919:0465`) leave SI changed (the engine last switched; the object offset of the last entry in
+view), and `mission_run` does not reload SI before `game_frame`, which passes it on (enemy_update
+and incoming_fire store it in `DS:D6F6`): the port returns SI from these routines.
 
 ### 3.3 Key handlers **verified** (actions); messages are the in-game texts (§9.1)
 
@@ -257,14 +263,14 @@ every pass **except** when a key with its own handler was pressed.
 | `.` `>` | `0919:0756` | Station 8, assignment (mission text, world spec §3) |
 | `/` `?` | `0919:0871` | Station 7, damage report |
 | `,` `<` | `0919:090d` | **Chase boat view** (message 25h): station 2, `D96B = 1`, `D96C = D191` (current view heading), `D8BC = 1`. Ignored if already on. |
-| `+` `=` | `0919:087d` | Time compression `B7F1` 0→1→2→0 (messages 2Ch/2Dh/2Eh); sets bit 20h of the byte at `DS:6E54 + [DS:6E54]` while on; panel switch 0Bh. 3D stations only. |
+| `+` `=` | `0919:087d` | Time compression `B7F1` 0→1→2→0 (messages 2Ch/2Dh/2Eh); going up sets bit 20h of the byte at `DS:6E54 + [DS:6E54]`, going back to 0 leaves the byte as it is (enemy_update toggles that bit, §8.3); panel switch 0Bh set from `D52B & 3` (0→1, 1→2, else 0). 3D stations only. |
 | `-` `_` | `0919:0503` | Next **control rate**: panel switch 0Ch (`D52C`) cycles 0→1→2→0. 3D stations only. |
 | D | `0919:0930` | Detail level: toggles `D6BF` (0 high, 1 low; messages 36h/37h); `D6C0` = FFh (high) or 16h (low); `D8BC = 1` |
 | Tab | `0919:08be` | Message 7 "Return to base.", `B801 = 6`. If `B7FF >= 10h`, or both engines are unusable (`(D508 & D506 & 3) == 2` for each): mission status `B545 = 2` and `B52C = 02d2:2b4a(B52C)` (game_flow) |
 | F1 | `0919:0520` | Panel switch per station (`0919:03cb`, table `CS:0270`). Pilot: switch 0, the **main switch** (`D520`, §4.4); switching it off also switches off each running engine (`0919:0608`). Bow: entry 12h, midship: 10h, stern: 1Ch. |
 | F2 | `0919:05ae` | Pilot, main switch on: toggle each engine that has fuel and is not wrecked (`0608`). Bow: entries 16h then 14h; midship 0Eh; stern 1Ah. |
-| F3 | `0919:056b` | Panel switch: pilot 4, bow 2, midship 6, stern 18h |
-| F4 | `0919:0667` | "Pilot, reverse course." (1Eh): toggles `D684`, recomputes the route (`8754`/`87e8`, §4.4) |
+| F3 | `0919:056b` | Panel switch: pilot 4, bow 2, midship 6, stern 18h. **Quirk:** entry 4 is toggled whenever AL is 1 after the gun station's toggle (the AX `panel_switch_toggle` returns), as it is for the pilot (station low byte 1). |
+| F4 | `0919:0667` | "Pilot, reverse course." (1Eh): toggles `D684`, recomputes the route (`8754`/`87e8`, §4.4). Not ported yet (needs `route_point`, `route_advance`). |
 | F5 / F6 | `0919:0649/0658` | "Pilot, branch left / right." (20h / 23h): `D685 = 1 / 2` |
 | F7 | `0919:06ee` | "Pilot, slower." (30h): computer-pilot throttle `D680 -= 15`, minimum 8 |
 | F8 | `0919:06a9` | "Pilot, faster." (1Ch): `D680 += 15`, at most `B81C` and `B81D` |
@@ -274,12 +280,22 @@ every pass **except** when a key with its own handler was pressed.
 The pilot commands (F4–F8) queue the crew's answer (`0919:0713`): `B800 = 1` and `B802` =
 21h "-I can't, you're piloting." (at the pilot station, not in chase view), 12h "-he's dead,
 sir." (captain dead), 24h "-we're not moving, sir." (speed 0), else 2 "Aye-aye, sir!". F8 at
-the maximum answers 32h "-maximum speed, sir." F7 down to idle sets `B802 = 24h`. While
-`B800 == 2` all messages are suppressed (§9).
+the maximum answers 32h "-maximum speed, sir." (only when the port maximum `B81C` capped the target,
+not the starboard one: quirk; a queued 24h becomes 2 first). F7 down to idle sets `B802 = 24h`. While
+`B800 == 2` all messages are suppressed (§9). The reply is 21h at the pilot station only when the
+station's low byte is 1 and the chase view is off.
 
 Panel switches (`0919:03cb`, `0919:0178`, `0919:0027`) set the switch byte `DS:D520 + n` and
 redraw it. The table at `CS:0270` gives, per entry, the switch number and the indicator to redraw
-(FFh = none). The drawing belongs to the hud spec.
+(FFh = none). The drawing belongs to the hud spec. **verified** (port, differential test)
+`panel_switch_toggle(BX = entry offset)`: the switch is set (switch_draw mode 00h) to its byte xor 1,
+then its lamp to 3 while the switch is on (bit 0 clear), 0 when off. A switch number above 80h (none
+in the table) would drive two lamps n and n + 1 with opposite values. The entries: 00h switch 0 /
+lamp 0; 02h 8 / 16h; 04h 4 / none; 06h 0Dh / 1Ah; 08h 1 / 1 and 0Ah 2 / 2 (the engines,
+`engine_switch`); 0Ch 0 / 0 (the pilot's main switch); 0Eh 0Ah / 19h; 10h 9 / 18h; 12h 5 / 17h;
+14h 6 / 14h; 16h 7 / 15h; 18h 10h / 1Dh; 1Ah 0Fh / 1Ch; 1Ch 0Eh / 1Bh. It returns the AX the lamp
+routine leaves (00FFh when there is no lamp); the callers pass AX on (`panel_redraw_all` after F1
+stores its AH in `scratch_b7e3`).
 
 ### 3.4 `controls_poll` (0919:0953) **verified**
 
@@ -336,11 +352,36 @@ skipped.
 
 ### 4.2 Engines **verified**
 
-`engine_switch(si)` (`0919:0608`) toggles panel entry `8 + 2*si`, updates the engine indicator
-(`D503+si`), and starts the start/stop countdown in `B808+si` (80h start, 7Fh stop; a reversal
-mid-countdown flips it with XOR FFh). `engine_thrust(si)` (`0919:2529`) advances the
-countdown, burns fuel and leaks, stops the engine at empty fuel, and returns the engine's
-forward and turning thrust in DX and CX (exact rules: ORIGINAL_PHYSICS.md).
+`engine_switch(si)` (`0919:0608`) toggles panel entry `8 + 2*si` (switch 1 / 2 and lamp 1 / 2).
+The engine reacts only when its lamp's low 3 bits (`D503+si`) are 0 or 3 (a lamp of 3 is first
+set to 2); any other lamp value leaves the countdown alone. In a countdown (`B808+si & FCh`
+nonzero) the countdown reverses: `B808 = (B808 & FCh) xor FFh`. Otherwise it starts: **7Fh when the
+switch is now on** (it counts down by 2 to 1: running) and **80h when off** (it counts up by 2 to 0:
+stopped). (Earlier drafts had the two values swapped.) **verified** (port, differential test)
+
+`engine_thrust(si)` (`0919:2529`, returns CX = forward thrust, DX = turning thrust) **verified**
+(port, differential test):
+
+```
+if fuel tank condition D506+si & 3 != 3:            (leaking)
+   fuel B80A+2si -= 16 * condition; at or below 0: fuel_out(si)
+state = B808+si
+  0:                   stopped: throttle = 0, jet reverse bit cleared, CX = DX = 0
+  80h..FFh (stopping): state += 2 (+1 if that reaches 0)
+  2..7Fh (starting):   state -= 2 (-1 from 2); reaching 1 from 2 or 3 sets the engine lamp to 3
+  after a countdown step: state 0 -> stopped as above; else throttle = 8 - ((state & 70h) >> 4),
+                       jet reverse bit cleared, CX = DX = 0
+  1 (running):         p = max(throttle - 9, 0) (vec_factor B7E5)
+                       j = jet_angle (bit 7 included) + DS:D6B6[si] (10h, F0h), |j| as a signed
+                       byte (B7E2); f = j, or 80h - j above 40h (B7E3)
+                       CX = hi(p * 80h * sine[4f]), halved and negated in reverse (jet bit 7)
+                       DX = hi(p * 80h * sine[100h - 4f]), negated when j > 40h
+if (DS:008B & 1Fh) == 0: fuel -= throttle >> 2; at or below 0: fuel_out(si)
+if station low byte == 1 (quirk: only at the pilot's station) and waterjet D50A+si & 3 != 3:
+   CX, DX >>= 1 (arithmetic); twice for a destroyed waterjet (2)
+fuel_out(si): fuel = 0; engine_switch(si) if its switch is on; switch byte D521+si = 15h;
+              lamp D503+si = 95h
+```
 
 ### 4.3 Propulsion (`0919:2273`) and headings **verified**
 
@@ -535,8 +576,10 @@ if not locked (D6B4 == 0):
    obj = row[0]; if |obj.X - boat.X| >= 80h or |obj.Y - boat.Y| >= 80h: return
    D6B4 = 1 (boat locked); D6B5 = 5
    for k in 0..4:   object[1+k]:
-      insertion: kind 25h, flags 5, start = boat position with X spread (`X + (word >> 4) - 20h`)
-      extraction: kind 24h, flags 5, start = position of object row[k]
+      flags 5 - k (5, 4, 3, 2, 1: the loop counter is the word's high byte)
+      insertion: kind 25h, start = boat position with X spread (X + (word >> 4) - 20h)
+      extraction: kind 24h, start = position of object row[0] + 2k (the row's first object and
+                  the four objects after it, not row[k])
 else (locked):
    for each passenger k in objects 1..5 that is still present:
       target = boat (kind 24h) or object row[k] (kind 25h)
@@ -547,6 +590,8 @@ else (locked):
 ```
 
 While `D6B4` is set, `accelerate_speed` does not change the speed (Codex: `movementLocked`).
+The `mission_stop` pseudocode is **verified** (port, differential test). It leaves SI at the last
+row object it loaded (and DI changed); the port returns SI.
 `move_toward` (`0919:1fc3`, BX = object offset, CX/DX = target, steps `D6A2`/`D6A4`): the step
 on the axis with the smaller distance is halved; each axis moves by at most its step toward the
 target. **verified** (port, differential test) Exactly:
@@ -632,8 +677,9 @@ set, `sfx_play(sound)`. Firing is requested once per `controls_poll` or gunner p
 other rate limit, heat or ammunition.
 
 `reload_tick` (`0919:1cf9`, every boat pass): a reload counter below its ready value counts down
-to 0, then is restored to 8 / 30h. `muzzle_flash_tick` (`0919:81f8`, once per frame) counts the
-flash counters down.
+to 0, then is restored to 8 / 30h; each step redraws the mount's lamp (19h midship, 1Ch stern) with
+2 (reloading) or 3 (ready). **verified** (port) `muzzle_flash_tick` (`0919:81f8`, once per frame)
+counts the flash counters down.
 
 ### 6.2 Crew gunners (`0919:18af`, once per frame) **verified**
 
@@ -650,9 +696,12 @@ for gun in (bow 18c7: heading B81F, fraction B823, elevation B837, index 0, memo
    gunner_aim(gun)                                   0919:19a0
 ```
 
-`gunner_aim` scans the visible-object list (§8.2) from its last entry down to 0:
+`gunner_aim` scans the visible-object list (§8.2) from its last entry down to 0. The list is
+sorted far to near, so the last entries are the nearest: **the scan ends** (and the gun sweeps) at
+the first entry whose distance class `DS:4C97[2i]` is above 12h (earlier drafts made it a filter).
+**verified** (port, differential test)
 
-* candidate: distance class `DS:4C97[2i] <= 12h`; kind (`B95D` low byte of object `DS:523E[i]`)
+* candidate: kind (`B95D` low byte of object `DS:523E[i]`)
   in 01h..17h and not 10h or 11h; relative bearing
   `a = 4E00[i] + D191 − gun heading − 38h`, accepted if `a <= 28h` (unsigned);
   line of sight clear (`0919:348e` returns CH = 0).
@@ -668,6 +717,19 @@ for gun in (bow 18c7: heading B81F, fraction B823, elevation B837, index 0, memo
 
 Turning and elevation use the player's aiming routines (`0919:1aa3` → `aim_bow`/`aim_stern`/
 `aim_midship`, §3.4) with the chosen rate index, so the arc limits apply to the crew too.
+
+The gun is described in shared scratch variables: `DS:B7DE` (the hud's `gauge_row`) holds the
+address of the gun's heading byte, `B7E3` its fraction, `B7E2` the gun (0 bow, 1 stern, 2 midship),
+`B7E9` its elevation, `B7DC` the address of its sweep byte (`gunner_sweep`, `DS:D67D..D67F`).
+
+Registers: `crew_gunners` loads AX = the word `B82E` and returns it when the crew does not fire at
+will (or in chase view); otherwise AX is what the last gunner leaves (AH is carried through, AL the
+last value loaded; after an aim or a shot the AX the aiming / fire routine leaves: `aim_*` return AL
+= the stepped fraction and AH = the relative heading when they turn, `projectile_aim` AH from its
+last product and AL = 1 in the fourth quadrant). SI is left at the last object offset or 2·entry the
+scan loaded. `game_frame` passes AX to `jet_marker`, `throttle_needles` and `panel_blink` (whose
+lamps store AH in `scratch_b7e3`) and SI to `projectile_tick` (`DS:D6F6`). **verified** (port,
+differential test of AX and SI)
 
 ### 6.3 Identify (F9, `0919:0465`) **verified**
 
@@ -725,7 +787,14 @@ mark_near_objects(): every visible entry (§8.2) with kind < 19h and distance cl
 hit_objects()                                                                     0919:3977
 ```
 
-`hit_objects` walks the visible list from the last entry down:
+`projectile_impact` also puts the weapon in `DS:B7EA`; the explosion is kind 42h, or 4Bh for weapons
+2 and 3, with flags 3. `projectile_tick`, `projectile_impact` and `mark_near_objects` take the
+caller's SI, which `mark_near_objects` stores in `DS:D6F6` (`caller_si`; `hit_objects` reloads SI
+from it for its "friendly" message).
+
+`hit_objects` walks the visible list from the last entry down; **the first entry the shot hits
+takes it and the routine ends there** (only wrecks 30h/31h and the ignored kinds ≥ 17h let the shot
+go on to the next entry). **verified** (port, differential test)
 
 * Skip empty, kind ≥ 3Fh, and objects 0..35 (boat and temporary objects) **except** kind 12h.
 * `hit_test` (`0919:3bbc`, view space, BX = entry, returns AH): the difference between the
@@ -752,8 +821,12 @@ hit_objects()                                                                   
 * On destruction (`0919:3aba..3b26`): `terrain_structure_break` (`0919:3c51`); a fire object
   (word 0448h: kind 48h, flags 4) is placed at the wreck unless the wreck is 32h, 33h or 37h or
   the old kind was 12h/13h (when the temporary slots are full it avoids the hunter's slot
-  `D6A0`); if `DS:5401[kind]` is nonzero, `02d2:2b4a` updates the score word
-  `DS:B52E + 2*that value` (game_flow); `mission_target_check` (`0919:3b51`).
+  `D6A0`); if `DS:5401[old kind]` is nonzero, `score_add` updates the score word
+  `DS:B52E + 2*that value` (BCD, game_flow) and `B7E2` is set to the old kind, **or to 04h when a
+  fire object was placed** (the AH of `MOV AX,0448h`: quirk); `mission_target_check` (`0919:3b51`).
+  The damage bits of the object are kept in `B7F8` (shot_elevation) meanwhile and its kind in
+  `DS:D74C` (`hit_kind`, for the friendly test of the message). Class byte 0 ends the routine with
+  no message.
 * Message (`0919:1565`) unless the target was friendly: "Target destroyed." (0Fh), or
   "MISSION ACCOMPLISHED!" (16h, below).
 
@@ -819,14 +892,20 @@ test)
 
 ```
 if D8BC: return
+D6F6 = SI (the caller's)
 toggle bit 20h of the byte at DS:6E54 + [DS:6E54] once per frame (every 2^n passes)
 D70C++                                                     (world-pass counter)
-for each visible entry, last to first:
+for each visible entry, last to first (the entry number kept in B7DC and reloaded from there:
+   quirk, a message printed meanwhile, "Salvo coming in!" or "MISSILE coming our way!", leaves its
+   last character '!' (21h) in B7DC's low byte, and the scan goes on from entry 20h):
    kind 0: skip
-   effects (kind >= 3Fh): count down the lifetime in the flags byte; advance the animation frame
-       (every 2 passes); at the end remove the object or turn it into the next stage
-       (4Bh → 0, 44h → 0, 48h → 0 …, exact table 0919:2f39..2f86)
-   kinds 28h/29h (every 16 passes) and 33h/34h (every 8): toggle between the two frames
+   effects (kind >= 3Fh), exact (0919:2f39..2f86):
+       wakes 3Fh -> 40h -> 41h -> 3Fh, the kind stored on even passes only; at 3Fh the flags
+       byte (lifetime) counts down first, and the wake is removed at 0
+       other effects: while the flags byte is nonzero it counts down (a flags byte of 0 never
+       changes); at 0 the kind advances with a new count: 43h, 44h -> removed at 44h (count 2);
+       45h..47h (2), removed at 48h; 49h, 4Ah (4); removed at 4Bh; 4Ch..51h (1); removed from 52h
+   kinds 28h <-> 29h (every 16 passes); 33h -> 34h -> 35h (every 8 passes; 35h stays: not a toggle)
    other kinds >= 19h: skip
    hostile (01h..18h) within distance class < 18h, with behaviour bits 5–7 != 0:
       d = distance class >> 1; w = behaviour byte; c = class byte; f = flags byte
@@ -837,11 +916,14 @@ for each visible entry, last to first:
       elif c & C0h and this is not the missile source D6A6:
           phase gate with DS:B3F4[region] (masked C1h for weapon classes ≤ 2)
           RNG gate: (DS:008A & DS:B3F8[(c >> 6) − (f bit 3 ? 1 : 0)]) == 0
+          B7E6 = B7E7 = bearing + view heading − 48h
           weapon class 0: no fire; class 1: only within d < 6; others: d < DS:B41C[region];
           not while f bit 5; line of sight clear
-          kind 14h (25%) or kind 17h at d >= 3 (1/16), and no missile in flight:
-              launch_missile()                              (§8.4)
+          kind 14h (25%) or kind 17h at distance class >= 3 (1/16), no missile in flight, and a
+          free temporary slot below 46h: launch_missile()   (§8.4)
           else schedule_shot(w)                             0919:3217
+      (the phase gates scramble a byte by SHR 1 and three RCR 1, OR 10h when the last carry is set:
+       the entry's 2*i for firing, the low byte of the object offset for spotting)
       movement, if behaviour >= 2, f bit 4 clear and c bit 5 set:
           circling (4–7): every 8 passes a wake (0919:31f1, kind 3Fh flags 0Ah); every 16 passes
                           facing (f bits 0–2) += 1 (−1 for 6–7)
@@ -860,7 +942,13 @@ in!"): if incoming slots 8–15 are all free, eight shots with descriptors `A0h 
 + k and timers `d/2 + 1 + 7k`, and the boat heading and speed at launch are saved in
 `D6F8`/`D6F9`. Otherwise the first free slot 0–7 gets descriptor `((w << 3) & E0h) | accuracy`
 and timer `d/2 + 1`, `D70D++`, and a muzzle flash object appears at the shooter (kind 53h; 54h
-for shooter kinds 0Dh–0Fh; 52h for weapon classes above 2).
+for shooter kinds 0Dh–0Fh; 52h for weapon classes above 2; flags 1). `d` is `B7E2`, the distance
+class / 2 that `enemy_update` left; the accuracy is `8·(w & 3) + 6` (kept in `B7E9`, w in `B7E3`).
+
+The `enemy_update` and `schedule_shot` pseudocode is **verified** (port, differential test on combat
+states: every entry of real visible lists, all world-pass phases). The movement reads the flags
+byte again after spotting (an object spotted in this pass moves with its new flags) and the
+behaviour, class and flags copies `B7EB`, `B7EC`, `B7E8` from memory at each test.
 
 ### 8.4 Homing missile (`0919:2038`, world group) **verified**
 
@@ -873,7 +961,9 @@ missile_update()                                          0919:2038
   if D6A8 == 0: return
   every 8 passes D6A8++                                   (age)
   if the shooter is now a wreck (kind 18h or 31h): explode
-  if the shooter is no longer in the visible list: explode
+  if the shooter is no longer in the visible list: explode  (looked up at the entry cached in
+                             DS:D6B2 first, then from the last entry down; D6B2 = the entry found;
+                             SI is left there: game_frame passes it to incoming_fire)
   every 4 passes, with line of sight from the shooter: retarget to the boat's position
   move_toward(target, step D6AD = 5)                      0919:1fc3
   if not at the target and D6A8 < 42h: return
@@ -907,14 +997,18 @@ slots 0–7 by one.
 
 ```
 boat_hit(class)                       class = AL & 7
+  B7F2 = 2, or 8 above class 2                            (shake steps, render3d §7)
   r = random() & 0Fh; if r >= DS:D194[class]: return      (D194 = 00 04 07 10 10 10 10 10)
   if class > 2: D9B5 = 3                                  (screen shake)
-  component = r; D194 = r (last component, used by the message)
+boat_hit_component(AL = component, CL = message)          0919:2a69 (also the ramming, CL = 0Ch)
+  component = r; D194 = r (last component, used by the message); component 0Ch: B7F2 = 8
   idx = DS:D1AC[component]; if condition D502[idx] & 3 == 2: return   (already destroyed)
-  message 0Ah "Hit to " + component name (CS:1457[component])
-  if practice (F110) or mission B505 <= 1: return         ("No damage possible." follows)
+  message CL: 0Ah "Hit to " + component name (CS:1457[component])
+  if practice (F110 low byte) or mission B505 low byte <= 1: return   ("No damage possible.")
   port / starboard engine (idx 6 / 7): B81C / B81D halved, throttle clipped to it
-  idx 4..7: 25% B7FE++ (leak)
+     (quirk: after the starboard one the halved maximum is compared with 6, so a halved B81D
+      of 6 also halves B81C)
+  idx 4..7: 25% B7FE++ (leak, random() & 3 == 0)
   condition 3 → 1 (damaged); 0 or 1 → 2 (destroyed); indicator redrawn; damage report refreshed
   if not destroyed: return
   destroyed:
@@ -928,7 +1022,10 @@ boat_hit(class)                       class = AL & 7
 
 `0919:2bb6` (`B52A = 1` for a damaged captain) is **unreachable**: the branch is only entered
 with the condition already 2. The hull (component 10) is never "destroyed" into a loss here; it
-sinks the boat through §8.7.
+sinks the boat through §8.7. The "damage report refreshed" step is `damage_panel_refresh`
+(`0919:2bbd`): a spotlight hit (condition index 0Ch front, 0Dh rear, 0Ah middle) at the gun
+station whose panel shows it (bow, midship, stern) redraws the gun panel, `gun_panel_copy(the
+condition byte)` on page 0. **verified** (port, differential test of every component)
 
 | Component | Name (message) | Condition byte |
 |---|---|---|
@@ -952,8 +1049,9 @@ Conditions: 3 intact, 1 damaged, 2 destroyed (0 also counts as damaged).
 ### 8.7 Sinking and loss (`0919:2cad`, `0919:2d0f`) **verified**
 
 `sinking_update` (world group): if the hull condition `D510 <= 2`, `B7FE = max(B7FE, D510)`.
-When `D70C == 5Bh` (once per 256 world passes): if `B7FE >= 2`, `B7FF += B7FE − 1`; at
-`B7FF >= 10h` the boat is lost, else message 0Bh "We're sinking!".
+When `D70C == 5Bh` (once per 256 world passes): if `B7FE − 1` is above 0 as a signed byte, the
+water `B7FF + B7FE − 1` (8-bit) at 10h or more loses the boat (`B7FF` unchanged), else it is
+stored and message 0Bh "We're sinking!". **verified** (port)
 
 `boat_destroyed` (`0919:2d0f`): `B545 = 1`; chase view looking back at the boat (distance 38h,
 heading `D191 + 80h`), `D8BC = 1`; sound 7, shake 3; speed, throttles and `D680` = 0; the boat
@@ -1007,7 +1105,28 @@ characters from `D64B + B7E3` (00f2:0e44). The code at `0919:1738` (a BCD twin o
 
 `0919:1565` shows a message on the visible page 0 and returns to drawing page 1 (used from the
 drawing part of the frame). `0919:1589` is its far entry (`input_read_key`'s pause messages).
-`0919:17d4` draws the message line frame per station (hud).
+
+`message_line_draw` (`0919:17d4`, once per frame) **verified** (port, differential test):
+
+```
+text colours (4, 0)                         (2 in CGA mode 4, EED2 == 4)
+cell (column, text row): chase view (11h, 4Eh); bow (11h, 85h), or (22h, 64h) with bow weapon 1;
+     midship and stern (20h, 84h); any other station above 4: return (the colour stays 4)
+pilot (station low byte 0 or 1):
+   looking left or ahead (F346 low byte <= 1): the clock at (0Fh left / 2 ahead, B0h), redrawn
+      only when the minutes differ from D649 (then D649 = minutes): hours (BCD, 2 digits), ':',
+      minutes (print_digits_tens with CL = 1, B7E3 = 1)
+   the readout at (22h left / 15h ahead / 8 right, B0h)
+readout: heading = the hull's B81E at station (word) 1, else the view heading D191; with the view
+   fraction D192 as AH, redrawn when the word differs from D647 (then D647 = it): heading_readout
+text colours (0Fh, 0)
+```
+
+`heading_readout` (`0919:16e3`, AL = heading, AH = fraction byte): the compass letters
+`D64F[((AL + 10h) >> 4) & 0Eh]` (two characters, `print_chars`), ':', then the degrees: the 14-bit
+value `(AL >> 2) : ((AL & 3) << 6 | AH >> 2 ...)` exactly as `SHR AL,1 / OR AH,8 / SHL AH,4 / SHR
+AL,1 / RCR AH,1` builds it, `(value << 16) / 5B00h >> 7`, printed by `print_3digits` with the carry
+= bit 8 (§ above; 0919:1729 is the `print_3digits` call used by the S1 test).
 
 ### 9.2 Mission clock and time of day **verified**
 
@@ -1139,8 +1258,13 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:1558 | print_colon | §9.1 |
 | 0919:1565 / 1589 / 1594 | show_message_page0 / show_message_far / show_message | §9.1 |
 | 0919:174e / 1769 / 176e / 1799 | print_bcd_2digits / print_3digits / print_digits_hundreds / print_digits_tens | §9.1 |
+| 0919:16e3 | heading_readout | §9.1 |
+| 0919:17d4 | message_line_draw | §9.1 |
 | 0919:18af | crew_gunners | §6.2 |
+| 0919:18c7 / 190d / 1953 | gunner_bow / gunner_stern / gunner_midship | §6.2 |
 | 0919:19a0 | gunner_aim | §6.2 |
+| 0919:1aa3 | gunner_key | §6.2 |
+| 0919:1cf9 | reload_tick | §6.1 |
 | 0919:1ac0 | crew_pilot | §4.5 |
 | 0919:1b2d | crew_pilot_decide | §4.5 |
 | 0919:1c00 | route_find | §4.6 |
@@ -1151,7 +1275,10 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:2038 | missile_update | §8.4 |
 | 0919:2273 | propulsion | §4.3 |
 | 0919:29f9 | accelerate_speed | §4.3 |
+| 0919:2529 | engine_thrust | §4.2 |
 | 0919:2a37 | boat_hit | §8.6 |
+| 0919:2a69 | boat_hit_component | §8.6 |
+| 0919:2bbd | damage_panel_refresh | §8.6 |
 | 0919:2cad | sinking_update | §8.7 |
 | 0919:2ce3 | window_hit | §8.6 |
 | 0919:2d0f | boat_destroyed | §8.7 |
@@ -1163,6 +1290,7 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:348e | line_of_sight | §8.2 |
 | 0919:3712 | atan | §4.6 |
 | 0919:37af / 37c7 | projectile_alloc / projectile_aim | §7.1 |
+| 0919:38cc | projectile_tick | §7.1 |
 | 0919:38ed | projectile_impact | §7.2 |
 | 0919:3948 | mark_near_objects | §7.2 |
 | 0919:3977 | hit_objects | §7.2 |
@@ -1193,8 +1321,15 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
   exact fork rules of `route_advance`: resolve while porting, with the differential test.
 * Weapon and region names are inferred (sounds, reload values, manual order); confirm against the
   outfitting screens (game_flow) and DOSBox.
-* `0919:0591` (cycles panel switch 3, `D523`) has no caller in the key tables: dead code or a
-  handler reached from elsewhere.
-* The panel switch table `CS:0270` and the switch/indicator art belong to the hud spec; which
-  F-key does what at the gun stations (switches 2, 6, 0Eh, 10h, 12h, 14h, 16h, 18h, 1Ah, 1Ch) is
-  to be named there.
+* `0919:0591` (cycles panel switch 3, `D523`) is in neither key table (`CS:0290` holds 13
+  handlers besides the default, `DS:D615` the ten F-key ones) and has no caller: dead code, not
+  ported.
+* The panel switch table `CS:0270` is listed in §3.3; the switch/indicator art belongs to the hud
+  spec; what the gun stations' switches (2, 6, 0Eh, 10h, 12h, 14h, 16h, 18h, 1Ah, 1Ch) mean is to be
+  named there.
+* Registers across the mission loop: `mission_run` does not reload SI before `game_frame`, which
+  passes it on through the world group (`missile_update` changes it; `incoming_fire` and
+  `enemy_update` store it in `DS:D6F6`) and the drawing part (`crew_gunners` changes it;
+  `projectile_tick` → `mark_near_objects` stores it). The ports of `game_frame` and `mission_run`
+  have to thread SI (and AX after `crew_gunners`) as the S2a routines return them. `mission_stop`
+  also leaves DI changed; no reader of DI after it is known.

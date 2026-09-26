@@ -352,3 +352,18 @@ global,DS:D65F,message_blank,u8[29],§9.1 28 spaces + AAh: clears the message li
 global,DS:D965,view_sky_top,u8,§3.4 first view row to redraw (render3d §3.1); the aiming routines clear it
 global,DS:D966,view_sky_top_prev,u8,§3.4 D965 of the last present (05bd:1fd4)
 global,DS:D97A,bob_masks,u16[],§5.4 wave bob random mask by sea state B4FF (no bound check)
+func,0919:16e3,heading_readout,near void(AL heading AH fraction),§9.1 compass letters (compass_points) and ':' then the heading in degrees (heading:fraction * 360 / 65536 via DIV 5B00h)
+func,0919:2bbd,damage_panel_refresh,near void(AL condition index),§8.6 spotlight hit at the gun station that shows it: gun_panel_copy(condition) on page 0
+func,0919:1cf9,reload_tick,near void(),§6.1 reload counters count down to 0 then back to 30h / 8; lamps 19h / 1Ch
+func,0919:38cc,projectile_tick,near void(SI),§7.1 flight countdowns; projectile_impact at 0 (SI goes to caller_si)
+func,0919:1aa3,gunner_key,near void(BL keys CL rate),§6.2 aim routine of gun scratch_b7e2 (0 bow 1 stern 2 midship)
+func,0919:1d30,mission_clock_tick,near void(),§9.2 clock; easter egg busy-wait of 300h ticks; deadline
+global,DS:B7E6,scratch_b7e6,u8,§8.3 enemy_update: bearing of the shooter relative to the view - 48h (also B7E7); hud: needle pivot y
+global,DS:B7EB,enemy_behaviour,u8,§8.3 behaviour byte of the object enemy_update is processing (saved around the missile message)
+global,DS:B7EC,enemy_class,u8,§8.3 class byte of the object enemy_update is processing
+global,DS:D649,readout_minutes_cache,u8,§9.1 minutes last drawn by message_line_draw (FFh forces a redraw)
+global,DS:D67D,gunner_sweep,u8[3],§6.2 bow / stern / midship gunner sweep direction (bit 0: 0 left 1 right)
+global,DS:D6B2,missile_source_entry,u16,§8.4 2*visible entry of the missile's source last found
+global,DS:D6B6,jet_engine_offset,u8[2],§4.2 added to jet_angle per engine in engine_thrust (10h F0h)
+global,DS:D6F6,caller_si,u16,§8.3 §7.2 SI of game_frame saved by enemy_update and mark_near_objects (hit_objects reloads SI from it)
+global,DS:D74C,hit_kind,u8,§7.2 kind of the object hit_objects is damaging (friendly test for the message)

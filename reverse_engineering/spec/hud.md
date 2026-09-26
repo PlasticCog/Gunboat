@@ -164,13 +164,19 @@ Drawn by `game_frame` after the boat passes (simulation §1.2) and by `propulsio
 The pilot's dashboard is a **panorama of five pictures `BD1`..`BD5`**; each look direction shows
 three (§5.1). The radar is in `BD5`.
 
-## 4. Message line (`message_line_draw`, 0919:17d4) **verified** (structure)
+## 4. Message line (`message_line_draw`, 0919:17d4) **verified** (port, differential test)
 
-Once per frame: text colours (4, or 2 in CGA) and the message line's cell position by station and
-fitted bow weapon (pilot and gun stations have their own row/column, e.g. row 11h), then the
-current message text (`show_message`, simulation §9.1) is printed through `0919:1558` (one
-character, `121b:03d8`), `16e3`, `174e`, `176e`, `1799`. Messages from the drawing part of the frame
-use `show_message_page0` so they land on the visible page.
+Once per frame: text colours (4, or 2 in CGA) and the **readouts** of the message line (the message
+texts themselves are printed by `show_message` when they change, simulation §9.1). The readout's
+cell (column, text row): chase view (11h, 4Eh); bow (11h, 85h), or (22h, 64h) with the second bow
+weapon; midship and stern (20h, 84h); other stations above 4 draw nothing (and keep colour 4). The
+pilot looking left or ahead gets the mission clock (hours:minutes) at (0Fh / 2, B0h) when the
+minutes changed (`DS:D649`), and the heading readout at (22h / 15h / 8, B0h) for left / ahead /
+right. The heading readout (`heading_readout`, `0919:16e3`) prints the compass letters and the
+degrees (`0919:1558` ':', `174e`, `176e`, `1799`) when the heading word changed (`DS:D647`): the
+hull's heading at the pilot's station, the view heading elsewhere. Colours 0Fh after. Exact
+pseudocode: simulation §9.1. Messages from the drawing part of the frame use
+`show_message_page0` so they land on the visible page.
 
 ## 5. Station screens (`05bd`, drawn when the station changes; world §3.2) **verified** (calls)
 
