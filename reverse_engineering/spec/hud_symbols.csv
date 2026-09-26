@@ -1,0 +1,46 @@
+kind,address,name,type,notes
+func,0919:000e,panel_blink,near void(),§2.1 every frame; timer DS:D5BE
+func,0919:0027,indicator_draw,near void(AL mode_id AH value),§2.1
+func,0919:016a,panel_switches_redraw,far void(),§2.1
+func,0919:0178,switch_draw,near void(AL mode_switch AH value),§2.1
+func,0919:0f77,jet_indicator_draw,far void(),§3
+func,0919:17d4,message_line_draw,near void(),§4
+func,0919:2324,throttle_needles,near void(),§3 pilot station
+func,0919:2704,needle_draw,near void(),§3
+func,0919:2786,jet_marker,near void(),§3 pilot station
+func,0919:2810,radar_scope,near void(),§3 pilot looking right
+func,0919:2932,radar_plot,near void(),§3
+func,0919:8a32,view_copy_1,far void(u16 dst_page u16 src_page),§6 VGA 8a72
+func,0919:8a72,view_copy_1_vga,near void(),§6 window trapezoid + 5x magnified strip
+func,0919:8ad5,view_copy_2,far void(u16 u16),§6 VGA 8b15
+func,0919:8b15,view_copy_2_vga,near void(),§6
+func,0919:8b43,view_copy_3,far void(u16 u16),§6 VGA 8b83
+func,0919:8b83,view_copy_3_vga,near void(),§6
+func,0919:8bf9,view_copy_4,far void(u16 u16),§6 VGA 8c39
+func,0919:8c39,view_copy_4_vga,near void(),§6
+func,0919:8cd3,view_copy_5,far void(u16 u16),§6 VGA 8d13
+func,0919:8d13,view_copy_5_vga,near void(),§6
+func,0919:8d45,view_copy_6,far void(u16 u16),§6 VGA 8d85
+func,0919:8d85,view_copy_6_vga,near void(),§6
+func,0919:8db7,view_copy_7,far void(u16 u16),§6 VGA 8df7
+func,0919:8df7,view_copy_7_vga,near void(),§6
+func,0919:8e47,view_copy_8,far void(u16 u16),§6 VGA 8e87
+func,0919:8e87,view_copy_8_vga,near void(),§6
+func,05bd:1ed0,gun_sprites_capture,far void(),§5 cuts sight and barrel sprites from the art
+func,05bd:2cde,gun_frame_draw,far void(u16),§6
+func,05bd:30ae,gun_panel_copy,far void(u16),§5
+cglobal,0919:2173,throttle_needle_points,u16[],§3
+global,DS:0B49,window_cracks,u8[5],§5 per station
+global,DS:D390,damage_report_labels,u16,§5 pointer to records
+global,DS:D392,damage_report_list,u16,§5 pointer to (x y id) triples
+global,DS:D394,condition_words,u16[8],§5
+global,DS:D502,indicators,u8[30],§2 same bytes as the component conditions
+global,DS:D520,switches,u8[17],§2 bit 0 set = off
+global,DS:D531,indicator_positions,u8[30][2],§2
+global,DS:D56D,indicator_graphics,u8[30],§2
+global,DS:D5BE,blink_timer,u8,§2.1
+global,DS:D6B8,radar_sweep,u8,§3
+global,DS:D6B9,jet_marker_last,u8,§3
+global,DS:D6BB,jet_marker_bitmap,u8[],§3
+global,DS:D6C1,gauge_centres,u8[3][12],§3 by look direction
+global,DS:D9B6,page_segments,u16[3],§1

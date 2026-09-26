@@ -123,8 +123,8 @@ function that contains them:
 
 ## Subsystem specs
 
-Status: **simulation**, **render3d**, **world**, **game_flow** — done (`spec/*.md`, 2026-09-25).
-hud, platform, video, sound — to do.
+Status: **simulation**, **render3d**, **world**, **game_flow**, **hud** — done (`spec/*.md`,
+2026-09-25). platform, video, sound — to do.
 
 As TD3: one spec per subsystem in `reverse_engineering/spec/<owner>.md`, each with an overview
 and call graph, a function table, a globals table, pseudocode, file formats, the DOS/hardware
