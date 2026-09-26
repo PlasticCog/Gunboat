@@ -277,4 +277,31 @@ void crew_pilot_decide()
     route_advance(p.dx, set_cl(p.cx, ds_u8(DS_route_index)), ds_u16(DS_route_cell));
 }
 
+// 0919:1ac0 crew_pilot (simulation.md §4.5, every boat pass): while the player pilots (station 1, not
+// the demo, not the chase view) the crew pilot only resets (keys 0, rate 0, state 2 = search) and
+// keeps its throttle target at the lower throttle, at least 8. Otherwise, unless the captain is
+// down (condition 2) or the random gate of his condition skips this pass, the crew pilot decides
+// and, while the main switch is on, works the controls with the keys it chose.
+void crew_pilot()
+{
+    if (ds_u16(DS_demo_mode) == 0 && u8(ds_u16(DS_station)) == 1 && ds_u8(0xD96B) == 0) {
+        ds_u8(DS_crew_pilot_keys) = 0;
+        ds_u8(DS_crew_pilot_rate) = 0;
+        ds_u8(DS_crew_pilot_state) = 2;
+        u8 bl = ds_u8(DS_throttle);
+        if (bl > ds_u8(u16(DS_throttle + 1))) bl = ds_u8(u16(DS_throttle + 1));
+        if (bl < 8) bl = 8;
+        ds_u8(DS_crew_throttle_target) = bl;
+        return;
+    }
+    const u8 bl = ds_u8(DS_captain_condition) & 3;
+    if (bl == 2) return;
+    if ((ds_u8(DS_rng_state) & ds_u8(u16(DS_crew_pilot_gate + bl))) != 0) return;
+    crew_pilot_decide();
+    const u8 cl = ds_u8(DS_crew_pilot_keys);
+    const u16 bx = ds_u8(DS_crew_pilot_rate);
+    if ((ds_u8(DS_panel_switches) & 1) != 0) return;
+    pilot_throttle_controls(cl, bx);
+}
+
 } // namespace gb

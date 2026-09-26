@@ -3,6 +3,8 @@
 #include "game/sim.hpp"
 
 #include "mem.hpp"
+#include "platform/platform.hpp"
+#include "render/render.hpp"
 #include "sound/sound.hpp"
 #include "symbols.hpp"
 
@@ -486,6 +488,90 @@ void schedule_shot(u8 al, u16 si)
     const u8 kind = object_kind(src);
     if (kind >= 0x0D && kind <= 0x0F) object_word(bx) = 0x0154;
     if ((ds_u8(DS_scratch_b7e3) & 0x1C) > 8) object_word(bx) = 0x0152;
+}
+
+// 0919:32fb incoming_fire (simulation.md §8.5, world group): the 16 incoming-fire timers; each that
+// runs out now fires its shot (descriptor D70E[i]: bits 5-7 the weapon, bits 0-4 the accuracy or
+// the missile's bearing slot). A missile (weapon 5) hits when its bearing and the speed difference
+// allow (boat_hit 5), and leaves a splash or a hit object at polar (bearing, 10h) from the boat;
+// the others hit on a random draw against the accuracy (night halves the chance), then damage the
+// boat (boat_hit by weapon) and, for the light weapons, a window; a splash or a burst object is
+// placed near the boat. SI is kept; it is saved in caller_si, which the callees read.
+void incoming_fire(u16 si)
+{
+    ds_u16(DS_caller_si) = si;
+    for (u16 bx = 0; bx < 0x10; bx++) {
+        if (ds_u8(u16(DS_incoming_timer + bx)) == 0) continue;
+        if (--ds_u8(u16(DS_incoming_timer + bx)) != 0) continue;
+        u8 al = ds_u8(u16(DS_incoming_descriptor + bx));
+        sfx_play((al & 0xE0) > 0x40 ? 0x0B : 0x0A);
+        al = ds_u8(u16(DS_incoming_descriptor + bx));
+        ds_u8(DS_scratch_b7e3) = al;
+        al &= 0x1F;
+        ds_u8(DS_scratch_b7e2) = al;
+        al ^= ds_u8(DS_scratch_b7e3);
+        if (al == 0xA0) {  // a missile
+            u8 bl = seg_u8(0x0919, u16(ds_u8(DS_scratch_b7e2) + 0x2E88));
+            bl = u8(bl + ds_u8(DS_salvo_heading));
+            bl = u8(bl - ds_u8(DS_heading));
+            ds_u8(DS_scratch_b7e2) = bl;
+            u8 d = u8(ds_u8(DS_salvo_speed) - ds_u8(DS_speed));
+            if (!(d & 0x80)) d = u8(-d);
+            d = u8(d + 0x58);
+            d = u8(d >> 2);
+            const u8 ah = d;
+            d = u8((d >> 1) + bl);
+            u16 kind;
+            if (d > ah) {
+                kind = 0x244;
+            } else {
+                sfx_play(7);
+                boat_hit(5);  // (SI = caller_si)
+                kind = 0x34B;
+            }
+            const u8 bearing = u8(ds_u8(DS_scratch_b7e2) + ds_u8(DS_heading) - 0x80);
+            CxDx p = polar_small(bearing, 0x10);
+            p.cx = u16(p.cx + ds_u16(DS_object_x));
+            p.dx = u16(p.dx + ds_u16(DS_object_y));
+            const u16 slot = free_temp_object();
+            ds_u16(u16(DS_object_word + slot)) = kind;
+            ds_u16(u16(DS_object_x + slot)) = p.cx;
+            ds_u16(u16(DS_object_y + slot)) = p.dx;
+            ds_u8(DS_incoming_count)--;
+            continue;
+        }
+        u16 cx;
+        al = u8(random()) & 0x3F;
+        if (al > ds_u8(DS_scratch_b7e2) || ((ds_u8(DS_daylight) ^ 1) & ds_u8(u16(DS_rng_state + 1))) != 0) {
+            cx = 0x1F1F;  // a miss
+        } else {
+            sfx_play((ds_u8(DS_scratch_b7e3) & 0xE0) > 0x40 ? 7 : 9);
+            boat_hit(u8(ds_u8(u16(DS_incoming_descriptor + bx)) >> 5));  // (SI = caller_si)
+            al = ds_u8(u16(DS_incoming_descriptor + bx));
+            ds_u8(DS_scratch_b7e3) = al;
+            cx = 0x0707;
+            if ((al & 0xE0) <= 0x40) {
+                window_hit();
+                ds_u8(DS_incoming_count)--;
+                continue;
+            }
+        }
+        const u8 b3 = ds_u8(DS_scratch_b7e3);
+        const u8 weapon = u8(((b3 << 3) | (b3 >> 5)) & 7);  // rol al, 3
+        u16 ax = u16(ds_u16(u16(DS_rng_state + 2)) & cx);
+        const u8 cl = u8(u8(cx) >> 1), ch = u8(u8(cx >> 8) >> 1);
+        const u16 dx = u16(((u8(ax >> 8) - ch) & 0xFF) << 8 | ((u8(ax) - cl) & 0xFF));
+        const u16 slot = free_temp_object();
+        u16 kind = 0x242;
+        if (weapon > 2) {
+            kind = 0x24B;
+            if (cl > 7) kind = 0x244;
+        }
+        ds_u16(u16(DS_object_word + slot)) = kind;
+        ds_u16(u16(DS_object_x + slot)) = u16(s16(s8(u8(dx))) + ds_u16(DS_object_x));
+        ds_u16(u16(DS_object_y + slot)) = u16(s16(s8(u8(dx >> 8))) + ds_u16(DS_object_y));
+        ds_u8(DS_incoming_count)--;
+    }
 }
 
 } // namespace gb

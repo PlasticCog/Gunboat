@@ -68,7 +68,7 @@ def test_boat_move(h, rng, scale):
             put8(m, 0xB828, rng.choice(SPEEDS))
         if rng.random() < 0.8:
             put16(m, 0x0086, rng.randrange(1, 10))
-        h.check('boat_move', m, label='case %d' % i)
+        h.check('boat_move', m, regs={'si': rng.randrange(0x10000)}, outputs=['si'], label='case %d' % i)
     return n
 
 

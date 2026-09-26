@@ -7,7 +7,8 @@ namespace gb {
 
 u16 vec_scale(u8 al);          // 0919:3706  returns AX
 u16 heading_vector(u8 angle);  // 0919:7e5f  AL = angle, returns AX
-void boat_move();              // 0919:7ee8
+u16 boat_move(u16 si);         // 0919:7ee8  returns SI
+u16 boat_motion(u16 si);       // 0919:7ebb  returns SI (mission_stop)
 
 // ---- controls (sim_controls.cpp): key actions, aiming, throttles, headings, fire keys
 void end_mission();                     // 0919:0906
@@ -86,6 +87,7 @@ void key_f6_branch_right();             // 0919:0658
 void key_f8_faster();                   // 0919:06a9
 void key_f7_slower();                   // 0919:06ee
 void pilot_command_reply();             // 0919:0713
+void key_f4_reverse_course();           // 0919:0667
 void key_m_map();                       // 0919:074a
 void key_period_assignment();           // 0919:0756
 void key_z_pilot_left();                // 0919:0762
@@ -142,6 +144,7 @@ void boat_destroyed();                         // 0919:2d0f
 
 // ---- enemies, missile and passengers (sim_enemies.cpp)
 u16 mission_stop(u16 si);                      // 0919:1e87  returns SI
+void incoming_fire(u16 si);                    // 0919:32fb  SI kept (saved in caller_si)
 u16 missile_update(u16 si);                    // 0919:2038  returns SI (the source entry once found)
 void enemy_update(u16 si);                     // 0919:2ea8  SI = the caller's (saved in caller_si)
 void schedule_shot(u8 al, u16 si);             // 0919:3217  AL = behaviour byte, SI = 2*entry
@@ -163,5 +166,6 @@ RoutePoint route_point(u16 cx, u16 bx);     // 0919:8754  CL = index, BX = grid 
 u16 route_advance(u16 dx, u16 cx, u16 bx);  // 0919:87e8  DH = link, CL = index, BX = cell; returns DX
 void route_find();                          // 0919:1c00
 void crew_pilot_decide();                   // 0919:1b2d
+void crew_pilot();                          // 0919:1ac0
 
 } // namespace gb

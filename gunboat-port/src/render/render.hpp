@@ -69,6 +69,8 @@ void list_bubble();                                   // 0919:6c23
 void sprite_lod_update();                             // 0919:6cad
 u16 sprite_lod_entry(u16 si, u8 dl, u16 bx);          // 0919:6cfa  SI = entry + 1, DL = class; SI
 void visible_project();                               // 0919:6d92
+void object_update();                                 // 0919:6af9
+void object_frame();                                  // 0919:6e5c
 void sprite_slots_reset();                            // 0919:6f3d
 void sprite_slot_alloc(u8 ah, u16 si);                // 0919:7017  AH = level, SI = entry + 1
 void sprite_cache_invalidate();                       // 0919:5a9f  (far)

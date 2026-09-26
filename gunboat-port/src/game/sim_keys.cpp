@@ -3,8 +3,9 @@
 // fkey_handlers (F1..F10 at the 3D stations); everything else polls the held controls.
 #include "game/sim.hpp"
 
+#include <utility>
+
 #include "game/flow.hpp"
-#include "game/pending.hpp"
 #include "host.hpp"
 #include "hud/hud.hpp"
 #include "mem.hpp"
@@ -29,7 +30,7 @@ u16 call_handler(u16 ax, u16 si)
     case 0x05AE: key_f2_panel(); break;
     case 0x0649: key_f5_branch_left(); break;
     case 0x0658: key_f6_branch_right(); break;
-    case 0x0667: key_f4_reverse_course(); break;  // pending.cpp: needs route_point / route_advance
+    case 0x0667: key_f4_reverse_course(); break;
     case 0x06A9: key_f8_faster(); break;
     case 0x06EE: key_f7_slower(); break;
     case 0x074A: key_m_map(); break;
@@ -522,6 +523,43 @@ void key_d_detail()
     ds_u8(0xD6C0) = bh;  // DS:D6C0, render3d's object distance limit
     ds_u8(DS_scene_rebuild) = 1;
     show_message(u8(ds_u8(DS_detail_low) + 0x36));
+}
+
+// 0919:0667 key_f4_reverse_course (simulation.md §3.3, §4.6): F4 at a gun station: "reverse course"
+// (message 1Eh), the route direction flipped, and the crew pilot's target turned round: the
+// waypoint of the current index in the current cell; when that has no forward link (DH negative:
+// FFh, none) the previous waypoint and link are swapped in and that point becomes the target (state
+// 1, steering); otherwise route_advance takes the next one, and a pilot reply follows unless it
+// found none.
+// CX: route_point reads CH, which it passes through to its CX output when the index has no
+// waypoint, so in the double miss CH reaches route_y. It is show_message's CH: 0 on every path
+// that draws (the pen x's low byte from gfx_draw_bitmap, a colour from gfx_set_colour, 000Ch from
+// bin_to_bcd), and the caller's when the message is suppressed (B800 = 2): key_dispatch's entry
+// CX, which was 00xxh at all 1,674 entries measured over the gun stations and the chase view
+// (view_present and gfx_copy_rect leave CH = 0). So CH = 0.
+void key_f4_reverse_course()
+{
+    show_message(0x1E);
+    ds_u8(DS_route_direction) ^= 1;
+    u16 bx = ds_u16(DS_route_cell);
+    RoutePoint p = route_point(ds_u8(DS_route_index), bx);  // CH = 0, see above
+    u16 cx = u16((p.cx & 0xFF00) | ds_u8(DS_route_index));
+    u8 dh = u8(p.dx >> 8);
+    if (s8(dh) < 0) {
+        const u8 link = ds_u8(DS_route_link);  // xchg [D688], dh
+        ds_u8(DS_route_link) = dh;
+        dh = link;
+        const u8 prev = ds_u8(DS_route_prev_index);  // xchg [D687], cl
+        ds_u8(DS_route_prev_index) = u8(cx);
+        cx = u16((cx & 0xFF00) | prev);
+        p = route_point(cx, bx);  // route_point keeps BX
+        ds_u16(DS_route_x) = p.ax;
+        ds_u16(DS_route_y) = p.cx;
+        ds_u8(DS_crew_pilot_state) = 1;
+        return;
+    }
+    const u16 dx = route_advance(u16((dh << 8) | u8(p.dx)), cx, bx);
+    if (u8(dx >> 8) != 0xFF) pilot_command_reply();
 }
 
 } // namespace gb

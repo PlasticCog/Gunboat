@@ -6,7 +6,7 @@ using namespace gb;
 
 BRIDGE(vec_scale) { r.ax = vec_scale(u8(r.ax)); }
 BRIDGE(heading_vector) { r.ax = heading_vector(u8(r.ax)); }
-BRIDGE(boat_move) { boat_move(); }
+BRIDGE(boat_move) { r.si = boat_move(r.si); }
 
 // ---- package S1: controls, messages, projectiles, hits, time of day, camera bob (simulation.md)
 #include "sound/sound.hpp"

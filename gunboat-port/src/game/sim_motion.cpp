@@ -2,6 +2,7 @@
 #include "game/sim.hpp"
 
 #include "mem.hpp"
+#include "render/render.hpp"
 #include "symbols.hpp"
 
 namespace gb {
@@ -93,7 +94,7 @@ u16 heading_vector(u8 angle)
 // 0919:7ee8 boat_move (simulation.md §5.1): moves the boat (object 0) along the hull heading by the
 // speed with 1/256 fractions, clipped to the map, then shifts the water marks (render3d.md §3.2) by
 // the motion relative to the view.
-void boat_move()
+u16 boat_move(u16 si_in)
 {
     // Y: vec_factor is the cosine of the hull heading.
     heading_vector(ds_u8(DS_heading));
@@ -133,7 +134,7 @@ void boat_move()
     ds_u8(DS_vec_factor) = ds_u8(DS_vec_sin);
     vec_scale(abs_speed());
     const u8 n = ds_u8(DS_vec_product_hi) >> 3;
-    if (n == 0) return;
+    if (n == 0) return si_in;  // SI untouched
     // 16 table rows, two marks each, starting at the mark of the first horizon row. n + 10 * row
     // can pass the 160-byte table and read the code bytes of heading_vector after it, as the
     // original does.
@@ -157,6 +158,21 @@ void boat_move()
             }
         }
     }
+    return si;  // n + 10 * 16 after the loop
+}
+
+// 0919:7ebb boat_motion (simulation.md §5.1, every boat pass): the wake picture by the heading
+// (B95E, the boat's object byte), then the mission stop test while stopped or the move while under
+// way, and the camera position (quarter units). Returns SI (mission_stop can change it).
+u16 boat_motion(u16 si)
+{
+    ds_u8(0xB95E) = u8(u8(ds_u8(DS_heading) + 0x90) >> 5);
+    if (ds_u8(DS_speed) == 0) si = mission_stop(si);
+    else si = boat_move(si);
+    const CxDx c = camera_position();
+    ds_u16(DS_camera_qx) = c.cx;
+    ds_u16(DS_camera_qy) = c.dx;
+    return si;
 }
 
 } // namespace gb

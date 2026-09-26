@@ -6,6 +6,9 @@
 
 #include "host.hpp"
 #include "mem.hpp"
+#include "game/sim.hpp"
+#include "platform/gfx.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 namespace gb {
@@ -447,6 +450,118 @@ void sprite_lod_update()
             si = u16(si - 1);
         } while (si > ds_u16(DS_identify_first));
     }
+}
+
+// 0919:6af9 object_update (render3d.md §5.4): the visible list sorted (quicksort after a rebuild,
+// else one bubble pass); then ramming: the nearest listed object (index >= 48h, the first from the
+// far end of the list) within E0h, when not in the chase view nor rebuilding, of a kind that is not
+// 0, 11h, 17h or 21h, and within 50h of the bow (the bearing relative to the hull, 80h turned when
+// going astern): the boat turns away (rotate_headings, step 4 with 30h), bump sound, and at speed
+// >= 0Fh one pass in 32 the hull is hit (component 0Ah, message 0Ch). A mine (13h) becomes a hit
+// object 14Bh and hurts the hull (twice outside Vietnam); boats and the wreckable kinds (4-6, 38h,
+// 1Eh-1Fh) become wrecks (448h) and count for the mission. Draw page 0 meanwhile, then 1.
+void object_update()
+{
+    if (ds_u8(DS_scene_rebuild) != 0) list_quicksort();
+    else list_bubble();
+    u16 si = u16((ds_u16(DS_visible_count) - 1) << 1);
+    u16 bx;
+    for (;;) {
+        bx = ds_u16(u16(DS_visible_object + si));
+        if (bx >= 0x48) break;
+        si = u16(si - 2);
+        if (s16(si) < 0) return;
+    }
+    if (ds_u16(u16(DS_visible_distance_word + si)) > 0xE0) return;
+    if (ds_u8(0xD96B) != 0 || ds_u8(DS_scene_rebuild) != 0) return;
+    si = u16(si >> 1);
+    const u8 kind = ds_u8(u16(DS_object_word + bx));
+    if (kind == 0 || kind == 0x21 || kind == 0x17 || kind == 0x11) return;
+    u8 al = u8(ds_u8(u16(DS_visible_bearing + si)) - ds_u8(DS_view_heading) + ds_u8(DS_heading) - 0x20);
+    if (ds_u8(DS_speed) & 0x80) al = u8(al - 0x80);
+    if (al >= 0x50) return;
+    ds_u8(u16(DS_turn_step_table + 4)) = 0x30;
+    if (al < 0x28) rotate_headings_plus(4);
+    else rotate_headings_minus(4);
+    sfx_play(5);
+    ds_u16(DS_draw_page) = 0;
+    gfx_set_draw_page(0);
+    u8 speed = ds_u8(DS_speed);
+    if (speed & 0x80) speed = u8(-speed);
+    if (speed >= 0x0F && (ds_u8(DS_rng_state) & 0x1F) == 0) boat_hit_component(0x0A, 0x0C);
+    si = u16(si << 1);
+    bx = ds_u16(u16(DS_visible_object + si));
+    const u8 k = u8(ds_u16(u16(DS_object_word + bx)));
+    if (k == 0x13) {  // a mine
+        ds_u16(u16(DS_object_word + bx)) = 0x14B;
+        sfx_play(8);
+        boat_hit_component(0x0A, 0x0C);
+        if (ds_u8(DS_region) >= 1) boat_hit_component(0x0A, 0x0C);
+    } else if (k >= 4 && (k <= 6 || k == 0x38 || (k >= 0x1E && k <= 0x1F))) {
+        ds_u16(u16(DS_object_word + bx)) = 0x448;
+        sfx_play(8);
+        mission_target_check(bx);
+    }
+    ds_u16(DS_draw_page) = 1;
+    gfx_set_draw_page(1);
+}
+
+// 0919:6e5c object_frame (render3d.md §5, §5.5): the visible list rebuilt when the scene is, projected
+// and updated (object_update), the sprites' levels of detail; then group A of the terrain and the
+// sprites drawn back to front: from the far end, group A primitives (DS:3C96 order, the last
+// group_a_count up to FFh) while they lie behind the next sprite (their mean elevation against the
+// sprite's), a sprite (prepared and blitted, unless it is a distant tiny one of the temporary
+// objects) whenever the next primitive is nearer; then the spotlights. ES, SI and DI are kept.
+void object_frame()
+{
+    if (ds_u8(DS_scene_rebuild) != 0) visible_list_rebuild();
+    visible_project();
+    object_update();
+    ds_u8(DS_scene_rebuild) = 0;
+    sprite_lod_update();
+    if (u8(ds_u16(DS_video_mode)) == 0x0D) render_parked("object_frame: the EGA plane set-up");
+    u16 si = ds_u16(DS_group_a_count);
+    if (si > 0x1FE) si = 0x1FE;
+    u16 bx = ds_u16(DS_identify_first);
+    for (;;) {
+        if (bx == ds_u16(DS_visible_count) && si == 0) break;
+        si = u16(si << 1);
+        bool sprite = si == 0;
+        if (!sprite && bx != ds_u16(DS_visible_count)) {
+            const u16 w = ds_u16(u16(0x4094 + si));  // the primitive's two vertex elevations
+            const u16 sum = u16(u8(w) + u8(w >> 8));
+            const u8 mean = u8(sum >> 1);  // add al, ah; rcr al, 1 (the 9-bit sum halved)
+            sprite = mean > ds_u8(u16(DS_visible_elevation + bx));
+        }
+        if (sprite) {
+            if (ds_u8(u16(DS_visible_sprite + bx)) != u8(bx >> 8)) {
+                bool draw = true;
+                if (u8(ds_u8(u16(DS_visible_bearing + bx)) + 8) > 0x90 &&
+                    ds_u16(u16(DS_visible_object + (bx << 1))) < 0x48)
+                    draw = false;
+                if (draw) {
+                    sprite_prepare(bx);
+                    blit_record(bx);
+                }
+            }
+            bx++;
+        } else {
+            const u16 es = ds_u16(DS_draw_page_segment);
+            si = u16(si - 2);
+            const u16 prim = ds_u16(u16(DS_group_a_order + si));
+            if (prim <= 0x1FD) {
+                u8 al = ds_u8(u16(DS_vertex_control + prim));
+                const u8 dl = u8((al >> 6) & 3);  // rol dl, 2; and dl, 3
+                al &= 0x3F;
+                if (al != 0) {
+                    ds_u16(DS_span_colour) = u16((al << 8) | al);
+                    draw_primitive(es, dl, prim);
+                }
+            }
+        }
+        si = u16(si >> 1);
+    }
+    spotlights();
 }
 
 } // namespace gb
