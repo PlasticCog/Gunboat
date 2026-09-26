@@ -94,3 +94,83 @@ global,DS:D9B8,draw_page_segment,u16,§1.1
 global,DS:EED2,video_mode,u16,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F280,tile_bin_offset,u16,§2 far pointer offset of TILE.BIN
 global,DS:F282,tile_bin_segment,u16,§2
+func,0919:5f4b,sprite_scale_rows,near (ES CX SI DI)->DI,"§5.7 zoom 0: rows kept by the row pattern, columns by the column pattern"
+func,0919:5fc8,sprite_scale_rows_up,near (ES CX SI DI)->DI,"§5.7 zoom 1: rows 1-2 times, columns 1-2 times"
+func,0919:6054,sprite_scale_rows_up2,near (ES CX SI DI)->DI,"§5.7 zoom 2-3: rows 2-4 times, columns 2-3 times"
+func,0919:6174,sprite_scale_patterns,near void(),§5.7 column/row patterns and zoom from D864
+func,0919:6244,sprite_row_box,near (ES BX SI CL DI)->DI,"§5.7 row type 0: two faces turned by the view, shrunk"
+func,0919:6373,sprite_row_box_up,near (ES BX SI CL DI)->DI,"§5.7 row type 0, zoom 1"
+func,0919:64ac,sprite_row_box_up2,near (ES BX SI CL DI)->DI,"§5.7 row type 0, zoom 2"
+func,0919:65eb,sprite_row_turn,near (ES BX CL DI)->DI,"§5.7 row type 80h: a strip scrolled by the view, shrunk"
+func,0919:66a7,sprite_row_turn_up,near (ES BX CL DI)->DI,"§5.7 row type 80h, zoom 1"
+func,0919:6764,sprite_row_turn_up2,near (ES BX CL DI)->DI,"§5.7 row type 80h, zoom 2"
+func,0919:6824,sprite_row_flat,near (ES BX CL DI)->DI,"§5.7 row type 40h: a centred row, shrunk"
+func,0919:68a4,sprite_row_flat_up,near (ES BX CL DI)->DI,"§5.7 row type 40h, zoom 1"
+func,0919:6925,sprite_row_flat_up2,near (ES BX CL DI)->DI,"§5.7 row type 40h, zoom 2"
+func,0919:6f3d,sprite_slots_reset,near void(),§5.6 slot bitmaps and the slots of all entries cleared
+func,0919:7a3e,shore_edge_test,near void(CX DX),§3.3 simulation §10: one neighbouring vertex of a contact candidate
+func,0919:7c38,terrain_rect_test,near void(CX x DX y),§5.3 simulation: point in the loaded terrain -> B7E2
+func,0919:8f53,list_swap,near void(SI DI),§5.3 swaps two visible entries (not the sprite slot)
+func,0919:8fa7,list_bubble_range,near void(u16 first u16 last),§5.3 bubble sort of a quicksort partition
+cglobal,0919:583d,sprite_slot_pointers,u16[185],§5.6 slot - 1 -> offset in DS:D885 (slots 1-68h) or DS:D883
+cglobal,0919:59af,sprite_scale_table,u8[][10],§5.7 per size step: 7 column-pattern bytes and 3 row-pattern bytes
+global,DS:B7DC,scratch_b7dc,u16,"shared scratch word (project end, thinning mask copy, loop ends)"
+global,DS:B7E0,scratch_b7e0,u16,shared scratch word (terrain_rect_test loop count)
+global,DS:B7F5,atan_octant,u8,§3.3 octant of the last atan or projection
+global,DS:B7F7,sprite_column,u8,§5.7 screen column (bearing byte) of the sprite being placed
+global,DS:B7F9,sprite_rows_left,u8,§5.7 rows left to scale or to blit
+global,DS:B7FA,sprite_row_pixels,u8,§5.7 pixels of the current source row
+global,DS:D6C0,detail_distance,u8,"§5.6 distance class limit for sprites (FFh high detail, 16h low)"
+global,DS:D6E6,flash_ega_colours,u8[4],§7.1 EGA/Tandy palette register 8 per flash level
+global,DS:D730,atan_raw,u8,§3.3 raw atan table value of the last projection
+global,DS:D731,octant_negate,u8[8],§3.3 1 = the octant angle is subtracted
+global,DS:D739,octant_base,u8[8],§3.3 octant base angle (atan)
+global,DS:D741,octant_base_view,u8[8],§3.3 octant base of the bearing high byte (project)
+global,DS:D862,sprite_blit_width,u8,§5.7 columns to copy after clipping
+global,DS:D863,sprite_slot,u8,§5.7 cache slot of the sprite being built (1-based)
+global,DS:D864,sprite_size,u8,§5.7 apparent size (atan of size / distance)
+global,DS:D865,sprite_zoom,u8,"§5.7 0 shrink, 1, 2 or 3 (rows per source row)"
+global,DS:D866,sprite_side,u8[2],"§5.7 kind record word 3: side face width, second part index"
+global,DS:D868,sprite_kind,u8,§5.7
+global,DS:D869,sprite_pad,u8,§5.7 padding pixels of the current row
+global,DS:D86A,sprite_view,u8,§5.7 view angle (0-3Fh after sprite_cache_build)
+global,DS:D86B,sprite_out_rows,u8,§5.7 output rows of the image
+global,DS:D86C,sprite_part_offset,u8,§5.7 column offset of the second part
+global,DS:D86D,sprite_part_height,u8,§5.7 height of the parts placed so far
+global,DS:D86F,sprite_row_repeat,u8,§5.7 repeats left of the current output row
+global,DS:D870,sprite_part_width,u8,§5.7 second part: width
+global,DS:D871,sprite_part_rows,u8,§5.7 second part: rows
+global,DS:D872,sprite_part_shift,u8,§5.7 second part: column offset ratio
+global,DS:D873,sprite_half_column,u16,§5.7 fine bearing bit 2 (one pixel)
+global,DS:D875,sprite_clip_left,u16,§5.7 columns clipped at the left
+global,DS:D877,sprite_part_types,u16,§5.7 second part: row-type table
+global,DS:D879,sprite_part_data,u16,§5.7 second part: row pointer table
+global,DS:D87B,sprite_repeat_ptr,u16,§5.7 cache record: row repeat counts
+global,DS:D87D,sprite_size_ptr,u16,§5.7 cache record: width/height bytes
+global,DS:D87F,sprite_slot_end,u16,§5.7 end of the slot (next slot pointer)
+global,DS:D881,sprite_record,u16,§5.7 cache record + 2 (view byte)
+global,DS:D887,sprite_segment,u16,§5.7 segment of the cache record being drawn
+global,DS:D889,sprite_column_pattern,u8[26],"§5.7 column keep bits, rotated as used"
+global,DS:D8A4,sprite_row_pattern,u8[3],"§5.7 row keep bits, shifted out top first"
+global,DS:D8A7,sprite_face_patterns,u8[8][2],§5.7 per view step: bits of the two box faces
+global,DS:D8BA,sprite_face_a,u8,§5.7
+global,DS:D8BB,sprite_face_b,u8,§5.7
+global,DS:D8C1,slot_clear_mask,u8[8],§5.6
+global,DS:D8C9,slot_bit,u8[8],§5.6
+global,DS:D8D1,slot_bitmap,u8[24],"§5.6 used slots, bit 0 of D8D1 = slot 1; slot 69h reserved"
+global,DS:D8E9,slot_level_first,u8[3],§5.6 first slot number of each level pool
+global,DS:D8EC,slot_level_mask,u16[3],"§5.6 first byte mask, 8 - first bit"
+global,DS:D8F2,slot_level_byte,u16[3],§5.6 first bitmap byte of each pool
+global,DS:D8FC,span_first_row,u8,§3.4
+global,DS:D954,span_colour,u16,§3.4 colour byte twice
+global,DS:D956,span_left,u16,§3.4 left edge bearing (+40h)
+global,DS:D958,span_right,u16,§3.4 right edge bearing (+BFh)
+global,DS:D95A,span_step_left,u16,§3.4 per-row step (subtracted)
+global,DS:D95C,span_step_right,u16,§3.4
+global,DS:D95E,span_apex,u16,§3.4 apex bearing of the triangle half
+global,DS:D964,span_from_apex,u8,§3.4 1 = the half starts at the apex
+global,DS:D965,sky_top,u8,§3.1 first view row the sky fill covers; lowered by sprites and beams
+global,DS:D96A,chase_view_reset,u8,§5.3 set when the chase camera gives up
+global,DS:D9A7,tile_record,u16,§2 TILE.BIN record being loaded
+global,DS:D9AF,shade_toggle,u8,§2 00h/1Fh alternating per vertex
+global,DS:B7F2,shake_counter,u8,§7.2 screen shake steps left (boat_hit sets 2 or 8)
