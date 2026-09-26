@@ -11,19 +11,24 @@ from unicorn.x86_const import (UC_X86_REG_AX, UC_X86_REG_BX, UC_X86_REG_CX, UC_X
 BDA = 0x400
 MODE, COLS, PAGE_SIZE, PAGE_START, CURSOR, CURSOR_SHAPE, PAGE, TICKS = \
     0x49, 0x4A, 0x4C, 0x4E, 0x50, 0x60, 0x62, 0x6C
-MODE_COLS = [40, 40, 80, 80, 40, 40, 80, 80, 0, 0, 0, 0, 0, 40, 80, 80, 80, 80, 80, 40]
-MODE_PAGE = [0x800, 0x800, 0x1000, 0x1000, 0x4000, 0x4000, 0x4000, 0x1000, 0, 0, 0, 0, 0,
+MODE_COLS = [40, 40, 80, 80, 40, 40, 80, 80, 20, 40, 80, 0, 0, 40, 80, 80, 80, 80, 80, 40]
+MODE_PAGE = [0x800, 0x800, 0x1000, 0x1000, 0x4000, 0x4000, 0x4000, 0x1000, 0x4000, 0x8000, 0x8000, 0, 0,
              0x2000, 0x4000, 0x8000, 0x8000, 0xA000, 0xA000, 0xFA00]
 
 
-def bios_init(m):
-    """bios_init on a memory image (bytearray)."""
+def bios_init(m, machine='vga'):
+    """bios_init on a memory image (bytearray), for the machine's video card."""
     m[BDA + 0x49:BDA + 0x6C + 5] = bytes(0x6C + 5 - 0x49)
     m[BDA + MODE] = 3
     struct.pack_into('<H', m, BDA + COLS, 80)
     struct.pack_into('<H', m, BDA + PAGE_SIZE, 0x1000)
     struct.pack_into('<H', m, BDA + CURSOR_SHAPE, 0x0607)
     struct.pack_into('<H', m, BDA + 0x63, 0x03D4)                           # the CRTC's port (colour)
+    if machine != 'vga':    # the card for the adapter probes (bios.cpp)
+        struct.pack_into('<H', m, BDA + 0x10, 0x0030 if machine == 'hercules' else 0x0020)
+        if machine == 'hercules':
+            struct.pack_into('<H', m, BDA + 0x63, 0x03B4)
+        m[0xFC000] = 0x21 if machine == 'tandy' else 0x00
     struct.pack_into('<HHHH', m, 8 * 4, 0xFEA5, 0xF000, 0xE987, 0xF000)   # INT 8, INT 9: the BIOS
 
 
@@ -32,9 +37,11 @@ class BiosModel:
         self.retrace ^= 1
         return 0x08 if self.retrace else 0x00
 
-    def __init__(self, orig):
+    def __init__(self, orig, machine='vga', card=None):
         self.orig = orig
         self.uc = orig.uc
+        self.machine = machine
+        self.card = card
         self.dac = bytearray(768)
         self.trace = bytearray()              # every DAC write in order: index, r, g, b
         orig.ints[0x10] = self.int10
@@ -45,7 +52,8 @@ class BiosModel:
         orig.ins[0x3DA] = self._in3da
         orig.outs[0x3D4] = lambda uc, value: None     # the CRTC (the display start: gbdiff compares memory)
         for port in (0x3CE, 0x3C4, 0x3B4, 0x3B5, 0x3B8, 0x3BF):
-            orig.outs[port] = lambda uc, value: None  # graphics/sequencer/Hercules registers
+            if port not in orig.outs:  # (the card model's, when there is one)
+                orig.outs[port] = lambda uc, value: None  # graphics/sequencer/Hercules registers
         # system port B (61h): bit 7 keyboard acknowledge, bits 0-1 the speaker gate (read back as
         # written); the keyboard data port 60h (a test sets what IN 60h reads)
         self.port61 = 0
@@ -83,8 +91,12 @@ class BiosModel:
                 uc.mem_write(0xB0000, b'\x20\x07' * 0x2000)
             elif mode <= 6:
                 uc.mem_write(0xB8000, bytes(0x4000))
-            elif 0x0D <= mode <= 0x13:
+            elif 8 <= mode <= 0x0A:
+                uc.mem_write(0xB8000, bytes(0x8000))
+            elif 0x0D <= mode <= 0x13 and self.machine != 'ega':
                 uc.mem_write(0xA0000, bytes(0x10000))
+        if self.machine != 'vga':
+            self.card.bios_set_mode(mode, clear)
         if mode == 0x13:
             for i in range(256):
                 self.dac_write(i, 0, 0, 0)
@@ -115,8 +127,19 @@ class BiosModel:
             table = bytes(uc.mem_read((es << 4) + dx, 3 * cx))
             for k in range(cx):
                 self.dac_write((bx + k) & 0xFF, *table[3 * k:3 * k + 3])
+        elif ah == 0x0B and self.machine != 'vga':
+            self.card.bios_cga_palette(bx >> 8, bx & 0xFF)
+        elif ax == 0x1000 and self.machine != 'vga':
+            self.card.bios_palette_reg(bx & 0xFF, bx >> 8)
+        elif ax == 0x1001 and self.machine != 'vga':
+            self.card.bios_overscan(bx >> 8)
         elif ax == 0x1002:
-            pass                                    # EGA attribute palette: not modelled (bios.cpp)
+            if self.machine != 'vga':
+                es = uc.reg_read(UC_X86_REG_ES)
+                table = bytes(uc.mem_read((es << 4) + dx, 17))
+                for i in range(16):
+                    self.card.bios_palette_reg(i, table[i])
+                self.card.bios_overscan(table[16])
         else:
             self.orig.fail('INT 10h AX=%04X is not modelled' % ax)
 

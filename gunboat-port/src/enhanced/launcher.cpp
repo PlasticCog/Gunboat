@@ -18,15 +18,18 @@ namespace gb {
 
 namespace {
 
-enum Item { FOLDER, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, SHOW, PLAY, QUIT, ITEMS };
+enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, SHOW, PLAY, QUIT, ITEMS };
 
-const char *const LABELS[ITEMS] = {"Game folder", "Preset",  "3D view", "Motion",      "Draw distance",
+const char *const LABELS[ITEMS] = {"Game folder", "Video card", "Preset",  "3D view", "Motion",      "Draw distance",
                                    "Widescreen",  "Picture", "Scaling", "Display",     "Sound",
                                    "This screen", "Play",    "Quit"};
 
 const char *const HELP[ITEMS][3] = {
     {"The folder with the original game's files: by default the folder Game next to gunboat.exe",
      "(Game/README.md lists the files). Enter: choose another folder.", ""},
+    {"The graphics card the game runs on, as in the original's setup: VGA (256 colours), EGA or",
+     "Tandy (16 colours), CGA (4 colours) or Hercules (monochrome). The enhancements below work",
+     "with VGA only; the other cards show the original's picture with the scaling chosen here."},
     {"Original: the picture exactly as the DOS game drew it.",
      "Enhanced: every enhancement below. The game itself is the same either way;",
      "the enhancements only change how its frames are shown. In the game, F11 switches."},
@@ -102,6 +105,14 @@ std::string value_of(const Settings &s, int item)
 {
     switch (item) {
     case FOLDER: return s.game_dir.empty() ? "Game: " + default_game_dir() : s.game_dir;
+    case VIDEO:
+        switch (s.video) {
+        case Video::Ega: return "EGA (16 colours)";
+        case Video::Tandy: return "Tandy (16 colours)";
+        case Video::Cga: return "CGA (4 colours)";
+        case Video::Hercules: return "Hercules (monochrome)";
+        default: return "VGA (256 colours)";
+        }
     case PRESET:
         if (!s.any_enhancement()) return "Original";
         if (s.all_enhancements()) return "Enhanced";
@@ -139,6 +150,7 @@ void change(Settings &s, int item, int dir)
         if (s.all_enhancements()) s.set_original();
         else s.set_enhanced();
         break;
+    case VIDEO: s.video = Video((int(s.video) + 5 + dir) % 5); break;
     case VIEW: s.hires_view = !s.hires_view; break;
     case MOTION: s.smooth_motion = !s.smooth_motion; break;
     case DISTANCE: s.far_view = !s.far_view; break;

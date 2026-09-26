@@ -66,6 +66,10 @@ void bios_set_mode(u8 al);                               // INT 10h AH=00h
 u16 bios_get_mode(u8 *bh);                               // INT 10h AH=0Fh: AX
 u16 bios_get_cursor(u8 page);                            // INT 10h AH=03h: DX
 u16 bios_display_combination();                          // INT 10h AX=1A00h: BX
+void bios_cga_palette(u8 bh, u8 bl);                     // INT 10h AH=0Bh
+void bios_palette_reg(u8 index, u8 value);               // INT 10h AX=1000h
+void bios_overscan(u8 value);                            // INT 10h AX=1001h
+void bios_palette_all(FarPtr table);                     // INT 10h AX=1002h
 void bios_dac_set(u16 index, u8 r, u8 g, u8 b);          // INT 10h AX=1010h
 void bios_dac_set_block(u16 first, u16 count, FarPtr table);  // INT 10h AX=1012h
 u32 bios_ticks();                                        // INT 1Ah AH=00h
@@ -103,6 +107,7 @@ void pal_fade_in();                         // 121b:0804
 void pal_black();                           // 121b:085d
 void pal_apply();                           // 121b:087f
 void picture_draw_vga(u16 src_ds, u16 runs, u16 y_bottom);  // 121b:08a8
+void hercules_setup();                                         // 121b:0902
 void dissolve_page1_to_0();                 // 121b:0581
 
 } // namespace gb

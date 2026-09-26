@@ -51,7 +51,7 @@ void host_stub_set_test_tick(void (*tick)()) { tick_handler = tick; }
 u16 host_stub_timer_divisor() { return game_divisor; }
 const std::vector<u16> &host_stub_timer_log() { return timer_log; }
 void host_stub_timer_clear() { timer_log.clear(); }
-void host_set_frame_source(bool (*)(u32 *), int, int) {}
+void host_set_frame_source(bool (*)(u32 *, int *, int *), int, int) {}
 void host_pump()
 {
     if (tick_handler) tick_handler();

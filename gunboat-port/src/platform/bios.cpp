@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "platform/vga.hpp"
 
 namespace gb {
@@ -18,9 +19,9 @@ constexpr u16 BDA_MODE = 0x49, BDA_COLS = 0x4A, BDA_PAGE_SIZE = 0x4C, BDA_PAGE_S
               BDA_CURSOR_SHAPE = 0x60, BDA_PAGE = 0x62, BDA_TICKS = 0x6C;
 
 // Columns and page size by mode 0..13h (0 = no such mode).
-constexpr u8 mode_cols[0x14] = {40, 40, 80, 80, 40, 40, 80, 80, 0, 0, 0, 0, 0, 40, 80, 80, 80, 80, 80, 40};
-constexpr u16 mode_page_size[0x14] = {0x0800, 0x0800, 0x1000, 0x1000, 0x4000, 0x4000, 0x4000, 0x1000, 0, 0,
-                                      0,      0,      0,      0x2000, 0x4000, 0x8000, 0x8000, 0xA000, 0xA000, 0xFA00};
+constexpr u8 mode_cols[0x14] = {40, 40, 80, 80, 40, 40, 80, 80, 20, 40, 80, 0, 0, 40, 80, 80, 80, 80, 80, 40};
+constexpr u16 mode_page_size[0x14] = {0x0800, 0x0800, 0x1000, 0x1000, 0x4000, 0x4000, 0x4000, 0x1000, 0x4000, 0x8000,
+                                      0x8000, 0,      0,      0x2000, 0x4000, 0x8000, 0x8000, 0xA000, 0xA000, 0xFA00};
 
 void fill_words(u16 seg, u16 words, u16 value)
 {
@@ -37,6 +38,14 @@ void bios_init()
     mem_u16(BDA, BDA_PAGE_SIZE) = 0x1000;
     mem_u16(BDA, BDA_CURSOR_SHAPE) = 0x0607;
     mem_u16(BDA, 0x0063) = 0x03D4;  // the CRTC's port (a colour adapter; gfx_set_display_offset reads it)
+    // The machine's card for the adapter probes (gfx_detect): the equipment word's initial video mode
+    // (80x25 colour; monochrome on a Hercules machine, whose CRTC is at 3B4h) and the Tandy's ROM id.
+    // (The VGA machine keeps the state the VGA tests were made on.)
+    if (card_machine() != Machine::Vga) {
+        mem_u16(BDA, 0x10) = card_machine() == Machine::Hercules ? 0x0030 : 0x0020;
+        if (card_machine() == Machine::Hercules) mem_u16(BDA, 0x0063) = 0x03B4;
+        mem_u8(0xFC00, 0) = card_machine() == Machine::Tandy ? 0x21 : 0x00;
+    }
     // the BIOS timer and keyboard handlers (the IBM PC entry points)
     mem_u16(0, 8 * 4) = 0xFEA5;
     mem_u16(0, 8 * 4 + 2) = 0xF000;
@@ -64,8 +73,10 @@ void bios_set_mode(u8 al)
         if (mode <= 3) fill_words(0xB800, 0x2000, 0x0720);
         else if (mode == 7) fill_words(0xB000, 0x2000, 0x0720);
         else if (mode <= 6) fill_words(0xB800, 0x2000, 0);
-        else if (mode >= 0x0D && mode <= 0x13) fill_words(0xA000, 0x8000, 0);
+        else if (mode >= 8 && mode <= 0x0A) fill_words(0xB800, 0x4000, 0);
+        else if (mode >= 0x0D && mode <= 0x13 && card_machine() != Machine::Ega) fill_words(0xA000, 0x8000, 0);
     }
+    if (card_machine() != Machine::Vga) card_bios_set_mode(mode, clear);  // the card's registers (EGA: its planes)
     if (mode == 0x13) {
         for (int i = 0; i < 256; i++) vga_dac_write(u8(i), 0, 0, 0);
         vga_set_start(0);
@@ -84,6 +95,19 @@ u16 bios_get_cursor(u8 page) { return mem_u16(BDA, u16(BDA_CURSOR + 2 * (page & 
 
 // INT 10h AX=1A00h: the display combination: AL = 1Ah (supported), BX = 0008h (VGA colour).
 u16 bios_display_combination() { return 0x0008; }
+
+// INT 10h AH=0Bh: the CGA palette (BH 0: background and border BL, 1: palette BL).
+void bios_cga_palette(u8 bh, u8 bl) { card_bios_cga_palette(bh, bl); }
+
+// INT 10h AX=1000h / 1001h / 1002h: an EGA (Tandy) palette register, the overscan, all 16 and the
+// overscan from a 17-byte table.
+void bios_palette_reg(u8 index, u8 value) { card_bios_palette_reg(index, value); }
+void bios_overscan(u8 value) { card_bios_overscan(value); }
+void bios_palette_all(FarPtr table)
+{
+    for (u8 i = 0; i < 16; i++) card_bios_palette_reg(i, far_u8(table, i));
+    card_bios_overscan(far_u8(table, 16));
+}
 
 // INT 10h AX=1010h / 1012h: DAC registers.
 void bios_dac_set(u16 index, u8 r, u8 g, u8 b) { vga_dac_write(u8(index), r, g, b); }

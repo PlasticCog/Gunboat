@@ -2,6 +2,7 @@
 // contact candidates, the draw order of group A, the sky, the water and its marks
 // (render3d.md §2-§3, simulation.md §10, world.md §5).
 #include "render/render.hpp"
+#include "render/modes.hpp"
 
 #include <utility>
 
@@ -441,9 +442,13 @@ void terrain_setup()
         if (ds_u8(DS_screen_shake) != 0) sky = 0x0F;
     }
     const u8 mode = u8(ds_u16(DS_video_mode));
-    // PORT: EGA (4ce2), Tandy (5529) and CGA (4587) sky and water are parked.
-    if (mode <= 0x0D) render_parked("the sky and water (sky_water_ega/tandy/cga)");
-    const u16 di = sky_water_vga(es, u16(sky << 8 | sky), bl, cl);
+    // The mode's sky and water: VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below.
+    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    u16 di;
+    if (mode > 0x0D) di = sky_water_vga(es, u16(sky << 8 | sky), bl, cl);
+    else if (mode == 0x0D) di = sky_water_ega(es, u16(sky << 8 | sky), bl, cl);
+    else if (mode >= 9) di = sky_water_tandy(es, u16(sky << 8 | sky), bl, cl);
+    else di = sky_water_cga(es, u16(sky << 8 | sky), bl, cl);
 
     u16 fresh = ds_u16(DS_rng_state);
     const u8 heading = ds_u8(DS_view_heading);
@@ -464,7 +469,12 @@ void terrain_setup()
     const u16 first = (ds_u8(DS_water_phase) >> 2) & 0x1F;
     const u8 water = ds_u8(u16(DS_scene_colours + 1));
     // DX = mode (DH = 0): water_marks_vga replaces DL before it adds DX.
-    water_marks_vga(es, u16(water << 8 | u8(water | 7)), first, 0x20, mode, di);
+    // TODO(verify): the dispatch of the other modes' marks (render/modes.hpp).
+    const u16 marks = u16(water << 8 | u8(water | 7));
+    if (mode > 0x0D) water_marks_vga(es, marks, first, 0x20, mode, di);
+    else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);
+    else if (mode >= 9) water_marks_tandy(es, marks, first, 0x20, mode, di);
+    else water_marks_cga(es, marks, first, 0x20, mode, di);
 }
 
 // 0919:7523 project (render3d.md §3.3, simulation.md §10): vertices SI .. AX - 1. The bearing word

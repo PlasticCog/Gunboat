@@ -7,6 +7,7 @@
 
 #include "host.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 
 namespace gb {
 
@@ -23,8 +24,28 @@ u16 last_start = 0xFFFF;
 
 void (*dac_trace)(u8, u8, u8, u8);
 
-bool compose(u32 *xrgb)
+// The other machines' cards compose their own picture (card.cpp); it changed when it differs.
+bool compose_card(u32 *xrgb, int *w, int *h)
 {
+    static u32 last[HOST_FRAME_MAX_W * HOST_FRAME_MAX_H];
+    static int last_w, last_h;
+    card_compose(xrgb, w, h);
+    const size_t n = size_t(*w) * size_t(*h);
+    const bool changed = dirty || *w != last_w || *h != last_h || std::memcmp(last, xrgb, n * 4) != 0;
+    if (changed) {
+        std::memcpy(last, xrgb, n * 4);
+        last_w = *w;
+        last_h = *h;
+        dirty = false;
+    }
+    return changed;
+}
+
+bool compose(u32 *xrgb, int *w, int *h)
+{
+    if (card_machine() != Machine::Vga) return compose_card(xrgb, w, h);
+    *w = 320;
+    *h = 200;
     const u8 *vram = mp(VRAM_SEG, 0);
     if (!dirty && start == last_start && std::memcmp(vram, last_vram, sizeof last_vram) == 0 &&
         std::memcmp(dac, last_dac, sizeof dac) == 0)

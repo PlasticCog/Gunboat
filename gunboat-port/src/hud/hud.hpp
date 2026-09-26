@@ -48,6 +48,32 @@ struct DiSi {
     u16 di, si;
 };
 DiSi view_copy_head_vga(u16 es, u16 ds);       // 0919:8e29  returns DI, SI (CX = 0)
+// The twins of the other video modes (hud/views_ega.cpp, views_tandy.cpp, views_cga.cpp; the
+// addresses are in each view_copy_N's dispatch): same registers, SI returned.
+u16 view_copy_1_ega(u16 es, u16 ds);
+u16 view_copy_2_ega(u16 es, u16 ds);
+u16 view_copy_3_ega(u16 es, u16 ds);
+u16 view_copy_4_ega(u16 es, u16 ds);
+u16 view_copy_5_ega(u16 es, u16 ds);
+u16 view_copy_6_ega(u16 es, u16 ds);
+u16 view_copy_7_ega(u16 es, u16 ds);
+u16 view_copy_8_ega(u16 es, u16 ds);
+u16 view_copy_1_tandy(u16 es, u16 ds);
+u16 view_copy_2_tandy(u16 es, u16 ds);
+u16 view_copy_3_tandy(u16 es, u16 ds);
+u16 view_copy_4_tandy(u16 es, u16 ds);
+u16 view_copy_5_tandy(u16 es, u16 ds);
+u16 view_copy_6_tandy(u16 es, u16 ds);
+u16 view_copy_7_tandy(u16 es, u16 ds);
+u16 view_copy_8_tandy(u16 es, u16 ds);
+u16 view_copy_1_cga(u16 es, u16 ds);
+u16 view_copy_2_cga(u16 es, u16 ds);
+u16 view_copy_3_cga(u16 es, u16 ds);
+u16 view_copy_4_cga(u16 es, u16 ds);
+u16 view_copy_5_cga(u16 es, u16 ds);
+u16 view_copy_6_cga(u16 es, u16 ds);
+u16 view_copy_7_cga(u16 es, u16 ds);
+u16 view_copy_8_cga(u16 es, u16 ds);
 
 // ---- the station screens (screens.cpp), segment 05bd, hud.md §5
 void map_screen();                  // 05bd:19cc  station 5

@@ -4,6 +4,7 @@
 //                [--fps N] [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]
 //                [--motion original|smooth] [--draw-distance original|extended]
 //                [--widescreen off|world|cockpit] [--aspect 4:3|square]
+//                [--video vga|ega|tandy|cga|hercules]
 //                [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]
 //   The player's settings (gunboat.ini, src/enhanced/settings.hpp) give the defaults; the options
 //   override them for this run. The launcher (src/enhanced/launcher.cpp) shows first unless the
@@ -47,6 +48,7 @@
 #include "game/flow.hpp"
 #include "host.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "platform/platform.hpp"
 #include "platform/vga.hpp"
 #include "sound/sound.hpp"
@@ -61,7 +63,7 @@ int usage(const char *prog)
                  "usage: %s [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window] [--fps N]\n"
                  "          [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]\n"
                  "          [--motion original|smooth] [--draw-distance original|extended]\n"
-                 "          [--widescreen off|world|cockpit] [--aspect 4:3|square]\n"
+                 "          [--widescreen off|world|cockpit] [--aspect 4:3|square] [--video vga|ega|tandy|cga|hercules]\n"
                  "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]\n",
                  prog);
     return 2;
@@ -144,6 +146,11 @@ int main(int argc, char **argv)
         else if (val("--view", "hires")) st.hires_view = true;
         else if (val("--motion", "original")) st.smooth_motion = false;
         else if (val("--motion", "smooth")) st.smooth_motion = true;
+        else if (val("--video", "vga")) st.video = Video::Vga;
+        else if (val("--video", "ega")) st.video = Video::Ega;
+        else if (val("--video", "tandy")) st.video = Video::Tandy;
+        else if (val("--video", "cga")) st.video = Video::Cga;
+        else if (val("--video", "hercules")) st.video = Video::Hercules;
         else if (val("--draw-distance", "original")) st.far_view = false;
         else if (val("--draw-distance", "extended")) st.far_view = true;
         else if (val("--widescreen", "off")) st.widescreen = Wide::Off;
@@ -227,7 +234,13 @@ int main(int argc, char **argv)
         }
     }
 
-    // The machine as DOS leaves it to GB.EXE, then the program (it ends through the runtime's exit).
+    // The machine as DOS leaves it to GB.EXE (its video card the player's), then the program (it ends
+    // through the runtime's exit).
+    static const Machine machines[] = {Machine::Vga, Machine::Ega, Machine::Tandy, Machine::Cga, Machine::Hercules};
+    static const u16 modes[] = {0x13, 0x0D, 0x09, 0x04, 0x0C};
+    card_set_machine(machines[int(st.video)]);
+    card_reset();
+    config_set_video_choice(modes[int(st.video)]);
     dos_heap_init();
     bios_init();
     if (!window && !host_init(dir.c_str(), st.window_scale, st.fullscreen)) return 1;

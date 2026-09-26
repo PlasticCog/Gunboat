@@ -3,8 +3,7 @@
 // page numbers, loads their segments from page_segments into DS and ES and calls the routine of the
 // video mode; the VGA routines are fixed REP MOVSW sequences on 320-byte rows.
 //
-// PORT: only the VGA routines are ported. The EGA (0919:49a4...), Tandy (0919:5062...) and CGA
-// (0919:411f...) twins are parked (EGA/Tandy/CGA not ported): in those modes the copy does nothing.
+// The EGA, Tandy and CGA twins are in hud/views_ega.cpp, views_tandy.cpp and views_cga.cpp.
 #include "hud/hud.hpp"
 
 #include "mem.hpp"
@@ -30,34 +29,38 @@ void movsw(u16 es, u16 &di, u16 ds, u16 &si, u16 cx)
 // (VGA) the VGA routine runs with ES = page_segments[dst], DS = page_segments[src]. The far routine
 // keeps DS and ES but not SI: the copy's source offset at its end reaches the callers (mission_run's
 // SI, caller_si), so it is returned.
-u16 dispatch(u16 src_page, u16 dst_page, u16 (*vga)(u16 es, u16 ds), u16 si)
+using Copy = u16 (*)(u16 es, u16 ds);
+
+// TODO(verify): the dispatch of the other modes (mode 0Dh EGA, 9-0Ch Tandy, below 9 CGA).
+u16 dispatch(u16 src_page, u16 dst_page, Copy vga, Copy ega, Copy tandy, Copy cga, u16)
 {
     const u8 mode = u8(ds_u16(DS_video_mode));
     const u16 es = ds_u16(u16(DS_page_segments + 2 * dst_page));
     const u16 ds = ds_u16(u16(DS_page_segments + 2 * src_page));
     if (mode > 0x0D) return vga(es, ds);
-    // PORT: not ported (EGA/Tandy/CGA parked): mode 0Dh, 9-0Ch, and below 9 (SI then unchanged).
-    return si;
+    if (mode == 0x0D) return ega(es, ds);
+    if (mode >= 9) return tandy(es, ds);
+    return cga(es, ds);
 }
 
 } // namespace
 
 // 0919:8a32 view_copy_1 (hud.md §6)
-u16 view_copy_1(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_1_vga, si); }
+u16 view_copy_1(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_1_vga, view_copy_1_ega, view_copy_1_tandy, view_copy_1_cga, si); }
 // 0919:8ad5 view_copy_2
-u16 view_copy_2(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_2_vga, si); }
+u16 view_copy_2(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_2_vga, view_copy_2_ega, view_copy_2_tandy, view_copy_2_cga, si); }
 // 0919:8b43 view_copy_3
-u16 view_copy_3(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_3_vga, si); }
+u16 view_copy_3(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_3_vga, view_copy_3_ega, view_copy_3_tandy, view_copy_3_cga, si); }
 // 0919:8bf9 view_copy_4
-u16 view_copy_4(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_4_vga, si); }
+u16 view_copy_4(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_4_vga, view_copy_4_ega, view_copy_4_tandy, view_copy_4_cga, si); }
 // 0919:8cd3 view_copy_5
-u16 view_copy_5(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_5_vga, si); }
+u16 view_copy_5(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_5_vga, view_copy_5_ega, view_copy_5_tandy, view_copy_5_cga, si); }
 // 0919:8d45 view_copy_6
-u16 view_copy_6(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_6_vga, si); }
+u16 view_copy_6(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_6_vga, view_copy_6_ega, view_copy_6_tandy, view_copy_6_cga, si); }
 // 0919:8db7 view_copy_7
-u16 view_copy_7(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_7_vga, si); }
+u16 view_copy_7(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_7_vga, view_copy_7_ega, view_copy_7_tandy, view_copy_7_cga, si); }
 // 0919:8e47 view_copy_8
-u16 view_copy_8(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_8_vga, si); }
+u16 view_copy_8(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_8_vga, view_copy_8_ega, view_copy_8_tandy, view_copy_8_cga, si); }
 
 // 0919:8a72 view_copy_1_vga: 8 rows from DS:9678 to ES:6480, each a run of BL words and, while BH
 // is above 0, a run of BH words after a gap (20h bytes growing by 20h per row at the destination,

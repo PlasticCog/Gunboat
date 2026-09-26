@@ -7,6 +7,7 @@
 #include "platform/gfx.hpp"
 
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "platform/platform.hpp"
 #include "symbols.hpp"
 
@@ -265,12 +266,33 @@ void gfx_move_to(s16 x, s16 y)
     ds_s16(DS_gfx_pen_y) = y;
 }
 
-// 1543:000b gfx_set_colour (13h path 0087: the colour as given)
+// 1543:000b gfx_set_colour (video.md §2): the colour of the drawing primitives, by the library's
+// mode (jump table CS:0093 on DCF8): text modes (001c) and mode 13h (0087) keep it as given; the
+// others take the colour map DD41h's entry for colour & 1Fh (the raw colour DCF6 then & 1Fh): CGA
+// 4-colour modes 4/5 (0022) & 3, Tandy 8-0Ah (0036) & 0Fh, the 2-colour modes 6/0Bh/0Ch (004a) as it
+// is, EGA 0Dh-12h (005b) & 0Fh, also written to the graphics controller's set/reset (0) and colour
+// compare (2) registers. DCF5 = the colour used. The caller gets AX = 0.
 void gfx_set_colour(s16 colour)
 {
-    if (!mode13()) return;  // PORT: other modes map the colour through DD41h and their depth
-    ds_u8(DS_gfx_colour_raw) = u8(colour);
-    ds_u8(DS_gfx_colour) = u8(colour);
+    u8 cl = u8(colour);
+    const u16 mode = u16(ds_u16(DS_gfx_mode_x2) >> 1);
+    auto mapped = [&](u8 mask) {
+        const u16 c = u16(u16(colour) & 0x1F);
+        ds_u8(DS_gfx_colour_raw) = u8(c);
+        return u8(ds_u8(u16(0xDD41 + c)) & mask);  // the colour map
+    };
+    switch (mode) {
+    case 4: case 5: cl = mapped(3); break;                   // 0022
+    case 8: case 9: case 0x0A: cl = mapped(0x0F); break;    // 0036
+    case 6: case 0x0B: case 0x0C: cl = mapped(0xFF); break; // 004a
+    case 0x0D: case 0x0E: case 0x0F: case 0x10: case 0x11: case 0x12:  // 005b
+        cl = mapped(0x0F);
+        card_out16(0x3CE, u16(cl << 8 | 0x00));  // set/reset
+        card_out16(0x3CE, u16(cl << 8 | 0x02));  // colour compare
+        break;
+    default: ds_u8(DS_gfx_colour_raw) = cl; break;          // 001c, 0087
+    }
+    ds_u8(DS_gfx_colour) = cl;
 }
 
 // 14cf:0008 gfx_fill_rect (13h path 02a1): rows from y1 up to y0, x0..x1 inclusive.

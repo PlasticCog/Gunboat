@@ -24,6 +24,10 @@ constexpr u16 MODE_BY_CHOICE = 0x008C;
 // The default setup choice by gfx_detect() result.
 constexpr u16 CHOICE_BY_DETECT = 0x0092;
 
+// PORT: the player's video card (the launcher, --video): the mode that replaces the one of
+// GUNBOAT.CFG or of the setup questions (0: keep it). Host configuration, not game state.
+u16 video_choice;
+
 // The disk checks of main: the prompt comes up while the data file is missing. The port finds its
 // files, so fopen succeeds and wait_key(1) returns at once.
 void disk_check(u16 name, u16 mode, bool first_disk)
@@ -105,6 +109,8 @@ void fatal_exit(s16 code)
     crt_exit(code);
 }
 
+void config_set_video_choice(u16 mode) { video_choice = mode; }
+
 // 0000:05fc config_print_mode, 0000:0620 config_print_yn: the setup screen's answers at text
 // positions (17f0:0058 and printf). PORT: there is no text screen; nothing is shown.
 void config_print_mode(u16) {}
@@ -138,12 +144,13 @@ void config_load()
         ds_u16(DS_joystick) = ds_u8(DS_name_buffer) == 'Y' ? 1 : 0;
         ds_u16(DS_video_mode) = ds_u8(u16(MODE_BY_CHOICE + ds_u16(DS_flow_scratch)));
     }
+    if (video_choice) ds_u16(DS_video_mode) = video_choice;  // PORT: the player's video card
     if (ds_u16(DS_joystick) != 0) joystick_calibrate(1);
     if (ds_u16(DS_video_mode) == 0x0C) {  // Hercules, on CGA mode 4
         ds_u8(DS_hercules_mode) = 1;
         ds_u16(DS_video_mode) = 4;
         gfx_set_mode(4);
-        // PORT: hercules_setup (121b:0902) programs the Hercules CRTC: not ported.
+        hercules_setup();
     } else {
         ds_u8(DS_hercules_mode) = 0;
         gfx_set_mode(s16(ds_u16(DS_video_mode)));

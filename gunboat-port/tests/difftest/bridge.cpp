@@ -9,8 +9,12 @@
 #include "host.hpp"
 #include "host_stub.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "platform/platform.hpp"
 #include "platform/vga.hpp"
+
+#include <cstddef>
+#include <cstring>
 
 #if defined(_WIN32)
 #define GB_EXPORT extern "C" __declspec(dllexport)
@@ -40,6 +44,17 @@ GB_EXPORT const char *gb_error() { return last_error.c_str(); }
 GB_EXPORT void gb_set_game_dir(const char *dir) { host_stub_set_game_dir(dir); }
 GB_EXPORT void gb_set_pit2(int v) { host_stub_set_pit2(u8(v)); }
 GB_EXPORT void gb_set_joy(int present, int x, int y, int buttons) { host_stub_set_joy(present != 0, s16(x), s16(y), u8(buttons)); }
+
+// The video card (platform/card.hpp): the machine (0 VGA, 1 EGA, 2 CGA, 3 Tandy, 4 Hercules) and its
+// state, laid out as tests/difftest/cardmodel.py expects.
+static_assert(sizeof(CardState) == 0x4007F, "cardmodel.py: SIZE");
+static_assert(offsetof(CardState, gc) == 0x4000B && offsetof(CardState, attr) == 0x40016 &&
+                  offsetof(CardState, tandy) == 0x40048 && offsetof(CardState, status) == 0x4007E,
+              "cardmodel.py: offsets");
+GB_EXPORT void gb_set_machine(int m) { card_set_machine(Machine(m)); }
+GB_EXPORT int gb_card_size() { return int(sizeof(CardState)); }
+GB_EXPORT void gb_card_get(u8 *out) { std::memcpy(out, &card(), sizeof(CardState)); }
+GB_EXPORT void gb_card_set(const u8 *in) { std::memcpy(&card(), in, sizeof(CardState)); }
 
 // Loads GB.EXE into mem[] as the game does at start-up. Returns 1, or 0 with gb_error().
 GB_EXPORT int gb_load_exe(const char *path)

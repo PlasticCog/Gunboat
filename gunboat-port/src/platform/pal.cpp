@@ -4,6 +4,7 @@
 
 #include "host.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "symbols.hpp"
 
 namespace gb {
@@ -128,6 +129,23 @@ void dissolve_page1_to_0()
         } while (--ds_u8(DS_scratch_b7e3));
         while (ds_u16(DS_tick_counter) == start) host_pump();
     }
+}
+
+// 121b:0902 hercules_setup (game_flow.md §2): the Hercules card in graphics mode showing page 1
+// (B800h): configuration 3 (graphics and page 1 allowed), mode 0 (video off), page 1 cleared (4000h
+// words), the 12 CRTC registers from the table at DS:DA2D (40 characters of 2 bytes a row, 100 rows
+// of 3 scan lines: the CGA-format picture's two banks and a blank third one), then mode 8Ah
+// (graphics, video on, page 1). ES and DI are kept.
+void hercules_setup()
+{
+    card_out(0x3BF, 3);
+    card_out(0x3B8, 0);
+    for (u32 i = 0; i < 0x4000; i++) mem_u16(0xB800, u16(2 * i)) = 0;
+    for (u16 si = 0; si < 12; si++) {
+        card_out(0x3B4, u8(si));
+        card_out(0x3B5, ds_u8(u16(0xDA2D + si)));
+    }
+    card_out(0x3B8, 0x8A);
 }
 
 } // namespace gb

@@ -1,6 +1,7 @@
 // Terrain primitives and their VGA span fillers, spotlight beams, the explosion flash and the
 // screen shake (render3d.md §3.4, §6, §7).
 #include "render/render.hpp"
+#include "render/modes.hpp"
 
 #include <utility>
 
@@ -144,9 +145,14 @@ void fill_triangle(u16 es, u16 ax, u16 cx, u16 dx)
     }
     ds_u16(DS_span_left) = u16(ds_u16(DS_span_left) + 0x40);
     ds_u16(DS_span_right) = u16(ds_u16(DS_span_right) + 0xBF);
-    // PORT: only the VGA routine; EGA 4dfa, Tandy 5693 and CGA 46e8 are parked.
-    if (ds_u16(DS_span_routine_a) != 0x788E) render_parked("the triangle span routine [D8F8]");
-    span_vga_a(es);
+    // The mode's span routine [D8F8] (video_mode_setup).
+    switch (ds_u16(DS_span_routine_a)) {
+    case 0x788E: span_vga_a(es); break;
+    case 0x4DFA: span_ega_a(es); break;
+    case 0x5693: span_tandy_a(es); break;
+    case 0x46E8: span_cga_a(es); break;
+    default: render_parked("the triangle span routine [D8F8]");
+    }
 }
 
 // 0919:7909 edge_setup (render3d.md §3.4): a line from row AL to row AH from bearing CX towards DX;
@@ -158,9 +164,14 @@ void edge_setup(u16 es, u16 ax, u16 cx, u16 dx)
     ds_u8(DS_span_first_row) = first;
     ds_u16(DS_span_left) = cx;
     ds_u16(DS_span_step_left) = edge_step(u16(cx - dx), u8(rows - 1));
-    // PORT: only the VGA routine; EGA 4eb6, Tandy 5756 and CGA 47cf are parked.
-    if (ds_u16(DS_span_routine_b) != 0x7943) render_parked("the line span routine [D8FA]");
-    span_vga_b(es);
+    // The mode's line routine [D8FA] (video_mode_setup).
+    switch (ds_u16(DS_span_routine_b)) {
+    case 0x7943: span_vga_b(es); break;
+    case 0x4EB6: span_ega_b(es); break;
+    case 0x5756: span_tandy_b(es); break;
+    case 0x47CF: span_cga_b(es); break;
+    default: render_parked("the line span routine [D8FA]");
+    }
 }
 
 // 0919:767a draw_primitive (render3d.md §3.4): primitive DL at vertex BX (mode 0: triangle i, i+1,
@@ -339,9 +350,13 @@ void spotlight_beam(u16 ax, u8 bl)
     ds_u8(BEAM_ROW) = first;
     ds_u8(BEAM_ROWS) = 10;
     const u16 table = u16(u8(bl * 10) + CS_spotlight_widths);
-    // PORT: EGA (4c18), Tandy (5494) and CGA (44f0) beams are parked.
-    if (u8(ds_u16(DS_video_mode)) <= 0x0D) render_parked("the spotlight beam (spotlight_beam_ega/tandy/cga)");
-    spotlight_beam_vga(es, table, dx);
+    // The mode's beam: VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below.
+    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    const u8 mode = u8(ds_u16(DS_video_mode));
+    if (mode > 0x0D) spotlight_beam_vga(es, table, dx);
+    else if (mode == 0x0D) spotlight_beam_ega(es, table, dx);
+    else if (mode >= 9) spotlight_beam_tandy(es, table, dx);
+    else spotlight_beam_cga(es, table, dx);
 }
 
 // 0919:7a89 spotlights (render3d.md §6): at night, not in chase view and with the main switch on

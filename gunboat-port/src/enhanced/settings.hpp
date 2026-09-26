@@ -14,6 +14,9 @@ enum class Sound { Auto, Adlib, Speaker };          // Auto: AdLib when the game
 // In a window wider than the picture, on the 3D stations: black borders, the world drawn beside the
 // picture, or the cockpit widened to the window's edges (widen.hpp).
 enum class Wide { Off, World, Cockpit };
+// The video card of the emulated machine: the original's graphics modes (VGA 256 colours, EGA and
+// Tandy 16, CGA 4, Hercules monochrome).
+enum class Video { Vga, Ega, Tandy, Cga, Hercules };
 
 struct Settings {
     std::string game_dir;     // empty: the Game folder (default_game_dir)
@@ -28,6 +31,7 @@ struct Settings {
     Wide widescreen = Wide::Cockpit;
     bool far_view = true;       // the extended draw distance: terrain and objects beyond the game's window
     Sound sound = Sound::Auto;
+    Video video = Video::Vga;
     int fps = 15;               // frame rate of the 3D stations (the mission clock; host_set_frame_rate)
 
     bool any_enhancement() const { return hires_view || smooth_motion || widescreen != Wide::Off || far_view; }
@@ -60,5 +64,6 @@ const char *aspect_name(Aspect a);
 const char *filter_name(Filter f);
 const char *sound_name(Sound s);
 const char *wide_name(Wide w);
+const char *video_name(Video v);
 
 } // namespace gb

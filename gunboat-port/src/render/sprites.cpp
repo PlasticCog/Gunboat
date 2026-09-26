@@ -6,6 +6,7 @@
 // out top bit first) and the column pattern D889.. (bytes rotated left as their bits are used;
 // BX = the byte, DL = its bits left). They are transcribed register by register.
 #include "render/render.hpp"
+#include "render/modes.hpp"
 
 #include <utility>
 
@@ -603,9 +604,14 @@ void blit_place(u16 es, u16 bx, u16 si)
     }
     ds_u16(DS_sprite_repeat_ptr) = di;
     ds_u8(BLIT_ROW) = row;
-    // PORT: EGA (48da), CGA (4056) and Tandy (4f96) row copiers are parked.
-    if (u8(ds_u16(DS_video_mode)) != 0x13) render_parked("the sprite row copier (blit_rows_ega/cga/tandy)");
-    blit_rows_vga(row, si);
+    // The mode's row copier: VGA 13h, EGA 0Dh, Tandy 9-0Ch, CGA below.
+    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    const u8 mode = u8(ds_u16(DS_video_mode));
+    if (mode == 0x13) blit_rows_vga(row, si);
+    else if (mode == 0x0D) blit_rows_ega(row, si);
+    else if (mode >= 9 && mode < 0x0D) blit_rows_tandy(row, si);
+    else if (mode < 9) blit_rows_cga(row, si);
+    else render_parked("the sprite row copier");
 }
 
 // 0919:5c71 blit_record (render3d.md §5.7): draws entry BX's cached image (not kind 39h): the

@@ -25,6 +25,7 @@ import struct
 import subprocess
 
 import biosmodel
+import cardmodel
 import dosmodel
 
 from unicorn import (Uc, UcError, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE, UC_HOOK_INTR, UC_HOOK_INSN,
@@ -226,19 +227,35 @@ class Original:
         return 0
 
     def _on_out(self, uc, port, size, value, _):
-        if port in self.outs:
+        if size == 2 and port + 1 in self.outs and port in self.outs:  # OUT DX, AX: AL to DX, AH to DX + 1
+            self.outs[port](uc, value & 0xFF)
+            self.outs[port + 1](uc, value >> 8)
+        elif port in self.outs:
             self.outs[port](uc, value)
         else:
             self._fail('OUT %Xh,%X at %s (no handler)' % (port, value, self._where()))
+
+    def map_ega(self, read_cb, write_cb):
+        """An EGA machine: A000:0000-FFFF becomes the card's memory (MMIO callbacks), no RAM."""
+        self.uc.mem_unmap(0xA0000, 0x10000)
+        self.uc.mmio_map(0xA0000, 0x10000, read_cb, None, write_cb, None)
+        self.ega = True
 
     def _on_bad_mem(self, uc, access, address, size, value, _):
         self._fail('invalid memory access %X at %s' % (address, self._where()))
         return False
 
     def set_memory(self, m):
-        self.uc.mem_write(0, bytes(m))
+        m = bytes(m)
+        if getattr(self, 'ega', False):  # around the card's memory
+            self.uc.mem_write(0, m[:0xA0000])
+            self.uc.mem_write(0xB0000, m[0xB0000:])
+        else:
+            self.uc.mem_write(0, m)
 
     def memory(self):
+        if getattr(self, 'ega', False):
+            return bytes(self.uc.mem_read(0, 0xA0000)) + bytes(0x10000) + bytes(self.uc.mem_read(0xB0000, MEM_SIZE - 0xB0000))
         return bytes(self.uc.mem_read(0, MEM_SIZE))
 
     def call(self, file_seg, off, far, regs, stack_args=(), max_insns=5_000_000, cs=None, ds=DGROUP, sp=TEST_SP):
@@ -356,13 +373,36 @@ def put16(m, ds_off, v):
     struct.pack_into('<H', m, DS_BASE + ds_off, v & 0xFFFF)
 
 
+class CardCheck:
+    """The video card on both sides: set to the same state before each check (the test's
+    card_state, default the reset state), compared after it."""
+
+    def before(self, h):
+        state = bytes(h.card_state) if h.card_state is not None else bytes(cardmodel.reset_state())
+        h.card.s[:] = state
+        h.port.dll.gb_card_set(state)
+
+    def after(self, h):
+        port = ctypes.create_string_buffer(cardmodel.SIZE)
+        h.port.dll.gb_card_get(port)
+        diff = cardmodel.describe(h.card.s, port.raw)
+        return [diff] if diff else []
+
+
 class Harness:
-    def __init__(self, dll=None):
+    def __init__(self, dll=None, machine='vga'):
+        """machine: the video card of the emulated machine (cardmodel.MACHINES): 'vga' (the game as
+        ported first), 'ega', 'cga', 'tandy' or 'hercules'."""
         self.sym = Symbols()
         self.orig = Original()
         self.port = Port(dll)
+        self.machine = machine
+        self.port.dll.gb_set_machine(cardmodel.MACHINES[machine])
         self.dos = dosmodel.DosModel(self.orig, GAME_DIR)
-        self.bios = biosmodel.BiosModel(self.orig)
+        self.bios = biosmodel.BiosModel(self.orig, machine)
+        self.card = cardmodel.CardModel(self.orig, machine)  # (after the BIOS: its ports win)
+        self.bios.card = self.card
+        self.card_state = None
         # Extra comparisons (e.g. a sound model): objects with before(harness) and after(harness) ->
         # a list of problem strings; they run around every check().
         self.extensions = []
@@ -372,6 +412,10 @@ class Harness:
         # add_function. Linear ranges not compared (another program's stack): ignore.
         self.extra_funcs = {}
         self.ignore = []
+        if machine != 'vga':
+            self.extensions.append(CardCheck())
+        if machine == 'ega':
+            self.ignore.append((0xA0000, 0xB0000))  # the card's memory: compared as its planes
 
     def add_function(self, name, cs, off, far, ds=DGROUP, sp=TEST_SP):
         """A function outside GB.EXE that check() can call by name: code at cs:off (runtime
@@ -383,7 +427,7 @@ class Harness:
         leaves it), BSS and everything else zero."""
         m = bytearray(load_image())
         dosmodel.heap_init(m)
-        biosmodel.bios_init(m)
+        biosmodel.bios_init(m, self.machine)
         return m
 
     TICK_KINDS = {None: 0, 'tick_counter': 1, 'bios': 2, 'both': 3}
@@ -457,6 +501,7 @@ class Harness:
         host_pump() (see set_tick). exit_code: both sides must end the program with exit(code)
         (the memory is compared at that point; outputs are not)."""
         regs = regs or {}
+        self.port.dll.gb_set_machine(cardmodel.MACHINES[self.machine])  # (the DLL is shared by the harnesses)
         if not keep_files:
             self.reset_files()
         start_dac = bytes(dac) if dac is not None else bytes(768)

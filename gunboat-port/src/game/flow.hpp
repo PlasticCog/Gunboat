@@ -9,6 +9,9 @@ namespace gb {
 // ---- program (flow_main.cpp)
 [[noreturn]] void game_main();           // 0000:0000 main
 void config_load();                      // 0000:02fe
+// PORT: the player's video card for config_load: 13h VGA, 0Dh EGA, 04h CGA, 09h Tandy, 0Ch Hercules
+// (0: GUNBOAT.CFG's, or the setup's default).
+void config_set_video_choice(u16 mode);
 void config_print_mode(u16 n);           // 0000:05fc
 void config_print_yn(u16 c);             // 0000:0620
 [[noreturn]] void quit_to_dos();         // 0000:021e

@@ -27,11 +27,12 @@ void host_shutdown();
 // divisor takes effect from the last tick on, as reprogramming the PIT does. handler may be null.
 void host_set_timer(u16 divisor, void (*handler)());
 
-// Source of the displayed image: fills a w x h XRGB8888 frame and returns true if it changed since
-// the last call. Installed by the VGA model (platform/vga.cpp, 320x200). Shown with 4:3 aspect.
-constexpr int HOST_FRAME_MAX_W = 320;
-constexpr int HOST_FRAME_MAX_H = 200;
-void host_set_frame_source(bool (*compose)(u32 *xrgb), int w, int h);
+// Source of the displayed image: fills an XRGB8888 frame, sets its size (*w x *h: 320x200, or up to
+// 720x348 for a Hercules card) and returns true if it changed since the last call. Installed by the
+// video model (platform/vga.cpp). Shown with 4:3 aspect.
+constexpr int HOST_FRAME_MAX_W = 720;
+constexpr int HOST_FRAME_MAX_H = 348;
+void host_set_frame_source(bool (*compose)(u32 *xrgb, int *w, int *h), int w, int h);
 
 // Runs the timer ticks that are due (and their audio), handles window events and presents the
 // screen when it changed. Every busy-wait loop of the original (tick waits, key polls, delays)
@@ -89,9 +90,10 @@ SDL_Window *host_window();
 SDL_Renderer *host_renderer();
 void host_set_game_dir(const char *dir);
 // Replaces the host's own picture: at each present slot of host_pump (at most every 8 ms, VSync
-// pacing it further) the presenter gets the composed frame and whether it changed since the last
-// slot (or the window needs a redraw), draws with host_renderer() and returns true if it presented.
-void host_set_presenter(bool (*present)(const u32 *xrgb, bool changed));
+// pacing it further) the presenter gets the composed frame (w x h) and whether it changed since the
+// last slot (or the window needs a redraw), draws with host_renderer() and returns true if it
+// presented.
+void host_set_presenter(bool (*present)(const u32 *xrgb, int w, int h, bool changed));
 // Called by host_frame_pace on entry: a 3D station's frame is complete in memory.
 void host_set_frame_hook(void (*hook)());
 // Called for each key press (SDL scancode) before the game gets it; true = the key is the

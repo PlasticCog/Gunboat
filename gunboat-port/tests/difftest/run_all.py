@@ -30,7 +30,7 @@ def main():
     a = ap.parse_args()
     if not a.no_build and not a.dll:
         gbdiff.build()
-    h = gbdiff.Harness(a.dll)
+    harnesses = {}  # one per video card (a test's `machine` attribute, default 'vga')
     results, failed = [], 0
     for path in sorted(HERE.glob('test_*.py')):
         module = importlib.import_module(path.stem)
@@ -38,6 +38,10 @@ def main():
             name = '%s.%s' % (path.stem, test.__name__)
             if a.k not in name:
                 continue
+            machine = getattr(test, 'machine', 'vga')
+            if machine not in harnesses:
+                harnesses[machine] = gbdiff.Harness(a.dll, machine)
+            h = harnesses[machine]
             rng = random.Random('%d:%s' % (a.seed, name))
             t0 = time.time()
             try:

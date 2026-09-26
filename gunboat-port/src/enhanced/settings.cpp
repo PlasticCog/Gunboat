@@ -38,6 +38,17 @@ const char *filter_name(Filter f)
 
 const char *sound_name(Sound s) { return s == Sound::Adlib ? "adlib" : s == Sound::Speaker ? "speaker" : "auto"; }
 
+const char *video_name(Video v)
+{
+    switch (v) {
+    case Video::Ega: return "ega";
+    case Video::Tandy: return "tandy";
+    case Video::Cga: return "cga";
+    case Video::Hercules: return "hercules";
+    default: return "vga";
+    }
+}
+
 const char *wide_name(Wide w) { return w == Wide::World ? "world" : w == Wide::Cockpit ? "cockpit" : "off"; }
 
 namespace {
@@ -112,6 +123,13 @@ bool settings_load(Settings &s)
             s.sound = !std::strcmp(v, "adlib") ? Sound::Adlib : !std::strcmp(v, "speaker") ? Sound::Speaker : Sound::Auto;
         }
         else if (!std::strcmp(k, "fps")) s.fps = SDL_clamp(std::atoi(v), 0, 1000);
+        else if (!std::strcmp(k, "video")) {
+            s.video = !std::strcmp(v, "ega")        ? Video::Ega
+                      : !std::strcmp(v, "tandy")    ? Video::Tandy
+                      : !std::strcmp(v, "cga")      ? Video::Cga
+                      : !std::strcmp(v, "hercules") ? Video::Hercules
+                                                    : Video::Vga;
+        }
     }
     std::fclose(f);
     return true;
@@ -135,9 +153,10 @@ bool settings_save(const Settings &s)
                  "far_view = %d\n"
                  "widescreen = %s\n"
                  "sound = %s\n"
+                 "video = %s\n"
                  "fps = %d\n",
                  s.game_dir.c_str(), s.launcher, s.fullscreen, s.window_scale, aspect_name(s.aspect),
-                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), s.fps);
+                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), video_name(s.video), s.fps);
     return std::fclose(f) == 0;
 }
 

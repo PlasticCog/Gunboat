@@ -31,8 +31,8 @@ char *game_dir;
 void (*tick_handler)();
 void (*kbd_handler)(u8);
 void (*focus_lost_handler)();
-bool (*frame_source)(u32 *);
-bool (*presenter)(const u32 *, bool);
+bool (*frame_source)(u32 *, int *, int *);
+bool (*presenter)(const u32 *, int, int, bool);
 void (*frame_hook)();
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
@@ -379,7 +379,7 @@ void host_set_timer(u16 divisor, void (*handler)())
 void host_set_kbd_handler(void (*handler)(u8)) { kbd_handler = handler; }
 void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handler; }
 
-void host_set_frame_source(bool (*compose)(u32 *), int w, int h)
+void host_set_frame_source(bool (*compose)(u32 *, int *, int *), int w, int h)
 {
     frame_source = compose;
     frame_w = SDL_clamp(w, 1, HOST_FRAME_MAX_W);
@@ -431,10 +431,15 @@ void host_pump()
 
     // Present at most once per ~8 ms; VSync paces it further.
     if (frame_source && now - last_present_ns >= 8 * SDL_NS_PER_MS) {
-        const bool changed = frame_source(frame) || redraw;
+        int w = frame_w, h = frame_h;
+        bool changed = frame_source(frame, &w, &h) || redraw;
+        if (w != frame_w || h != frame_h) {  // another mode: the texture follows the frame's size
+            host_set_frame_source(frame_source, w, h);
+            changed = true;
+        }
         bool shown = false;
         if (presenter) {
-            shown = presenter(frame, changed);
+            shown = presenter(frame, frame_w, frame_h, changed);
         } else if (changed) {
             present();
             shown = true;
@@ -539,7 +544,7 @@ void host_set_game_dir(const char *dir)
     game_dir = SDL_strdup(dir);
 }
 
-void host_set_presenter(bool (*present)(const u32 *, bool))
+void host_set_presenter(bool (*present)(const u32 *, int, int, bool))
 {
     presenter = present;
     host_set_frame_source(frame_source, frame_w, frame_h);  // the logical presentation for it

@@ -26,6 +26,7 @@
 #include "enhanced/widen.hpp"
 #include "host.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "platform/vga.hpp"
 #include "symbols.hpp"
 
@@ -52,7 +53,9 @@ struct ViewTex {
 };
 ViewTex win_tex, left_tex, right_tex;
 
-bool view_wanted() { return enhanced_on && cfg.any_enhancement(); }
+// The enhancements draw the VGA game (mode 13h: the capture reads its pages); the other video cards
+// show their own pictures as they are.
+bool view_wanted() { return enhanced_on && cfg.any_enhancement() && card_machine() == Machine::Vga; }
 
 SDL_ScaleMode filter_mode()
 {
@@ -495,8 +498,56 @@ void update_widening(const Layout &l, const u32 *frame, int side)
 Layout last_layout;
 bool was_live;
 
-bool present(const u32 *frame, bool changed)
+// The frame of another video card (EGA, CGA, Tandy, Hercules) as it is, in a 4:3 picture with the
+// player's filter.
+SDL_Texture *plain_tex;
+int plain_w, plain_h;
+
+bool present_plain(const u32 *frame, int w, int h, bool changed)
 {
+    SDL_Renderer *r = host_renderer();
+    int ow, oh;
+    SDL_GetRenderOutputSize(r, &ow, &oh);
+    const bool resized = ow != last_layout.ow || oh != last_layout.oh;
+    last_layout.ow = ow;
+    last_layout.oh = oh;
+    if (!changed && !resized) return false;
+    if (!plain_tex || plain_w != w || plain_h != h) {
+        if (plain_tex) SDL_DestroyTexture(plain_tex);
+        plain_tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, w, h);
+        plain_w = w;
+        plain_h = h;
+    }
+    if (!plain_tex) return false;
+    SDL_SetTextureScaleMode(plain_tex, filter_mode());
+    SDL_UpdateTexture(plain_tex, nullptr, frame, w * 4);
+    double pw = oh * 4.0 / 3.0, ph = oh;
+    if (pw > ow) {
+        pw = ow;
+        ph = pw * 3.0 / 4.0;
+    }
+    const SDL_FRect pic = {float(std::floor((ow - pw) / 2)), float(std::floor((oh - ph) / 2)), float(std::floor(pw)),
+                           float(std::floor(ph))};
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
+    SDL_RenderClear(r);
+    SDL_RenderTexture(r, plain_tex, nullptr, &pic);
+    const double sy = pic.h / h;
+    if (cfg.filter == Filter::Crt && sy >= 2) {
+        SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(r, 0, 0, 0, 96);
+        for (int y = 0; y < h; y++) {
+            const SDL_FRect band = {pic.x, pic.y + float((y + 0.6) * sy), pic.w, float(0.4 * sy)};
+            SDL_RenderFillRect(r, &band);
+        }
+    }
+    snapshot(r);
+    SDL_RenderPresent(r);
+    return true;
+}
+
+bool present(const u32 *frame, int w, int h, bool changed)
+{
+    if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
     const bool resized = l.ow != last_layout.ow || l.oh != last_layout.oh;
