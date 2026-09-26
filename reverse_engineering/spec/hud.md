@@ -6,7 +6,8 @@ Symbols: `spec/hud_symbols.csv`. Confidence tags as in `simulation.md`.
 **Ported** (package H, `gunboat-port/src/hud`, tests `tests/difftest/test_hud.py`): every routine of
 §2.1, §3, §5 (the three full-screen stations, the gun sprites and panels, `screen_clear`, the window
 cracks) and §6 (`view_copy_*`, `gun_frame_draw`), with the library's `gfx_line_to` /
-`gfx_fill_rect_clipped`. The pseudocode below was corrected from the verified port.
+`gfx_fill_rect_clipped`. Package V: `view_present` itself (§6; `gunboat-port/src/mission`, tests
+`tests/difftest/test_mission.py`). The pseudocode below was corrected from the verified ports.
 
 This spec gives the structure, the data model and the rules. The screen coordinates, rectangle
 sizes and bitmap offsets are constants in the listed routines; the port transcribes them
@@ -20,14 +21,15 @@ specified; each drawing helper below has CGA/EGA/Tandy twins that are parked.
 |---|---|---|
 | 0 | A000:0000, `DS:D9B6` | visible screen |
 | 1 | RAM, `DS:D9B8` | drawing page: the 3D view (render3d §1.1) and the decoded cockpit art |
-| 2 | RAM, `DS:D9BA` | only outside VGA (`DS:0074 = 2`); in VGA `DS:0074 = 0` |
+| 2 | RAM, `DS:D9BA` | the view page outside VGA (`DS:0074 = 2`); in VGA `DS:0074 = 0` and page 2 is the screen segment A000h too |
 
 `DS:007A` is the current draw page for the graphics library (`gfx_set_draw_page`); the page
 segment table starts at `DS:D9B6` (indexed by page number, `0919:8a3f`). A frame is:
-`game_frame` draws into page 1 (render3d), then `mission_run` calls **`view_present`**
-(`05bd:1fd4`, page `DS:0074`) which copies the parts of page 1 visible through the current
-station's cockpit openings to the screen and adds the station overlays (§6). In chase view the
-loop copies the view rectangle directly instead (world §3.2).
+`game_frame` draws into page 1 (render3d), then `mission_run` calls **`view_present(1, 0)`**
+(`05bd:1fd4`; `view_restore` calls `view_present(1, DS:0074)`), which draws the gun station's
+sprites into the view on page 1 and copies the parts of page 1 visible through the current
+station's cockpit openings to the screen (§6). In chase view the loop copies the view rectangle
+directly instead (world §3.2).
 
 ## 2. The cockpit model **verified**
 
@@ -211,12 +213,101 @@ draw page (`gfx_read_bitmap`): `F348`/`F21E` (45 rows at (20h, 38h) / (118h, 38h
 page 1 x 100h..11Fh, rows 0..20h to x 0, bottom row 2Ch (parts 1), preceded by 120h..13Fh to x
 120h (parts 2).
 
-## 6. `view_present` (05bd:1fd4) **verified** (structure)
+## 6. `view_present` (05bd:1fd4) **verified** (ported)
 
-Per station, after each `game_frame`:
+`view_present(src_page, dst_page)`, a far C function: `mission_run` calls it as `(1, 0)` after each
+`game_frame` at the stations 1-4 when not in chase view, `view_restore` as `(1, DS:0074)` (world
+§3.2-3.3). The gun stations draw their sprites into the new view on the **source** page (page 1),
+then every station copies the view to the **destination** page: a rectangle for the rows below the
+sky, then one of the eight fixed view copies (1. below). There is no elevation arithmetic: the
+sprites have fixed positions (the gun's elevation shows through the view pitch, simulation §5.4), and
+the only varying inputs are the sky top, the gun bearings, the weapon fits, the flash counters and
+their latches, and the parity of the world pass counter. AX is left as the last callee leaves it;
+both callers ignore it. Stations and look directions other than those below: nothing.
 
-1. Copy the view from page 1 to the screen through the cockpit openings: rectangles with
-   `gfx_copy_rect` and the special copies `view_copy_*` (`0919:8a32`, `8ad5`, `8b43`, `8bf9`,
+`view_sky_top` (`D965`) is the view's horizon row (render3d §3.1): the rows above it are sky that
+the renderer left as it was. `view_sky_top_prev` (`D966`) holds the last present's value, so the rows
+copied start at the higher of the two horizons (the rows the sky uncovered or covered since then);
+`screen_clear` and the aiming routines set both to 0, so the next present copies the whole view
+window from its top row 40h:
+
+```
+rows_copy(bottom, dy):                              (inline in each station)
+    D966 = min(D965, D966) + 40h                    (8 bits: a sky top from C0h up wraps to a low row)
+    if D966 <= bottom: gfx_copy_rect(28h, 127h, D966, bottom, 20h, dy, src, dst)   (to x 20h, bottom row dy)
+    D966 = D965
+```
+
+**Pilot (1)**, by the look direction `F346`: the same idiom with two rectangles (bottom 77h, both
+to the bottom row 4Fh), then the view copy of that direction:
+
+| Look | Rectangles (view x → screen x) | Copy |
+|---|---|---|
+| 0 left | 78h..F7h → 80h, F8h..127h → 110h | `view_copy_1` |
+| 1 ahead | 28h..A7h → 18h, A8h..127h → A8h | `view_copy_2` |
+| 2 right | 28h..57h → 0, 58h..D7h → 40h | `view_copy_3` |
+
+**Gun stations (2, 3, 4)**: draw page = src (`DS:007A` and `gfx_set_draw_page`);
+`gun_frame_draw(heading[station] − heading[hull] + 20h)` (bow: `− 60h`; `heading` = `B81E` hull,
+`B81F` bow, `B820` midship, `B821` stern); the station's sprites (below: 1-bit sprites captured by
+the station screens, drawn by `gfx_draw_bitmap` at the pen, rows upward); draw page = dst; the rows
+copy; the view copy. Colours: `gun_dark_colour` `ECAE` (VGA 08h), `muzzle_flash_colour` `ECAF`
+(0Ch, with white 0Fh), `gun_light_colour` `F106` (14h), `gun_edge_colour` `F107` (15h),
+`gun_shade_colour` `F108` (16h), `gun_rail_colour` `F10A` (17h), `midship_mount_colour` `EEA1`.
+Flash counters (simulation §6.1): the bow reads `flash_bow` `B83A`/`B83B` directly, the midship
+`flash_midship` `B839` for its muzzle flash; the ammunition belt and the stern use the latches that
+`mission_run` and `view_restore` take before `game_frame` (`flash_midship_latch` `F132`,
+`flash_stern_latch` `F10B`, after moving the old ones to `flash_midship_latch_prev` `ECA8` /
+`flash_stern_latch_prev` `EA86`, world §3.3).
+
+```
+midship (3):
+    sight post at (A0h, 79h): E9E2 16 x 25 in gun_dark_colour, EA14 in gun_rail_colour
+    if B839: muzzle_flash()        (at (A0h, 77h): F2A4 16 x 14 in muzzle_flash_colour, F2C0 in white)
+    if weapon B807 == 2: ammo_belt(F132, ECA8)
+    weapon 0: at (B0h, 7Fh) F3A2 8 x 4 dark, F3A6 8 x 4 edge; at (98h, 7Fh) F5B4 8 x 6 edge, F5AE 8 x 6 dark
+    weapon 1: at (B8h, 7Fh) F3A2 8 x 5 in EEA1; at (90h, 7Fh) F5B3 8 x 5 edge, F5AE 8 x 5 light
+    else:     at (A0h, 79h) F3A2 16 x 3 shade, F3A8 16 x 3 edge
+    D965 = min(D965, 21h); rows_copy(6Ch, 38h)
+    weapon 1: view_copy_5, else view_copy_6
+stern (4):
+    sight post as the midship
+    if F10B and weapon B806 == 0: muzzle_flash(); the grenade rack: page 1 x 88h..DDh (F10B == 1)
+        or E0h..137h (else), rows 30h..3Ch, to page 0 at (10h, bottom row 77h)
+    if weapon == 1: ammo_belt(F10B, EA86); at (A0h, 79h) F3A2 16 x 3 shade, F3A8 16 x 3 edge
+    else: in gun_dark_colour F3A2 8 x 1 at (B0h, 79h), F5AE 8 x 1 at (98h, 79h)
+    D965 = min(D965, 21h); rows_copy(6Ch, 38h)
+    weapon != 0: view_copy_6, else view_copy_8
+ammo_belt(latch, prev):            (midship weapon 2, stern weapon 1)
+    if latch: muzzle_flash(); frame = 2 if prev and (D70C & 1) else 1
+    elif prev: frame = 2
+    else: return
+    page 1 x C0h..12Fh, rows 9Dh..A8h (frame 1) or A9h..B4h (frame 2), to page 0 at (18h, bottom row 67h)
+bow (2), weapon B804 == 0 (two barrels):
+    mount edges 8 x 5 in edge colour: EE94 at (40h, 6Bh), ECA9 at (108h, 6Bh)
+    the left barrel (counter B83A; flash F5E8 F5FD at x 88h; pieces F0F0 F0F4 at x 60h; barrel
+    E9FD E9E2 EA18 at x 78h), then the right one (B83B; EEA6 EEBB at B0h; F5DC F5E0 at E8h;
+    F2BF F2A4 F2DA at C0h):
+        recoil = 51h if its counter else 0          (the recoil frames are captured 51h bytes further)
+        if its counter: at (x, 7Ah) the flash 24 x 7: white, then muzzle_flash_colour
+        at (x, 7Ah) the pieces 8 x 4: edge, then shade
+        at (x, 7Fh) the barrel 24 x 9, each + recoil: shade (colour still set), edge, dark
+    rows copy without the clamp: bottom 6Bh, dy 37h; view_copy_4
+bow, weapon != 0:
+    at (B0h, 7Fh) F5DC 8 x 3 dark, F5DF 8 x 3 colour 0; at (98h, 7Fh) F0F4 8 x 4 colour 0, F0F0 dark
+    at (98h, 7Bh) the barrel cluster 32 x 18: E9E2 dark, EA2A gun_rail_colour
+    if B83A: at (A0h, 7Bh) the flash 16 x 10: F5E8 white, F5FC muzzle_flash_colour
+    rows copy without the clamp: bottom 6Ch, dy 38h; view_copy_7
+```
+
+The ammunition belt and the grenade rack go from page 1 to page 0 whatever pages are passed (in
+VGA both callers pass `dst = 0`). The sight post's rows (61h..79h of page 1) are why the midship and
+the stern clamp the sky top to 21h: the rows copy then always covers them. The captured sprites
+share buffers between the stations (one holds the sight post at the midship and a barrel at the
+bow): `hud_symbols.csv` names them by address (`gun_sprite_e9e2`, ...) with each station's
+content.
+
+1. **The view copies** `view_copy_*` (`0919:8a32`, `8ad5`, `8b43`, `8bf9`,
    `8cd3`, `8d45`, `8db7`, `8e47`). Each takes **(source page, destination page)**, loads DS and ES
    from `page_segments` (`DS:D9B6`) and, when the low byte of `DS:EED2` is above 0Dh, runs its VGA
    routine (`8a72`, `8b15`, `8b83`, `8c39`, `8d13`, `8d85`, `8df7`, `8e87`; the EGA / Tandy / CGA
@@ -232,12 +323,7 @@ Per station, after each `game_frame`:
    48h, 4 + 30h + 4, 4 rows of 30h); `8d13`..`8e87` share `view_copy_head_vga` (`0919:8e29`, 9 rows
    of 68h words from 8880h to 4778h) and add rows of 18h words and rows of two short runs (5: 4 + 6
    rows of 4 + 4 words 20h apart; 6: 4 + 6 rows of 8 + 8 words 10h apart; 7: 6 + 4; 8: 2 + 2).
-2. Draw the station overlays from the captured sprites: gun sight and barrel pictures
-   (`gfx_draw_bitmap` of the `E9E2`…`F5FD` buffers) at positions from the gun elevation and the
-   muzzle flash counters (`F10B`, `F132`, `EA86`, `ECA8`: this frame's and last frame's stern and
-   midship flashes, copied by `mission_run`), the gun colour `F107`/`F109`/`F10A`, and the
-   recoil frames; the sight animation `D965`/`D966`.
-3. `gun_frame_draw` (`05bd:2cde`, argument: the gun's bearing relative to the hull, + 20h or
+2. **`gun_frame_draw`** (`05bd:2cde`, argument: the gun's bearing relative to the hull, + 20h or
    − 60h by the station): b = low byte. Within 30h of 40h (v = 2·(30h − (b − 40h))) the left frame
    piece `F112` at (20h + v, 7Fh), and for v > 8 a second one at (18h + v, 5Fh) with a fill
    (18h+v..1Fh+v, 60h..7Fh), for v > 10h also (28h..18h+v, 40h..7Fh), colour `F109`; within 30h
@@ -282,6 +368,7 @@ picture columns.
 
 * Switch 7 (`D527`, bow F2 together with sw 6): its role (a second bow mount switch?) and the
   lamp picture numbers.
-* The exact placement arithmetic in `view_present` for each station (elevation → sight row,
-  recoil frames); the eight view copy shapes are transcribed (§6) and ported.
+* Resolved: `view_present` has no placement arithmetic (fixed sprite positions; the recoil frames lie
+  51h bytes further in the capture buffers, §6); the eight view copy shapes are transcribed and
+  ported.
 * The left look direction's instruments (`F346 = 0`): only the radar (right) is identified.

@@ -84,7 +84,7 @@ func,05bd:19cc,map_screen,far void(),world,spec:world,§3.2 station 5 (hud spec)
 func,05bd:1ba4,damage_report_screen,far void(),world,spec:world,§3.2 station 7 (hud spec)
 func,05bd:1dba,assignment_screen,far void(),world,spec:world,§3.2 station 8; prints the mission text DS:ECB4
 func,05bd:1ed0,gun_sprites_capture,far void(),hud,spec:hud,§5 cuts sight and barrel sprites from the art
-func,05bd:1fd4,view_present,far void(u16 page),world,spec:world,§3 copies the 3D view and composes the cockpit (hud spec)
+func,05bd:1fd4,view_present,far void(u16 src_page u16 dst_page),world,spec:world,§3 hud §6: the gun sprites on the source page; the view through the cockpit openings to the destination page (mission_run (1 0); view_restore (1 view_page)) | §3 copies the 3D view and composes the cockpit (hud spec)
 func,05bd:2cde,gun_frame_draw,far void(u16 bearing),hud,spec:hud,§6 the gun's bearing relative to the hull (view_present adds 20h or subtracts 60h) | §6
 func,05bd:2efc,screen_clear,far void(),world,spec:world,§3.1
 func,05bd:2f6a,station_screen_colours,far void(),hud,spec:hud,§5 EGA/Tandy/CGA palette entries of the full-screen stations (ega_pal_entry); nothing in VGA
@@ -1086,14 +1086,31 @@ global,DS:E6CA,speaker_branch_xor,u8[6],sound,spec:sound,§4.4
 global,DS:E6D0,speaker_branch_mask,u8[6],sound,spec:sound,§4.4
 global,DS:E6D6,speaker_script_ops,u16[8],sound,spec:sound,§4.4 near handlers in 1b37
 global,DS:E9E0,pencil_colour,u16,game_flow,spec:game_flow,§3 title_colour_a saved for the menu cursor drawer 020d:09cc
+global,DS:E9E2,gun_sprite_e9e2,u8[72],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: sight post dark layer 16 x 25 (at (A0h; 79h)); bow weapon 0: left barrel 24 x 9 in gun_edge_colour (recoil frame gun_sprite_ea33); bow weapon 1: barrel cluster dark layer 32 x 18
+global,DS:E9FD,gun_sprite_e9fd,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left barrel 24 x 9 in gun_shade_colour (recoil frame gun_sprite_ea4e)
+global,DS:EA14,gun_sprite_ea14,u8[50],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: sight post 16 x 25 in gun_rail_colour
+global,DS:EA18,gun_sprite_ea18,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left barrel 24 x 9 dark layer (recoil frame gun_sprite_ea69)
+global,DS:EA2A,gun_sprite_ea2a,u8[72],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: barrel cluster 32 x 18 in gun_rail_colour
+global,DS:EA33,gun_sprite_ea33,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_e9e2
+global,DS:EA4E,gun_sprite_ea4e,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_e9fd
+global,DS:EA69,gun_sprite_ea69,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_ea18
 global,DS:EA84,map_drawn,u16,game_flow,spec:game_flow,§6 the mission whose assignment map is on page 1 (0 = redraw)
+global,DS:EA86,flash_stern_latch_prev,u8,world,spec:world,§3.2 flash_stern_latch of the frame before (mission_run and view_restore: before game_frame)
 global,DS:EA88,gun_frame_right,u8[32],hud,spec:hud,§5 captured at (58h; 2Fh)
+global,DS:ECA8,flash_midship_latch_prev,u8,world,spec:world,§3.2 flash_midship_latch of the frame before
+global,DS:ECA9,gun_sprite_eca9,u8[5],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right mount edge 8 x 5 at (108h; 6Bh)
+global,DS:ECAE,gun_dark_colour,u8,hud,spec:hud,§6 the dark layer of the gun sprites (VGA 08h; EGA/Tandy 08h; CGA 02h)
+global,DS:ECAF,muzzle_flash_colour,u8,hud,spec:hud,§6 the muzzle flash sprites with white 0Fh (VGA 0Ch; EGA/Tandy 0Ch; CGA 03h)
 global,DS:ECB0,menu_idle,u16,game_flow,spec:game_flow,§3 menu loop iterations without a key; 113h starts the demo
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
+global,DS:EE94,gun_sprite_ee94,u8[5],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left mount edge 8 x 5 at (40h; 6Bh) in gun_edge_colour
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EEA0,gun_edge_mask_colour,u8,hud,spec:hud,§5 colour gun_sprites_capture reads the edge sprites in (F107 at a station change)
+global,DS:EEA1,midship_mount_colour,u8,hud,spec:hud,§6 midship weapon 1: the piece at (B8h; 7Fh) (gun_shade_colour; 7 in EGA/Tandy: midship_screen)
 global,DS:EEA2,clip_runs,u16,hud,spec:hud,§5 run count of CLIP.LZ
 global,DS:EEA4,mp5a_runs,u16,game_flow,spec:game_flow,§6 run count of MP5A.LZ
+global,DS:EEA6,gun_sprite_eea6,u8[21],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right muzzle flash 24 x 7 in white
+global,DS:EEBB,gun_sprite_eebb,u8[21],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right muzzle flash 24 x 7 in muzzle_flash_colour
 global,DS:EED0,map_a_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnA.LZ
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
@@ -1102,16 +1119,22 @@ global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
 global,DS:F0E6,map_sheet_a_runs,u16,hud,spec:hud,§5 run count of MPnA.LZ (clip_1838_far in a mission)
 global,DS:F0E8,cms_driver_entry,u16[2],sound,spec:sound,§4.5 far pointer to the loaded CMS.DRV
 global,DS:F0EC,map_sheet_b_runs,u16,hud,spec:hud,§5 run count of MPnB.LZ
+global,DS:F0F0,gun_sprite_f0f0,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece left of the barrels (weapon 0: gun_edge_colour; weapon 1: dark)
+global,DS:F0F4,gun_sprite_f0f4,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece (weapon 0: gun_shade_colour; weapon 1: colour 0)
 global,DS:F0FA,mp5b_runs,u16,game_flow,spec:game_flow,§6 run count of MP5B.LZ
 global,DS:F0FC,bd1_far,u16[2],platform,spec:platform,§5 1784h bytes
 global,DS:F100,map_b_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnB.LZ
 global,DS:F102,bd2_far,u16[2],platform,spec:platform,§5 0CC6h bytes
+global,DS:F106,gun_light_colour,u8,hud,spec:hud,§6 light grey of the gun sprites (VGA 14h)
 global,DS:F107,gun_edge_colour,u8,hud,spec:hud,§6 gun_frame_draw: the edge sprites (VGA 15h)
+global,DS:F108,gun_shade_colour,u8,hud,spec:hud,§6 mid grey of the gun sprites (VGA 16h)
 global,DS:F109,gun_frame_colour,u8,hud,spec:hud,§6 gun_frame_draw: the frame pieces and fills (VGA 17h)
 global,DS:F10A,gun_rail_colour,u8,hud,spec:hud,§6 gun_frame_draw: the rail sprites (VGA 17h)
+global,DS:F10B,flash_stern_latch,u8,world,spec:world,§3.2 flash_stern (B83C) taken before game_frame for view_present
 global,DS:F10C,flow_file,u16,game_flow,spec:game_flow,§1 FILE* of main's disk checks and config_load
 global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
 global,DS:F112,gun_frame_left,u8[32],hud,spec:hud,§5 8 x 32 captured at (60h; 2Fh)
+global,DS:F132,flash_midship_latch,u8,world,spec:world,§3.2 flash_midship (B839) taken before game_frame for view_present
 global,DS:F134,title_colour_a,u16,game_flow,spec:game_flow,§3 the title sprite's first colour layer; the pencil's; then the menu text colour (0 in VGA)
 global,DS:F13A,flow_scratch,u16,world,spec:world,"§1 scratch of main and config_load: the title choice, the page allocation result | was copy_counter | §3.3 shared with the front end"
 global,DS:F13C,folder_code,char[5],game_flow,spec:game_flow,"§6 ""4x7x"" with the folder letter and digit (shown at row 7 col 31)"
@@ -1147,6 +1170,13 @@ global,DS:F298,music_note_off,u16[2],sound,spec:sound,§3 far pointer
 global,DS:F29C,music_control,u16[2],sound,spec:sound,§3 far pointer
 global,DS:F2A0,sound_device,u16,sound,spec:sound,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
 global,DS:F2A2,music_loop,u16,sound,spec:sound,§4.2 music_play's third argument
+global,DS:F2A4,gun_sprite_f2a4,u8[28],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: muzzle flash 16 x 14 in muzzle_flash_colour; bow weapon 0: right barrel 24 x 9 in gun_edge_colour (recoil frame gun_sprite_f2f5)
+global,DS:F2BF,gun_sprite_f2bf,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right barrel 24 x 9 in gun_shade_colour (recoil frame gun_sprite_f310)
+global,DS:F2C0,gun_sprite_f2c0,u8[28],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: muzzle flash 16 x 14 in white
+global,DS:F2DA,gun_sprite_f2da,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right barrel 24 x 9 dark layer (recoil frame gun_sprite_f32b)
+global,DS:F2F5,gun_sprite_f2f5,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2a4
+global,DS:F310,gun_sprite_f310,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2bf
+global,DS:F32B,gun_sprite_f32b,u8[27],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2da
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2
 global,DS:F348,gun_edge_left,u8[45],hud,spec:hud,§5 1-bit sprite 8 x 45 captured at (20h; 38h)
 global,DS:F375,gun_rail_left,u8[30],hud,spec:hud,§5 8 x 30 captured at (20h; 29h)
@@ -1155,6 +1185,12 @@ global,DS:F396,world_b_size,u16,world,spec:world,§4
 global,DS:F398,first_run,u8,game_flow,spec:game_flow,§1
 global,DS:F39C,bios_video_mode,u16,game_flow,spec:game_flow,§2
 global,DS:F39E,archive_entry_size,u32,platform,spec:platform,§4 size of the last archive entry found; file_load_far stores the bytes read
+global,DS:F3A2,gun_sprite_f3a2,u8[6],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 2 and stern weapon 1: 16 x 3 in gun_shade_colour; midship weapon 0: 8 x 4 dark; midship weapon 1: 8 x 5 in midship_mount_colour; stern weapon 0: 8 x 1 dark
+global,DS:F3A6,gun_sprite_f3a6,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 4 in gun_edge_colour
+global,DS:F3A8,gun_sprite_f3a8,u8[6],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 2 and stern weapon 1: 16 x 3 in gun_edge_colour
+global,DS:F5AE,gun_sprite_f5ae,u8[6],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 6 dark; midship weapon 1: 8 x 5 in gun_light_colour; stern weapon 0: 8 x 1 dark
+global,DS:F5B3,gun_sprite_f5b3,u8[5],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 1: 8 x 5 in gun_edge_colour
+global,DS:F5B4,gun_sprite_f5b4,u8[6],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 6 in gun_edge_colour
 global,DS:F5BA,pictures_far,u16[2],platform,spec:platform,§5 244Ah bytes: LIGHTS; MAP; title pictures
 global,DS:F5BE,bow_art2_far,u16[2],platform,spec:platform,§5 21F2h bytes
 global,DS:F5C2,midship_art2_far,u16[2],platform,spec:platform,§5 2382h bytes
@@ -1163,7 +1199,13 @@ global,DS:F5CC,map_a_far,u16[2],game_flow,spec:game_flow,§6 bow_art1_far + 125C
 global,DS:F5D0,stern_art2_far,u16[2],platform,spec:platform,§5 1AEAh bytes
 global,DS:F5D4,world_b_far,u16[2],world,spec:world,§4 far pointer to the B data copy
 global,DS:F5D8,cms_driver_tick,u16[2],sound,spec:sound,§4.5 far pointer from CMS.DRV function 5 | was music_stream | §4 far pointer
+global,DS:F5DC,gun_sprite_f5dc,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece right of the barrels in gun_edge_colour (weapon 0); 8 x 3 dark (weapon 1)
+global,DS:F5DF,gun_sprite_f5df,u8[3],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: 8 x 3 in colour 0
+global,DS:F5E0,gun_sprite_f5e0,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: 8 x 4 piece in gun_shade_colour
 global,DS:F5E4,clip_far,u16[2],platform,spec:platform,§5 2AD0h bytes
+global,DS:F5E8,gun_sprite_f5e8,u8[21],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow muzzle flash in white: weapon 0 left barrel 24 x 7; weapon 1 16 x 10
+global,DS:F5FC,gun_sprite_f5fc,u8[20],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: muzzle flash 16 x 10 in muzzle_flash_colour
+global,DS:F5FD,gun_sprite_f5fd,u8[21],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left muzzle flash 24 x 7 in muzzle_flash_colour
 global,DS:F612,clip_1838_far,u16[2],platform,spec:platform,§5 clip_far + 1838h
 global,DS:F616,clip_0c1c_far,u16[2],platform,spec:platform,§5 clip_far + 0C1Ch
 global,DS:F61A,map_sheet_b_far,u16[2],platform,spec:platform,§5 1310h bytes

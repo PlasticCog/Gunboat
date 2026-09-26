@@ -71,7 +71,8 @@ if chase view, station or look direction changed since the last pass (F5CA, F21C
 if station == 5 (map): blink colour F148++ & 3; objective arrow at DS:B3C0[2·(8·region + mission)]
     (not in region 3); boat marker at ((X >> 6) + 18h, ((Y >> 7) << 1) ^ FFh + B5h) (hud spec).
     A branch for region 4 (which does not exist) would use the start position EED6/F0E4.
-input_read_key; flash counters; game_frame; present; key_dispatch; …   (simulation §1.1)
+input_read_key; flash latches; game_frame; view_present(1, 0) (stations 1-4, not in chase view);
+    key_dispatch; …   (simulation §1.1)
 ```
 
 ### 3.3 Returning to a 3D station (`view_restore`, 05bd:144a) **verified**
@@ -87,9 +88,10 @@ panel_redraw_all() 0919:0000 (indicators 40h–5Dh; Ghidra shows it as 08e1:0380
 address); 0919:016a (panel switches); window_cracks_draw() 05bd:3114 (a far call: push cs)
    (the two panel routines get AX as sprite_cache_invalidate leaves it: its AH is stored in
    scratch_b7e3, hud §2.1)
-EA86 = F10B; ECA8 = F132; F10B = B83C; F132 = B839
+EA86 = F10B; ECA8 = F132; F10B = B83C; F132 = B839   (the flash latches for view_present: stern and
+                                                       midship, and the frame before's; hud §6)
 game_frame()
-if not chase view: present (05bd:1fd4); draw page 0
+if not chase view: view_present(1, DS:0074) (05bd:1fd4, hud §6); draw page 0
 ```
 
 `far_to_near_copy` / `near_to_far_copy` (`0000:072c` / `0000:0756`) use the **global**
