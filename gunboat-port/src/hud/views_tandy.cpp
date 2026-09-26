@@ -158,7 +158,7 @@ u16 view_copy_3_tandy(u16 es, u16 ds)
 }
 
 // 0919:51f2 view_copy_4_tandy (twin of view_copy_4_vga): a fixed pattern of runs from DS:10F4 to
-// ES:08D0 (same offsets on both pages): 4, 30h and 4 words with gaps, 30h words, 9 rows of 2Ch
+// ES:08D0 (the same steps on both pages): 4, 30h and 4 words with gaps, 30h words, 9 rows of 2Ch
 // words, 4 rows of 24h words, a row of 2, 18h and 2 words, 4 rows of 18h words.
 u16 view_copy_4_tandy(u16 es, u16 ds)
 {
