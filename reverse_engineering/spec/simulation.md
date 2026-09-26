@@ -142,7 +142,7 @@ Known fields (Codex-era tests; **verified** for the listed routines):
 
 | DS | Size | Field |
 |---|---|---|
-| 0086 | word | **Station / screen**: 1 pilot, 2 bow, 3 midship, 4 stern, 5 tactical map, 7 assignment, 8 damage report, 9 quit to menu. `< 5` = a 3D station. |
+| 0086 | word | **Station / screen**: 1 pilot, 2 bow, 3 midship, 4 stern, 5 tactical map, 6 chase view screen, 7 damage report, 8 assignment, 9 quit to menu. `< 5` = a 3D station. |
 | 0088 | dword | RNG state (§11); bytes 8A/8B are read directly as random bytes |
 | 007A | word | Current draw page for the graphics library |
 | B503 | word | Region 0–3 |
@@ -250,8 +250,8 @@ every pass **except** when a key with its own handler was pressed.
 | N | `0919:07f6` | Midship station. Refused in any practice (not demo): 19h, or 1Bh if `F110 == 3`; or crewman dead (`D512`). |
 | B | `0919:0833` | Stern station. Refused when `F110` is odd (not demo), or gunner dead (`D515`). |
 | M | `0919:074a` | Station 5, tactical map; chase view off |
-| `.` `>` | `0919:0756` | Station 8, damage report |
-| `/` `?` | `0919:0871` | Station 7, assignment |
+| `.` `>` | `0919:0756` | Station 8, assignment (mission text, world spec §3) |
+| `/` `?` | `0919:0871` | Station 7, damage report |
 | `,` `<` | `0919:090d` | **Chase boat view** (message 25h): station 2, `D96B = 1`, `D96C = D191` (current view heading), `D8BC = 1`. Ignored if already on. |
 | `+` `=` | `0919:087d` | Time compression `B7F1` 0→1→2→0 (messages 2Ch/2Dh/2Eh); sets bit 20h of the byte at `DS:6E54 + [DS:6E54]` while on; panel switch 0Bh. 3D stations only. |
 | `-` `_` | `0919:0503` | Next **control rate**: panel switch 0Ch (`D52C`) cycles 0→1→2→0. 3D stations only. |
@@ -789,7 +789,8 @@ boat_hit(class)                       class = AL & 7
   destroyed:
      engines or fuel tanks (components 0Bh–0Eh) and (DS:008A & 0Ch) == 0: boat_destroyed()
      captain (0Fh): main switch forced off, B545 = 1, message 0Dh "Sir, you just died!"
-     engineman (3) / gunner's mate (9) / seaman (4): the player at station 4 / 2 / 3 is sent to 7
+     engineman (3) / gunner's mate (9) / seaman (4): the player at station 4 / 2 / 3 is sent to the
+     damage report (station 7)
      port / starboard engine (0Bh / 0Ch): panel 1 / 2 = 5, engine B808 / B809 = 0
      secondary indicator DS:D19C[component] redrawn if nonzero
 ```

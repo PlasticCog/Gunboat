@@ -2,6 +2,9 @@
 
 ## Placement records
 
+> **Correction (2026-09-25):** besides the authored objects and tile scenery, the arrays hold
+> **far objects** from index 296 (count at DS:B95B, file offset 10Fh). See `spec/world.md` §6.1.
+
 DAT1.DAT–DAT4.DAT load at DS:B84C. Three parallel arrays contain object words,
 world X and world Y at DS:B95D, DS:C12D and DS:C8FD. Their file offsets are
 273, 2273 and 4273 respectively, each with room for 1000 unsigned 16-bit words.

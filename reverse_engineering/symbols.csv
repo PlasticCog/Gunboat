@@ -2,6 +2,8 @@ kind,address,name,type,owner,source,notes
 func,0000:0000,main,,game_flow,index,called only by _astart; opens DATAA/B/C.DAT
 func,0000:0648,file_load_near,,game_flow,td3-match,"TD3 0000:0e74 file_load_near, score 1.00"
 func,0000:06b4,file_load_far,,game_flow,td3-match,"TD3 0000:0ee0 file_load_far, score 1.00"
+func,0000:072c,far_to_near_copy,far void(u8 far *src u8 *dst u16 count),world,spec:world,§3.3 loop counter is the global DS:F13A
+func,0000:0756,near_to_far_copy,far void(u8 *src u8 far *dst u16 count),world,spec:world,§4 loop counter DS:F13A
 func,0000:0780,random,,game_flow,td3-match,"TD3 0000:0f58 random, score 1.00 | ORIGINAL_PHYSICS.md: state = state*41C64E6Dh+3039h at DS:0088"
 func,0000:07a8,input_read_key,far void(u16 *key),simulation,spec:simulation,§3.1 key code -> DS:EE9C; keypad reader; pause; S mute; Ctrl+Q
 func,0000:0a4e,mem_alloc_all,,game_flow,td3-match,"TD3 0000:11d2 mem_alloc_all, score 0.55; low score: confirm in the spec"
@@ -17,7 +19,19 @@ func,00f2:0ece,screen_present,,game_flow,td3-match,"TD3 01f4:1be2 screen_present
 func,00f2:0fea,ega_pal_init,,game_flow,td3-match,"TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
 func,020d:0bdc,hi_write,,game_flow,td3-match,"TD3 01f4:2e66 hi_write, score 0.50; low score: confirm in the spec"
 func,05bd:000a,mission_run,far void(),simulation,spec:simulation,§1.1 mission loop (world spec for the screens)
+func,05bd:048c,pilot_screen,far void(),world,spec:world,§3.2 station 1 screen (hud spec)
+func,05bd:07da,chase_view_screen,far void(),world,spec:world,§3.2 chase view screen (hud spec)
+func,05bd:08be,bow_screen,far void(),world,spec:world,§3.2 station 2 screen (hud spec)
+func,05bd:0e9e,stern_screen,far void(),world,spec:world,§3.2 station 4 screen (hud spec)
+func,05bd:10f4,midship_screen,far void(),world,spec:world,§3.2 station 3 screen (hud spec)
+func,05bd:144a,view_restore,far void(),world,spec:world,§3.3 B data back into DGROUP; sprites invalidated; one frame
 func,05bd:14d6,mission_load,far void(),simulation,spec:simulation,§2.1 loads DAT10/11 DATn DATnA/B TILE.BIN cockpit art palettes
+func,05bd:19cc,map_screen,far void(),world,spec:world,§3.2 station 5 (hud spec)
+func,05bd:1ba4,damage_report_screen,far void(),world,spec:world,§3.2 station 7 (hud spec)
+func,05bd:1dba,assignment_screen,far void(),world,spec:world,§3.2 station 8; prints the mission text DS:ECB4
+func,05bd:1fd4,view_present,far void(u16 page),world,spec:world,§3 copies the 3D view and composes the cockpit (hud spec)
+func,05bd:2efc,screen_clear,far void(),world,spec:world,§3.1
+func,05bd:3114,window_cracks_draw,near void(),world,spec:world,§3.3 simulation §8.6
 func,08e1:006e,demo_next_key,far void(u8 *key),simulation,spec:simulation,§3.1 recorded demo keys; any real key ends the demo
 func,08e1:018e,lzw_alloc,,platform,td3-match,"TD3 0ab4:000f lzw_alloc, score 0.53; low score: confirm in the spec"
 func,08e1:01aa,lzw_free,,platform,td3-match,"TD3 0ab4:0034 lzw_free, score 1.00"
@@ -25,6 +39,7 @@ func,08e1:01db,lzw_decode_body,,platform,td3-match,"TD3 0ab4:006a lzw_decode_bod
 func,08e1:02b1,lzw_fill_input,,platform,td3-match,"TD3 0ab4:0140 lzw_fill_input, score 1.00"
 func,08e1:02cd,lzw_get_code,,platform,td3-match,"TD3 0ab4:015c lzw_get_code, score 1.00"
 func,08e1:0361,lzw_add_entry,,platform,td3-match,"TD3 0ab4:01f0 lzw_add_entry, score 1.00"
+func,0919:0000,panel_redraw_all,far void(),world,spec:world,§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
 func,0919:038e,key_dispatch,far void(),simulation,td3-match+spec:simulation,"§3.2 key code DS:EE9C -> CS:0290 (01h-7Fh) / DS:D615 (81h-8Ah) | TD3 0e12:0084 key_dispatch, score 0.54; low score: confirm in the spec"
 func,0919:03c7,key_default,near void(),simulation,spec:simulation,§3.2 default handler: controls_poll
 func,0919:03cb,panel_switch_toggle,near void(BX entry),simulation,spec:simulation,§3.3 table CS:0270 -> switch DS:D520+n
@@ -42,7 +57,7 @@ func,0919:06a9,key_f8_faster,near void(),simulation,spec:simulation,§3.3 D680 +
 func,0919:06ee,key_f7_slower,near void(),simulation,spec:simulation,§3.3 D680 -= 15 (min 8)
 func,0919:0713,pilot_command_reply,near void(),simulation,spec:simulation,§3.3 queue the crew's answer B802
 func,0919:074a,key_m_map,near void(),simulation,spec:simulation,§3.3 station 5
-func,0919:0756,key_period_damage,near void(),simulation,spec:simulation,§3.3 station 8
+func,0919:0756,key_period_assignment,near void(),simulation,spec:simulation,§3.3 station 8 assignment | was key_period_damage | §3.3 station 8
 func,0919:0762,key_z_pilot_left,near void(),simulation,spec:simulation,§3.3 pilot station F346 = 0
 func,0919:0769,key_x_pilot_ahead,near void(),simulation,spec:simulation,§3.3 pilot station F346 = 1
 func,0919:0770,key_c_pilot_right,near void(),simulation,spec:simulation,§3.3 pilot station F346 = 2
@@ -51,7 +66,7 @@ func,0919:07b3,station_dead_reply,near void(),simulation,spec:simulation,§3.3 m
 func,0919:07c0,key_v_bow,near void(),simulation,spec:simulation,§3.3 station 2
 func,0919:07f6,key_n_midship,near void(),simulation,spec:simulation,§3.3 station 3
 func,0919:0833,key_b_stern,near void(),simulation,spec:simulation,§3.3 station 4
-func,0919:0871,key_slash_assignment,near void(),simulation,spec:simulation,§3.3 station 7
+func,0919:0871,key_slash_damage_report,near void(),simulation,spec:simulation,§3.3 station 7 damage report | was key_slash_assignment | §3.3 station 7
 func,0919:087d,key_plus_time_compression,near void(),simulation,spec:simulation,§3.3 B7F1 0-2
 func,0919:08be,key_tab_return_to_base,near void(),simulation,spec:simulation,§3.3 message 7; B545 = 2 when crippled
 func,0919:0906,end_mission,near void(),simulation,spec:simulation,§9.1 station 9
@@ -127,6 +142,9 @@ func,0919:3b9f,score_add,near void(DL index),simulation,spec:simulation,§7.2
 func,0919:3bbc,hit_test,near (BX entry)->AH,simulation,spec:simulation,§7.2
 func,0919:3c51,terrain_structure_break,near void(AH old kind SI object),simulation,spec:simulation,§7.3
 func,0919:3cc9,engine_sound_update,,sound,codex,ORIGINAL_AUDIO.md CE59: live engine effect program
+func,0919:3d78,mission_setup,far void(),world,spec:world,§5
+func,0919:3f8d,colour_remap,near void(DI start DX end SI table),world,spec:world,§5 CGA/EGA/Tandy only
+func,0919:3fba,video_mode_setup,near void(),world,spec:world,§5 row table DS:D74D and span pointers D8F8/D8FA
 func,0919:4056,blit_rows_cga,near void(),render3d,spec:render3d,§5.7
 func,0919:44f0,spotlight_beam_cga,near void(),render3d,spec:render3d,§1.2
 func,0919:4587,sky_water_cga,near void(),render3d,spec:render3d,§1.2
@@ -140,6 +158,7 @@ func,0919:4f96,blit_rows_tandy,near void(),render3d,spec:render3d,§5.7
 func,0919:5494,spotlight_beam_tandy,near void(),render3d,spec:render3d,§1.2
 func,0919:5529,sky_water_tandy,near void(),render3d,spec:render3d,§1.2
 func,0919:55da,water_marks_tandy,near void(),render3d,spec:render3d,§1.2
+func,0919:5a9f,sprite_cache_invalidate,far void(),world,spec:world,§3.3
 func,0919:5acc,sprite_prepare,near void(BX entry),render3d,spec:render3d,§5.7
 func,0919:5aeb,sprite_cache_build,,render3d,codex,NATIVE_PORT.md EC7B: sprite cache
 func,0919:5c71,blit_record,,render3d,codex,"NATIVE_PORT.md EE01: direct VGA blitter, zero = transparent"
@@ -199,6 +218,8 @@ func,0919:87e8,route_advance,near void(DH link CL index),simulation,spec:simulat
 func,0919:8930,game_frame,,engine,codex,"ORIGINAL_PHYSICS.md 11AC0: main update; simulation iteration loop at +AF (11B6F), outer loop at +ED (11BAD); motion before propulsion"
 func,0919:8eb9,list_quicksort,near void(),render3d,spec:render3d,§5.3
 func,0919:8ece,list_quicksort_range,near void(u16 first u16 last),render3d,spec:render3d,§5.3
+func,121b:036e,world_a_base,far u16(),world,spec:world,§3.1 returns 6E54h
+func,121b:0372,pit_random,far u16(u16 base),world,spec:world,reads PIT counter 2 (port 42h) + base (platform spec)
 func,121b:0380,far_normalize,,platform,td3-match,"TD3 0c1c:071c far_normalize, score 1.00"
 func,121b:0397,text_set_colours,,platform,td3-match,"TD3 0c1c:0733 text_set_colours, score 1.00"
 func,121b:050a,dos_seek,,platform,td3-match,"TD3 0c1c:084e dos_seek, score 1.00"
@@ -304,9 +325,12 @@ cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
 global,DS:0070,demo_mode,u16,simulation,spec:simulation,§3.1
 global,DS:007A,draw_page,u16,simulation,spec:simulation,graphics library page
 global,DS:007E,sound_muted,u16,simulation,spec:simulation,§3.1
-global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
+global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 map; 6 chase; 7 damage report; 8 assignment; 9 quit | §2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
 global,DS:08C0,tick_counter,u16,simulation,spec:simulation,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
+global,DS:08C4,palette_3d,u8[225],world,spec:world,§4 TACTCOLR.BIN
+global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
+global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation,§8.6 per station
 global,DS:1096,vertex_control,u8[1024],render3d,spec:render3d,§8
 global,DS:1496,vertex_height,u16[1024],render3d,spec:render3d,§8
@@ -333,11 +357,15 @@ global,DS:541A,object_behaviour,u8[2][],simulation,spec:simulation,§8.1 per kin
 global,DS:541B,object_class,u8[2][],simulation,spec:simulation,§8.1 per kind
 global,DS:547A,object_name_offset,u16[],simulation,spec:simulation,§9.1 per kind; text at DS:6E54 + offset
 global,DS:6E54,world_a_data,u8[],simulation,spec:simulation,DATnA.DAT
+global,DS:B2DB,mission_text_offsets,u16[4][8],world,spec:world,§7 relative to DS:6E54
+global,DS:B354,mission_times,u8[16][4],world,spec:world,§5 start hours minutes deadline hours minutes
+global,DS:B3C0,map_objective_arrow,u8[24][2],world,spec:world,§3.2
 global,DS:B3F4,region_fire_phase,u8[4],simulation,spec:simulation,§8.3
 global,DS:B3F8,fire_rate_mask,u8[4],simulation,spec:simulation,§8.3
 global,DS:B3FC,enemy_velocity,s8[16][2],simulation,spec:simulation,§8.3
 global,DS:B41C,region_max_range,u8[4],simulation,spec:simulation,§8.3
 global,DS:B420,scene_colour_table,u8[],simulation,spec:simulation,§9.2
+global,DS:B444,map_sheet_sizes,u16[4][2],world,spec:world,§4
 global,DS:B503,region,u16,simulation,spec:simulation,§2.3
 global,DS:B505,mission_number,u16,simulation,spec:simulation,§2.3
 global,DS:B509,mission_type,u16,simulation,spec:simulation,§5.2
@@ -361,7 +389,9 @@ global,DS:B7FF,water_level,u8,simulation,spec:simulation,§8.7
 global,DS:B800,message_state,u8,simulation,spec:simulation,§9.1 0 idle 1 showing 2 mission ending
 global,DS:B801,message_timer,u8,simulation,spec:simulation,§9.1
 global,DS:B802,message_reply,u8,simulation,spec:simulation,§9.1
+global,DS:B803,practice_targets,u8,world,spec:world,§5 all authored objects become kind 16h
 global,DS:B804,bow_weapon,u8,simulation,spec:simulation,§6.1
+global,DS:B805,engines_upgraded,u8,world,spec:world,§5 throttle maximum 103 instead of 59
 global,DS:B806,stern_weapon,u8,simulation,spec:simulation,§6.1
 global,DS:B807,midship_weapon,u8,simulation,spec:simulation,§6.1
 global,DS:B808,engine_state,u8[2],simulation,spec:simulation,§2.3
@@ -395,6 +425,7 @@ global,DS:B84C,mission_record,u8[6468],simulation,spec:simulation,§2.1 DATn.DAT
 global,DS:B84E,world_grid,u8[187],simulation,spec:simulation,§2.1
 global,DS:B909,mission_table,u16[8][5],simulation,spec:simulation,§2.1
 global,DS:B959,authored_object_count,u16,simulation,spec:simulation,§2.1
+global,DS:B95B,far_object_count,u16,world,spec:world,§6.1 far objects from object 296
 global,DS:B95D,object_word,u16[1000],simulation,spec:simulation,§2.1 kind | flags << 8
 global,DS:C12D,object_x,u16[1000],simulation,spec:simulation,§2.1
 global,DS:C8FD,object_y,u16[1000],simulation,spec:simulation,§2.1
@@ -463,6 +494,7 @@ global,DS:D6A8,missile_age,u8,simulation,spec:simulation,§8.4
 global,DS:D6A9,missile_target_x,u16,simulation,spec:simulation,§8.4
 global,DS:D6AB,missile_target_y,u16,simulation,spec:simulation,§8.4
 global,DS:D6AD,missile_speed,u8,simulation,spec:simulation,§8.4
+global,DS:D6AE,missile_speed_table,u8[4],world,spec:world,§5
 global,DS:D6B4,boat_locked,u8,simulation,spec:simulation,§5.2
 global,DS:D6B5,passengers_pending,u8,simulation,spec:simulation,§5.2
 global,DS:D6BA,wake_timer,u8,simulation,spec:simulation,§4.3
@@ -478,6 +510,9 @@ global,DS:D70E,incoming_descriptor,u8[16],simulation,spec:simulation,§8.5
 global,DS:D71F,incoming_timer,u8[16],simulation,spec:simulation,§8.5
 global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
+global,DS:D74D,view_row_table,u16[64],world,spec:world,§5 row start offsets for the span drawers
+global,DS:D883,sprite_segment_a,u16,world,spec:world,§5
+global,DS:D885,sprite_segment_b,u16,world,spec:world,§5
 global,DS:D8BC,scene_rebuild,u8,simulation,spec:simulation,§11.2
 global,DS:D8BD,far_object_mask,u16,render3d,spec:render3d,§5.1
 global,DS:D8BF,visible_count_previous,u16,render3d,spec:render3d,§5.1
@@ -530,9 +565,13 @@ global,DS:DA39,fast_forward_key,u8,simulation,spec:simulation,§3.1 Backspace he
 global,DS:DA3A,ctrl_held,u8,simulation,spec:simulation,§3.1
 global,DS:DA42,isr_key_code,u8,simulation,spec:simulation,§3.1
 global,DS:DA43,held_keys,u8,simulation,spec:simulation,§3.1
+global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F110,practice_mode,u16,simulation,spec:simulation,§3.3 0 mission; 1-3 practice types
+global,DS:F13A,copy_counter,u16,world,spec:world,§3.3 shared with the front end
 global,DS:F280,tile_bin_offset,u16,render3d,spec:render3d,§2 far pointer offset of TILE.BIN
 global,DS:F282,tile_bin_segment,u16,render3d,spec:render3d,§2
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2
+global,DS:F396,world_b_size,u16,world,spec:world,§4
+global,DS:F5D4,world_b_far,u16[2],world,spec:world,§4 far pointer to the B data copy

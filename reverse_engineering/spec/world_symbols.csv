@@ -1,0 +1,40 @@
+kind,address,name,type,notes
+func,0000:072c,far_to_near_copy,far void(u8 far *src u8 *dst u16 count),§3.3 loop counter is the global DS:F13A
+func,0000:0756,near_to_far_copy,far void(u8 *src u8 far *dst u16 count),§4 loop counter DS:F13A
+func,05bd:048c,pilot_screen,far void(),§3.2 station 1 screen (hud spec)
+func,05bd:07da,chase_view_screen,far void(),§3.2 chase view screen (hud spec)
+func,05bd:08be,bow_screen,far void(),§3.2 station 2 screen (hud spec)
+func,05bd:0e9e,stern_screen,far void(),§3.2 station 4 screen (hud spec)
+func,05bd:10f4,midship_screen,far void(),§3.2 station 3 screen (hud spec)
+func,05bd:144a,view_restore,far void(),§3.3 B data back into DGROUP; sprites invalidated; one frame
+func,05bd:19cc,map_screen,far void(),§3.2 station 5 (hud spec)
+func,05bd:1ba4,damage_report_screen,far void(),§3.2 station 7 (hud spec)
+func,05bd:1dba,assignment_screen,far void(),§3.2 station 8; prints the mission text DS:ECB4
+func,05bd:1fd4,view_present,far void(u16 page),§3 copies the 3D view and composes the cockpit (hud spec)
+func,05bd:2efc,screen_clear,far void(),§3.1
+func,05bd:3114,window_cracks_draw,near void(),§3.3 simulation §8.6
+func,0919:3d78,mission_setup,far void(),§5
+func,0919:3f8d,colour_remap,near void(DI start DX end SI table),§5 CGA/EGA/Tandy only
+func,0919:3fba,video_mode_setup,near void(),§5 row table DS:D74D and span pointers D8F8/D8FA
+func,0919:5a9f,sprite_cache_invalidate,far void(),§3.3
+func,121b:036e,world_a_base,far u16(),§3.1 returns 6E54h
+func,121b:0372,pit_random,far u16(u16 base),reads PIT counter 2 (port 42h) + base (platform spec)
+global,DS:08C4,palette_3d,u8[225],§4 TACTCOLR.BIN
+global,DS:0AC6,map_sheet_names,char[4][16],§7
+global,DS:0B26,mission_record_names,char[4][9],§7
+global,DS:B2DB,mission_text_offsets,u16[4][8],§7 relative to DS:6E54
+global,DS:B354,mission_times,u8[16][4],§5 start hours minutes deadline hours minutes
+global,DS:B3C0,map_objective_arrow,u8[24][2],§3.2
+global,DS:B444,map_sheet_sizes,u16[4][2],§4
+global,DS:B803,practice_targets,u8,§5 all authored objects become kind 16h
+global,DS:B805,engines_upgraded,u8,§5 throttle maximum 103 instead of 59
+global,DS:B95B,far_object_count,u16,§6.1 far objects from object 296
+global,DS:D6AE,missile_speed_table,u8[4],§5
+global,DS:D74D,view_row_table,u16[64],§5 row start offsets for the span drawers
+global,DS:D883,sprite_segment_a,u16,§5
+global,DS:D885,sprite_segment_b,u16,§5
+global,DS:ECB4,mission_text,u8[480],§6.2
+global,DS:F13A,copy_counter,u16,§3.3 shared with the front end
+global,DS:F396,world_b_size,u16,§4
+global,DS:F5D4,world_b_far,u16[2],§4 far pointer to the B data copy
+func,0919:0000,panel_redraw_all,far void(),§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380

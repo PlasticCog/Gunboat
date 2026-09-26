@@ -37,6 +37,9 @@ game data). `map/` and `symbols.csv` are tracked.
   `0x1B730 + xxxx`. C code always runs with DS = DGROUP; assembly routines that load DS
   themselves are flagged `sets_ds` in the index.
 * Entry `15ee:0016` (`_astart`), which calls `main` at `0000:0000`. Initial stack `1ad7:08c8`.
+* Segments overlap: the same code can be reached as two `SSSS:OOOO` pairs. `0919:0000` is
+  `08e1:0380` (image 9190h); Ghidra's output may use either label. The index and `symbols.csv`
+  use the segment the indexer assigns (`gbindex.py`).
 * Segment `0919` crosses linear `0x20000` (Ghidra `1919`, at offset `6E70`). Ghidra wraps near
   branch targets there wrongly; `tools/ghidra/FixNearFlows.java` repairs them.
 
@@ -120,8 +123,8 @@ function that contains them:
 
 ## Subsystem specs
 
-Status: **simulation** and **render3d** — done (`spec/simulation.md`, `spec/render3d.md`,
-2026-09-25). world, game_flow, hud, platform, video, sound — to do.
+Status: **simulation**, **render3d**, **world** — done (`spec/*.md`, 2026-09-25). game_flow,
+hud, platform, video, sound — to do.
 
 As TD3: one spec per subsystem in `reverse_engineering/spec/<owner>.md`, each with an overview
 and call graph, a function table, a globals table, pseudocode, file formats, the DOS/hardware
