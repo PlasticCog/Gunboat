@@ -6,9 +6,11 @@
 /reverse_engineering/references/
 /_tools/
 
-# Archived prototypes and tools: only the index is tracked
-/archive/*
-!/archive/README.md
+# Archived prototypes, old research notes and tools (local only)
+/archive/
+
+# Local editor settings
+/.vscode/
 
 # Generated output (tools and tests regenerate it; much of it is derived from the original data)
 /reverse_engineering/out/

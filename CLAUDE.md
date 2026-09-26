@@ -15,6 +15,9 @@ layer, and never change the faithful core.
   find it in the disassembly; don't approximate it.
 * The original game data is copyrighted: `Original DOS version/` and everything derived from it
   (`reverse_engineering/out/`, `gunboat-port/out/`) stay out of git.
+* **GitHub** (`origin` = github.com/PlasticCog/Gunboat, public): push only what the remake needs
+  (port code, tests, specs, symbols, the RE tools and format docs). No game files, generated
+  output, tool installs, editor settings or archived material.
 
 ## Layout
 
@@ -29,7 +32,7 @@ layer, and never change the faithful core.
 | `reverse_engineering/out/` | Generated: unpacked EXE, Ghidra project, decompilation `decomp/gb_ds.c` (ignored) |
 | `Original DOS version/` | The original game (ignored). `SteelThunder/` is the predecessor game, for reference. |
 | `test-drive-3-sdl3/` | Reference port (MIT, separate git repo, ignored): specs, tools, `td3port/` skeleton |
-| `archive/` | Abandoned prototypes (Python, Three.js, old Ghidra project). Don't build on them. |
+| `archive/` | Local only (git-ignored): abandoned prototypes, old research notes and tools. Don't build on them. |
 | `_tools/` | Ghidra install (ignored) |
 
 ## Porting rules (adapted from `test-drive-3-sdl3/td3port/PORTING.md`)
