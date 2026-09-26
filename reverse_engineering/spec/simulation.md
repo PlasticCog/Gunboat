@@ -176,7 +176,7 @@ Known fields (Codex-era tests; **verified** for the listed routines):
 | D70C | byte | Frame counter used by fire rules and AI pacing |
 | D8BC | byte | Scene rebuild this frame; enemies and projectiles skip it (§11.2) |
 | D8FD | byte | Boat lost next frame (pilot practice, §10): `boat_destroyed` after the world group |
-| D967..D969 | byte | Wave bob period, countdown, phase |
+| D967..D969 | byte | Wave bob countdown, period, phase (§5.4) |
 | D96B / D96C | byte | Detached camera on / its heading |
 | D982 | s16 | Pitch impulse |
 | D9B3 | word | `game_frame` counter |
@@ -306,8 +306,8 @@ Aiming:
 * Left (4) / right (8): the gun heading steps by `D629[rate]` eighths (`0919:0f42` / `0f0b`,
   §4.3). The move is **refused** if the new heading relative to the hull `B81E` falls in the
   blocked arc: bow gun `(rel − 60h) ≤ 41h` (rel 60h–A1h, behind); midship and stern
-  `(rel + 20h) ≤ 41h` (rel E0h–21h, ahead). Each move clears `D965`/`D966` (sight animation,
-  hud).
+  `(rel + 20h) ≤ 41h` (rel E0h–21h, ahead). Each move (refused or not) clears `D965`/`D966`
+  (`view_sky_top`: the view rows to redraw, render3d §3.1).
 * `DS:D629` = 20h, 10h, 04h, 02h for control rates 0–3 (eighths of a heading unit per poll).
 
 Firing happens **before** aiming in the same poll. With the main switch off, the gunners can aim
@@ -364,9 +364,9 @@ propulsion()
   if station == 1: 0919:2810                         (pilot gauges, hud)
 ```
 
-* `free_temp_object` (`0919:6f2a`) returns BX = 2·i for the first object `i` in 1..34 whose
-  kind byte is 0. **Quirk:** if none is free it returns BX = 46h and the caller overwrites
-  object 35.
+* `free_temp_object` (`0919:6f2a`) returns BX = 2·i for the first object `i` in 1..35 whose
+  kind byte is 0. **Quirk:** object 35 (BX = 46h) is returned whether it is free or not, so when
+  1..34 are all busy the caller overwrites object 35. **verified** (port, differential test)
 * Heading steps (`0919:0f0b` plus, `0919:0f42` minus; AL = fraction in eighths, AH = heading,
   BX = table index): the step `DS:D629[BX]` is added to (subtracted from) the fraction; an
   unrolled chain then carries at most **8** whole units into AH, and the fraction keeps its low 3
@@ -461,7 +461,7 @@ boat_motion()
   D972 = CX; D974 = DX                                (camera in 1/4 units, renderer input)
 ```
 
-`camera_pitch_bob` (`0919:80e0`) is Codex-verified.
+`camera_pitch_bob` (`0919:80e0`): §5.4.
 
 #### `boat_move` (0919:7ee8) and its helpers **verified** (disassembly; port differential test)
 
@@ -549,7 +549,20 @@ else (locked):
 While `D6B4` is set, `accelerate_speed` does not change the speed (Codex: `movementLocked`).
 `move_toward` (`0919:1fc3`, BX = object offset, CX/DX = target, steps `D6A2`/`D6A4`): the step
 on the axis with the smaller distance is halved; each axis moves by at most its step toward the
-target.
+target. **verified** (port, differential test) Exactly:
+
+```
+move_toward(bx, cx, dx)
+  ddx = cx - X[bx]; ddy = dx - Y[bx]                   (16-bit; |.| by the sign of the result)
+  if |ddx| != |ddy|: halve (shr, in memory) D6A2 if |ddx| < |ddy|, else D6A4
+  if ddx < 0: D6A2 = -D6A2 (in memory); mx = ddx if ddx > D6A2 (unsigned) else D6A2
+  else:       mx = ddx if ddx < D6A2 (unsigned) else D6A2
+  X[bx] += mx; the same for Y with D6A4
+```
+
+Both callers (`mission_stop`, `missile_update`) reload the steps before each call, so the halving
+and the negation stored in `D6A2`/`D6A4` (a sign that flips on every call toward smaller values)
+never accumulate in the game.
 
 ### 5.3 `camera_position` (0919:8229) **verified**
 
@@ -571,6 +584,31 @@ return CX, DX
 
 The ordinary boat does **not** use `terrain_rect_test`; it collides through the projection
 (§10). In chase view the boat also gets this coarse test every eighth frame.
+
+### 5.4 `camera_pitch_bob` (0919:80e0, every boat pass) **verified** (port, differential test)
+
+```
+camera_pitch_bob()
+  p = D982 (s16): decays by 4 toward 0 (a step past 0 gives 0); clamp to -18h..18h; D982 = p
+  B82D = (-(low byte of 2p + 80h)) & F8h                   (pitch reference)
+  step = (B82A << 8) sar 1                                  (bob velocity / 2, in 1/256)
+  sum = step + B82B (16-bit, carry c)
+  store if step >= 0: no carry; if step < 0: a carry and sum != 0
+  if store: B82B = sum
+  else:     D968 = D968 - D967; D967 = 1                    (the swing ends now)
+  v = B82C (after the store)
+  if station low byte >= 2: v = elevation (bow B837 for 2, midship B836 for 3, stern B838 above)
+                                - (station high byte : B82D) + v; if negative: 8
+  D193 = (clamp(v, 8, 1F0h) >> 3) + 43h                    (view pitch, unsigned)
+  if --D967 != 0: return
+  D967 = D968; D969 = (D969 + 1) & 3
+  if D969 odd: B82A = -B82A; return                          (the swing turns back)
+  m = (DS:008A * 101h) & bob_masks[sea state B4FF]        (word table DS:D97A, not bounded)
+  period = low(m) + 1Dh - 3 * speed band B819 (8-bit), 0 -> 1; D968 = D967 = period
+  B82A = rol(high(m), 2) + 1 + B819, negated when D969 & 2
+```
+
+`bob_masks` = 0001h, 4003h, 4007h, C003h for sea states 0-3.
 
 ## 6. Guns, gunners and identification
 
@@ -650,7 +688,27 @@ X (2), impact Y (2), heading fraction (1), heading (1), range (1). `projectile_a
 (`0919:37af`) takes the highest free slot, or slot 0 when full. `projectile_aim` (`0919:37c7`)
 turns the elevation `B7F8` and the gun heading into a flight time and an impact point with the
 sine table at image `C692` and the aim limits `DS:D63E[weapon]`. Projectiles are **aimed impact
-points**, not rays.
+points**, not rays. Exactly (**verified**, port differential test):
+
+```
+projectile_launch(bx = weapon, ch = heading, cl = fraction)           0919:0ee2
+  (slot, si = 8*slot) = projectile_alloc()                            0919:37af
+  e = elevation_add_clamped(B82C - B82D)                               0919:3b3b: signed AL + B7F8,
+                                                                        clamped to 0..FFh by the carry
+  e = min(e, weapon_elevation_limit D63E[weapon])                      (E9 E7 EB EB E9 for 1..5)
+  projectile_aim(al = e, ah = weapon, bx = slot, cx, si)               0919:37c7
+projectile_aim
+  D1BC[slot] = max((e >> 3) - 0Eh, 0) + 1                              (sign test of the byte result)
+  record: weapon, fraction, heading; range r = max(-e - 13h, 0) (8-bit)
+  k = 7FFFh if r <= 1 else FFFFh / r
+  B7F5 = heading >> 6 (quadrant); i4 = 4 * (heading & 3Fh); f = fraction << 6
+  s = sine[i4] (words at CS:3502 + i4), interpolated toward sine[i4 + 2]: + half the difference
+      if f bit 7, + a quarter if f bit 6 (logical shifts of the 16-bit difference) -> B7DC
+  c = sine[100h - i4], interpolated the same way toward sine[FEh - i4] (subtracted)
+  dx = hi(k * c); cx = hi(k * s)                                       (MUL, unsigned)
+  q >= 1: swap(dx, cx), dx = -dx;  q >= 2: cx = -cx, swap(dx, cx);  q == 3: swap(dx, cx), dx = -dx
+  impact X = boat X + (cx sar 3), impact Y = boat Y + (dx sar 3)
+```
 
 `projectile_tick` (`0919:38cc`, once per frame): does nothing while `DS:D8BC` is set (§11).
 Otherwise, for p = 31 down to 0, a nonzero countdown is decremented, and on reaching 0
@@ -670,12 +728,16 @@ hit_objects()                                                                   
 `hit_objects` walks the visible list from the last entry down:
 
 * Skip empty, kind ≥ 3Fh, and objects 0..35 (boat and temporary objects) **except** kind 12h.
-* `hit_test` (`0919:3bbc`, view space): the difference between the entry's bearing
-  (`4E00`:`4EB5` + view heading `D191`:`D192`) and the shot's bearing `D749`, offset by 4C00h
-  and folded to its absolute value, is scaled down (`>> 6` after a 3-bit rotate) and must be
-  < 28h and within the sprite's half width. The shot's range byte must match the entry's
-  elevation `4F6A` within the sprite's height, and the sum within the sprite's size. Sprite sizes
-  come from the sprite descriptor (`CS:583D` table, banks `DS:D883`/`D885`). No hit → next entry.
+* `hit_test` (`0919:3bbc`, view space, BX = entry, returns AH): the difference between the
+  entry's bearing (`4E00`:`4EB5` + view heading `D191`:`D192`) and the shot's bearing `D749`,
+  offset by 4C00h and folded to its absolute value, is scaled down (`>> 6` after a 3-bit rotate
+  of its low byte) and must be < 28h and within the sprite's half width. The shot's range byte
+  must match the entry's elevation `4F6A` within the sprite's height, and the sum within the
+  sprite's size. Sprite sizes come from the sprite descriptor (`CS:583D` table, banks
+  `DS:D883`/`D885`). No hit → next entry. Exactly (**verified**, port differential test):
+  descriptor `d` = `sprite_slots[s - 1]` in segment `D883` when the sprite index `s >= 69h`, else
+  `D885`; `w = d[3]`, `h = ((d[4] + d[6]) << 2)` (bytes); `c` (above) `<= 2w`;
+  `e = 4F6A[entry] - D74B + 2` must be 0..7Fh and `<= 2h`; `c + e <= (w + h) << 1` (8-bit).
 * Hit on kind > 31h: stop (nothing further is hit). Kinds 30h/31h: ignore (already wrecks).
 * Kind 12h: damage flags forced to 30h, and the chase/hunter state `D6A8`, `D6A6`, `D6A0` reset
   (§8).
@@ -702,11 +764,14 @@ on page 0), sound 4 plays and the message is 16h "MISSION ACCOMPLISHED!".
 ### 7.3 Terrain structures (`DS:D0CD`, end of the mission record) **verified**
 
 `D0CD` = count *n* ≤ 32, then *n* terrain-piece words at `D0CF`, X at `D10F`, Y at `D14F`.
-`terrain_structure_break` (`0919:3c51`) runs when the old kind was 10h, 11h, 20h or 21h
-(bridge-type objects). Every structure in the same 1024-unit cell (`X & FC00h`, `Y & FC00h`)
-with a piece below 62h (except 5Dh) changes: `< 5Ch` → 62h, `5Ch` → removed (0),
-`5Dh..5Fh` → 5Dh, `60h/61h` → 63h. Then `D9AD = FFFFh` forces the terrain to be rebuilt
-(render3d).
+`terrain_structure_break` (`0919:3c51`, AH = old kind, SI = the object) runs when the old kind
+was 10h, 11h, 20h or 21h (bridge-type objects). The list is scanned from its last entry down; the
+**first** structure found in the object's 1024-unit cell (`X & FC00h`, `Y & FC00h`) with a piece
+below 62h (except 5Dh) changes, and the scan stops there (**only one structure per hit**; earlier
+drafts said every one): `< 5Ch` → 62h, `5Ch` → removed (0), `5Dh..5Fh` → 5Dh, `60h/61h` → 63h (the
+word's high byte is kept). Then `D9AD = FFFFh` forces the terrain to be rebuilt (render3d). With a
+count of 0 the loop still examines the word before the lists once (index −1). **verified** (port,
+differential test)
 
 ## 8. World: objects, enemies, incoming fire and boat damage
 
@@ -744,8 +809,11 @@ angle, relative to the view heading `D191`:`D192`), elevation `DS:4F6A[i]`, spri
 sorting: render3d §5.1–5.3; object 35 is never listed). The gunners (§6.2), hit tests
 (§7.2), spotting and firing (§8.3) only see objects in this list, so **a faithful port must
 reproduce the renderer's list exactly**. `line_of_sight` (`0919:348e`, SI = 2·entry) returns
-CH = 0 when no nearer listed object (index ≥ 48h, not kind 35h or 10h, with a sprite) covers the
-entry's bearing.
+CH = 0 when no later entry of the list (an object at offset ≥ 48h, i.e. not the boat or a
+temporary object; not kind 35h or 10h; with a sprite) covers the entry's bearing: with
+`d = 4E00[entry] − 4E00[k]` (signed byte) and `w = descriptor[3] >> 2` of k's sprite (descriptor
+as in §7.2 `hit_test`), k covers it when `−w ≤ d < w`; CH = 1. **verified** (port, differential
+test)
 
 ### 8.3 `enemy_update` (0919:2ea8, world group) **verified** (control flow), **likely** (roles)
 
@@ -902,10 +970,10 @@ byte ≥ 80h. Texts are quoted throughout this spec. `show_message(al)` (`0919:1
 
 ```
 if B800 == 2: return                                 (mission ending: line locked)
-B802 = 0; clear the message line (text colour DS:D64A, 00f2:0e10 print_text of DS:D65F)
-D645 = D647 = FFFFh
+B802 = 0; clear the message line (text_goto(row DS:D64A, column 6); 00f2:0e10 print_text of
+          DS:D65F, 28 blanks); D645 = D647 = FFFFh (the heading readout is redrawn); text_goto again
 if al == 0: B800 = 0; return                         (message 0 = clear)
-print the text (character by character, 121b:03d8)
+print the text (character by character: each stored in DS:B7DC, then 121b:03d8 text_draw_char)
 attribute:
   0      → none
   1, 3   → queue reply 2 "Aye-aye, sir!"
@@ -915,14 +983,27 @@ attribute:
   5      → print the name of object D60F (kind; 3Ch shown as 39h): text at DS:6E54 + [DS:547A + 2*kind];
            D60F = 0
   6      → B52C = bcd_inc(B52C) (02d2:2b4a); then as 7
-  7      → B800 = 2, B801 = 1Eh: the mission ends 30 world passes later
+  7 and above → B800 = 2, B801 = 1Eh: the mission ends 30 world passes later (returns here)
   (0–5)  → B801 = 0Ch (display time, world passes), B800 = 1
+  (3 queues 2 like 1; 5 with D60F = 0 prints the name of kind 0)
 ```
 
 `message_sequencer` (`0919:1528`, world group): while `B801 > 0` count it down; then
 `B800 == 0`: idle; `B800 == 2`: **end the mission** (`0919:0906`: station 9); `B800 == 1`: show
 the queued reply `B802`, or message 5 if nothing is queued and an identification is pending
 (`D60F`), else message 0 (clear). Message timing therefore scales with time compression.
+
+The readouts of the message line (`message_line_draw` 0919:17d4, hud: the clock at the pilot's
+station, the compass heading elsewhere) print numbers with these helpers (**verified**, port
+differential test): `print_colon` (`0919:1558`) prints `DS:D64E` (':'); `print_bcd_2digits`
+(`0919:174e`, AL = BCD) converts to binary and prints 2 digits (`B7E3 = 1`); `print_3digits`
+(`0919:1769`, AL, CF) prints CF·256 + AL as 3 digits (`B7E3 = 0`); `print_digits_hundreds`
+(`0919:176e`) puts the hundreds digit (blank for none) in `D64B`: with CF it starts from 200 + (AL
++ 38h) and a carry there gives '3' but loses the 256 (**quirk**: 456–511 print as 300–355; the
+heading readout stops at 359); `print_digits_tens` (`0919:1799`, AL, CL = digits counted so far)
+puts the tens (blank when zero and CL = 0) and units in `D64C`/`D64D` and prints `3 − B7E3`
+characters from `D64B + B7E3` (00f2:0e44). The code at `0919:1738` (a BCD twin of `174e` without
+`B7E3 = 1`) is unreached.
 
 `0919:1565` shows a message on the visible page 0 and returns to drawing page 1 (used from the
 drawing part of the frame). `0919:1589` is its far entry (`input_read_key`'s pause messages).
@@ -941,10 +1022,12 @@ if ++D69F >= 15: D69F = 0; if ++B549 (seconds) >= 60:
    if (B547, B548) != 0 and B54A == B547 and B54B == B548: message 1Fh "Our time is up!" (ends)
 ```
 
-`time_of_day` (`0919:1dd6`): hour < 6 → night (`B7FC = 0`, `B7FD = 0`); 6:00–6:03 dawn stage 1,
+`time_of_day` (`0919:1dd6`, **verified** by the port's differential test; the twilight stages
+have `B7FC = 0`; D9B0/D9B1 = 18h/10h in VGA, 8/4 in other modes, 1/1 in CGA mode 4): hour < 6 →
+night (`B7FC = 0`, `B7FD = 0`); 6:00–6:03 dawn stage 1,
 6:04–6:06 stage 2, from 6:07 day (`B7FC = 1`); hours up to 19h (BCD) day; 19:55–19:57 dusk
 (stage 2), 19:58–19:59 stage 1; after that night. On a change: `D9AD = FFFFh` (terrain rebuild)
-and the four scene colours `D94F..D952` = `DS:B420 + 4·(1 − B7FC + B7FD)` (+10h in EGA mode 4).
+and the four scene colours `D94F..D952` = `DS:B420 + 4·(1 − B7FC + B7FD)` (+10h in CGA mode 4).
 `B547`/`B548` (deadline) and the start time are set by `0919:3d78` (mission objects set-up,
 world spec).
 
@@ -1047,11 +1130,15 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:0a22 / 0aab / 0b34 | aim_stern / aim_midship / aim_bow | §3.4 |
 | 0919:0bbd | pilot_throttle_controls | §4.1 |
 | 0919:0c6a | throttle_step | §4.1 |
+| 0919:0cf4 / 0d45 / 0dbd | fire_station4 / fire_station3 / fire_bow | §6.1 |
 | 0919:0e19 | pilot_slow_down | §4.1 |
 | 0919:0e48 / 0e95 | rotate_headings_minus / _plus | §4.3 |
+| 0919:0ee2 | projectile_launch | §7.1 |
 | 0919:0f0b / 0f42 | heading_step_plus / _minus | §4.3 |
 | 0919:1528 | message_sequencer | §9.1 |
+| 0919:1558 | print_colon | §9.1 |
 | 0919:1565 / 1589 / 1594 | show_message_page0 / show_message_far / show_message | §9.1 |
+| 0919:174e / 1769 / 176e / 1799 | print_bcd_2digits / print_3digits / print_digits_hundreds / print_digits_tens | §9.1 |
 | 0919:18af | crew_gunners | §6.2 |
 | 0919:19a0 | gunner_aim | §6.2 |
 | 0919:1ac0 | crew_pilot | §4.5 |
@@ -1063,6 +1150,7 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:1fc3 | move_toward | §5.2 |
 | 0919:2038 | missile_update | §8.4 |
 | 0919:2273 | propulsion | §4.3 |
+| 0919:29f9 | accelerate_speed | §4.3 |
 | 0919:2a37 | boat_hit | §8.6 |
 | 0919:2cad | sinking_update | §8.7 |
 | 0919:2ce3 | window_hit | §8.6 |
@@ -1074,9 +1162,11 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:3479 | evade_incoming | §4.1, §8.5 |
 | 0919:348e | line_of_sight | §8.2 |
 | 0919:3712 | atan | §4.6 |
+| 0919:37af / 37c7 | projectile_alloc / projectile_aim | §7.1 |
 | 0919:38ed | projectile_impact | §7.2 |
 | 0919:3948 | mark_near_objects | §7.2 |
 | 0919:3977 | hit_objects | §7.2 |
+| 0919:3b3b | elevation_add_clamped | §7.1 |
 | 0919:3b51 | mission_target_check | §7.2 |
 | 0919:3b9f | score_add | §7.2 |
 | 0919:3bbc | hit_test | §7.2 |
@@ -1084,6 +1174,8 @@ Names are in `spec/simulation_symbols.csv` and merged into `reverse_engineering/
 | 0919:6f2a | free_temp_object | §4.3 |
 | 0919:7158 | terrain_frame | §10 |
 | 0919:7ebb | boat_motion | §5.1 |
+| 0919:80e0 | camera_pitch_bob | §5.4 |
+| 0919:81f8 | muzzle_flash_tick | §6.1 |
 | 0919:8229 | camera_position | §5.3 |
 | 0919:82de | chase_view_collision | §5.3 |
 | 0919:8331 | polar_small | §8.5 |
