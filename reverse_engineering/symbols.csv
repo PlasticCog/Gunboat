@@ -230,11 +230,22 @@ func,0919:4056,blit_rows_cga,near void(),render3d,spec:render3d,§5.7
 func,0919:44f0,spotlight_beam_cga,near void(),render3d,spec:render3d,§1.2
 func,0919:4587,sky_water_cga,near void(),render3d,spec:render3d,§1.2
 func,0919:4639,water_marks_cga,near void(),render3d,spec:render3d,§1.2
-func,0919:48da,blit_rows_ega,near void(),render3d,spec:render3d,§5.7
-func,0919:4989,ega_gc_setup,,video,td3-match,"TD3 0c1c:1b6f ega_gc_setup, score 1.00"
-func,0919:4c18,spotlight_beam_ega,near void(),render3d,spec:render3d,§1.2
-func,0919:4ce2,sky_water_ega,near void(),render3d,spec:render3d,§1.2
-func,0919:4d64,water_marks_ega,near void(),render3d,spec:render3d,§1.2
+func,0919:48da,blit_rows_ega,near void(AL row SI source),render3d,spec:render3d,§1.4 ported (mode_ega.cpp) | §5.7
+func,0919:4989,ega_gc_setup,near void(),hud,td3-match+spec:hud,"§6.1 map mask 0Fh; write mode 0; bit mask 0 (every write stores the latches); function replace | TD3 0c1c:1b6f ega_gc_setup, score 1.00"
+func,0919:49a4,view_copy_1_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8a72
+func,0919:4a06,view_copy_2_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8b15
+func,0919:4a37,view_copy_3_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8b83
+func,0919:4aac,view_copy_4_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8c39
+func,0919:4b3f,view_copy_5_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8d13
+func,0919:4b6d,view_copy_6_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8d85
+func,0919:4b9b,view_copy_7_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8df7
+func,0919:4bc9,view_copy_8_ega,near void(ES dst_seg DS src_seg),hud,spec:hud,§6.1 EGA twin of 8e87
+func,0919:4bf7,view_copy_head_ega,near (ES DS)->DI SI,hud,spec:hud,§6.1 ega_gc_setup and nine rows of 26 bytes shared by view_copy_5..8_ega; CX = 0
+func,0919:4c18,spotlight_beam_ega,near void(ES page BX widths DX column),render3d,spec:render3d,§1.4 ported | §1.2
+func,0919:4ce2,sky_water_ega,near DI(ES page AH sky BL horizon CL top),render3d,spec:render3d,§1.4 ported | §1.2
+func,0919:4d64,water_marks_ega,near void(ES page AL colour BX mark CX rows DI),render3d,spec:render3d,§1.4 ported | §1.2
+func,0919:4dfa,span_ega_a,near void(ES page),render3d,spec:render3d,§1.4 DS:D8F8 in EGA; ported
+func,0919:4eb6,span_ega_b,near void(ES page),render3d,spec:render3d,§1.4 DS:D8FA in EGA; ported
 func,0919:4f96,blit_rows_tandy,near void(AL row SI source),render3d,spec:render3d,§11.1 Tandy twin of blit_rows_vga (ported) | §5.7
 func,0919:5062,view_copy_1_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_1_vga | §6.1 Tandy twin of view_copy_1_vga
 func,0919:5104,view_copy_2_tandy,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 Tandy twin of view_copy_2_vga | §6.1 Tandy twin of view_copy_2_vga
@@ -870,7 +881,11 @@ global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
 global,DS:D74C,hit_kind,u8,simulation,spec:simulation,§7.2 kind of the object hit_objects is damaging (friendly test for the message)
 global,DS:D74D,view_row_table,u16[64],world,spec:world,§5 row start offsets for the span drawers
-global,DS:D816,water_mark_patterns,u16[5][5],render3d,spec:render3d,§11.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too | §8.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too
+global,DS:D7ED,mask_low_bits,u8[9],render3d,spec:render3d,§1.4 the n low bits set (n = 0..8): EGA first byte of a span
+global,DS:D7F6,mask_high_bits_ff,u8[8],render3d,spec:render3d,§1.4 the n high bits set (FFh for n = 0): EGA last byte of a beam row
+global,DS:D7FE,pixel_bit,u8[8],render3d,spec:render3d,§1.4 80h >> n: EGA water mark pixels
+global,DS:D80E,mask_high_bits,u8[8],render3d,spec:render3d,§1.4 the n high bits set (0 for n = 0): EGA last byte of a span
+global,DS:D816,water_mark_patterns,u16[5][5],render3d,spec:render3d,§1.4 §11.4 water mark pixel offsets by size (+-140h a row; five per size and four used); read by the CGA (4683) and EGA (4dc7) and Tandy marks
 global,DS:D848,tandy_nibble_shift,u8[2],render3d,spec:render3d,§11.1 rotate count of a sprite pixel by its column parity (4: the left nibble) | §8.1 rotate count of a sprite pixel by its column parity (4: the left nibble)
 global,DS:D84A,tandy_nibble_keep,u8[2],render3d,spec:render3d,§11.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h) | §8.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h)
 global,DS:D84C,tandy_beam_start,u8[2],render3d,spec:render3d,§11.2 the beam's first byte: 08h from a right nibble; 88h | §8.2 the beam's first byte: 08h from a right nibble; 88h

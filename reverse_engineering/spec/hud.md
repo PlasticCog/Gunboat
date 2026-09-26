@@ -13,7 +13,8 @@ This spec gives the structure, the data model and the rules. The screen coordina
 sizes and bitmap offsets are constants in the listed routines; the port transcribes them
 routine by routine (`tools/fn.py NAME -k` lists every drawing call with its constant
 arguments) and checks each screen against DOSBox captures. Only the VGA (mode 13h) paths are
-specified; each drawing helper below has CGA/EGA/Tandy twins that are parked.
+specified, and the EGA view copies (§6.1); the other drawing helpers below have CGA/EGA/Tandy twins
+that are parked.
 
 ## 1. Pages and presentation **verified**
 
@@ -316,8 +317,8 @@ content.
 1. **The view copies** `view_copy_*` (`0919:8a32`, `8ad5`, `8b43`, `8bf9`,
    `8cd3`, `8d45`, `8db7`, `8e47`). Each takes **(source page, destination page)**, loads DS and ES
    from `page_segments` (`DS:D9B6`) and, when the low byte of `DS:EED2` is above 0Dh, runs its VGA
-   routine (`8a72`, `8b15`, `8b83`, `8c39`, `8d13`, `8d85`, `8df7`, `8e87`; the EGA / Tandy / CGA
-   twins at `0919:4xxx`/`5xxx` are parked). The VGA routines are fixed `REP MOVSW` runs: `8a72` 8
+   routine (`8a72`, `8b15`, `8b83`, `8c39`, `8d13`, `8d85`, `8df7`, `8e87`); at 0Dh the EGA twin
+   (§6.1), from 9 the Tandy one, below 9 the CGA one (`0919:5xxx`/`4xxx`, parked). The VGA routines are fixed `REP MOVSW` runs: `8a72` 8
    rows from 9678h to 6480h of a left run (60 words, 8 fewer per row) and a right run (20 words, 8
    fewer, while positive) after a gap (destination 20h, source 10h, both growing by 20h per row),
    then 64 source rows of 80 bytes from 5028h, each as 5 pieces of 16 bytes on 5 successive rows
@@ -343,6 +344,28 @@ content.
    above D0h (v = 2·(b − D0h) + 2) the right piece `EA88` mirrored (128h − v, 130h − v, fills to
    127h). Then the edges `F348`/`F21E` at (28h, 6Ch) / (120h, 6Ch) in `F107` and the rails
    `F375`/`F24B` at (28h, 5Dh) / (120h, 5Dh) in `F10A`.
+
+### 6.1 The EGA view copies **verified** (ported, differential test)
+
+In mode 0Dh the pages are the card's memory (page p at A000h + 200h·p, 40 bytes per row and plane;
+render3d §1.4). Each EGA twin first calls `ega_gc_setup` (`0919:4989`: map mask 0Fh, write mode 0,
+bit mask 0, function replace, rotate 0), so that a byte read from the source page loads the four
+latches and a byte written to the destination stores them: `REP MOVSB` moves 8 pixels of all four
+planes a byte at a time. The openings are the VGA ones in bytes (VGA offsets / 8 with the rows of
+40):
+
+| Copy | EGA | Runs |
+|---|---|---|
+| 1 | `49a4` | 8 rows from 12CFh to 0C90h: BL bytes (15, 2 fewer per row), while BH > 0 (5, 2 fewer) BH bytes after a gap (destination 4, source 2, both + 4 per row); 64 source rows of 10 bytes from 0A05h as 5 pieces of 2 bytes to 5 rows going up from the row above 04DBh + 40·row, each 2 bytes further right |
+| 2 | `4a06` | 8 rows from 12C5h to 0C83h: two runs of BL bytes (15, 2 fewer) with the gap 4 / 2 growing by 4 |
+| 3 | `4a37` | 8 rows from 12C5h to 0C80h: BL bytes while positive (5, 2 fewer), a gap, BH bytes (15, 2 fewer); the gap + 4 per row while BL >= 0 after its decrement, + 3 when it reaches -1, + 2 after; 64 source rows of 10 bytes from 0A1Bh as 5 pieces of 2 bytes going down from 042Bh |
+| 4 | `4aac` | from 10E5h to 08C4h: 2, 18h, 2, 18h bytes with gaps, 9 rows of 16h, 4 of 12h, 1 + 0Ch + 1, 4 rows of 0Ch |
+| 5-8 | `4b3f`, `4b6d`, `4b9b`, `4bc9` | `view_copy_head_ega` (`4bf7`: `ega_gc_setup`, 9 rows of 1Ah bytes from 1110h to 08EFh, then 0Ah further; CX = 0), then rows of 6 bytes and rows of two short runs (5: 4 + 6 rows of 1 + 1 bytes 4 apart; 6: 4 + 6 rows of 2 + 2 bytes 2 apart; 7: 6 + 4; 8: 2 + 2) |
+
+The far `view_copy_N` returns SI as the twin leaves it, as in VGA. Ported in
+`gunboat-port/src/hud/views_ega.cpp`; `tests/difftest/test_modes_ega.py` checks `view_copy_1..8` on
+the EGA pages (A000h/A200h/A400h) between every pair used and the twins alone (DS = DGROUP, ES each
+page), on random planes, latches and registers, comparing the card's whole state and all memory.
 
 ## 7. Symbols and tables
 

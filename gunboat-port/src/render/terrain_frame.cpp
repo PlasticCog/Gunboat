@@ -3,6 +3,7 @@
 // group A draw order and the group B primitives.
 #include "game/sim.hpp"
 #include "mem.hpp"
+#include "platform/card.hpp"
 #include "render/render.hpp"
 #include "symbols.hpp"
 
@@ -68,8 +69,12 @@ void terrain_frame()
     }
     if (ds_u8(DS_scene_rebuild) != 0) order_reset();
     order_sort();
-    // PORT: not ported (EGA/Tandy/CGA parked): the EGA plane set-up (OUT 3C4h/3CEh at 7268).
-    if (u8(ds_u16(DS_video_mode)) == 0x0D) render_parked("the EGA plane set-up (terrain_frame)");
+    if (u8(ds_u16(DS_video_mode)) == 0x0D) {  // EGA (7268): map mask 0Fh, write mode 0, set/reset
+        card_out16(0x3C4, 0x0F02);            // on every plane, function replace
+        card_out16(0x3CE, 0x0005);
+        card_out16(0x3CE, 0x0F01);
+        card_out16(0x3CE, 0x0003);
+    }
     draw_group_b();
 }
 

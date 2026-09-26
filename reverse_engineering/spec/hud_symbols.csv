@@ -55,6 +55,16 @@ func,0919:5344,view_copy_6_tandy,near void(ES dst_seg DS src_seg),§6 Tandy twin
 func,0919:53a2,view_copy_7_tandy,near void(ES dst_seg DS src_seg),§6 Tandy twin of view_copy_7_vga
 func,0919:5436,view_copy_8_tandy,near void(ES dst_seg DS src_seg),§6 Tandy twin of view_copy_8_vga
 func,0919:5400,view_copy_head_tandy,near (ES DS)->DI SI,§6 nine rows of 104 bytes shared by view_copy_5..8_tandy; leaves DI/SI for the caller and CX = 0
+func,0919:4989,ega_gc_setup,near void(),§6.1 map mask 0Fh; write mode 0; bit mask 0 (every write stores the latches); function replace
+func,0919:49a4,view_copy_1_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8a72
+func,0919:4a06,view_copy_2_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8b15
+func,0919:4a37,view_copy_3_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8b83
+func,0919:4aac,view_copy_4_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8c39
+func,0919:4b3f,view_copy_5_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8d13
+func,0919:4b6d,view_copy_6_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8d85
+func,0919:4b9b,view_copy_7_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8df7
+func,0919:4bc9,view_copy_8_ega,near void(ES dst_seg DS src_seg),§6.1 EGA twin of 8e87
+func,0919:4bf7,view_copy_head_ega,near (ES DS)->DI SI,§6.1 ega_gc_setup and nine rows of 26 bytes shared by view_copy_5..8_ega; CX = 0
 cglobal,0919:213b,fuel_needle_pivot,u16,§3 (x; y) added to the gauge centre for the fuel needles' pivot
 cglobal,0919:213d,fuel_needle_points,u16[32],§3 needle end (dx; dy) by fuel >> 11
 cglobal,0919:2171,needle_pivot,u16,§3 (x; y) added to the gauge centre for the throttle needles and the radar sweep

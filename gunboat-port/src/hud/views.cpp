@@ -38,7 +38,7 @@ u16 dispatch(u16 src_page, u16 dst_page, Copy vga, Copy ega, Copy tandy, Copy cg
     const u16 es = ds_u16(u16(DS_page_segments + 2 * dst_page));
     const u16 ds = ds_u16(u16(DS_page_segments + 2 * src_page));
     if (mode > 0x0D) return vga(es, ds);
-    if (mode == 0x0D) return ega(es, ds);
+    if (mode == 0x0D) return ega(es, ds);  // (8a57 ...: AL == 0Dh; verified)
     if (mode >= 9) return tandy(es, ds);
     return cga(es, ds);
 }

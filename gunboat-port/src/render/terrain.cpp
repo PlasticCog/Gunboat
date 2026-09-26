@@ -471,7 +471,7 @@ void terrain_setup()
     // The mode's marks (0919:7438): VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below 9.
     const u16 marks = u16(water << 8 | u8(water | 7));
     if (mode > 0x0D) water_marks_vga(es, marks, first, 0x20, mode, di);
-    else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);
+    else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);  // (7445: DL == 0Dh; verified)
     else if (mode >= 9) water_marks_tandy(es, marks, first, 0x20, mode, di);
     else water_marks_cga(es, marks, first, 0x20, mode, di);
 }

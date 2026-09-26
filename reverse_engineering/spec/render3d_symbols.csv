@@ -5,10 +5,12 @@ func,0919:4056,blit_rows_cga,near void(),§5.7
 func,0919:4587,sky_water_cga,near void(),§1.2
 func,0919:4639,water_marks_cga,near void(),§1.2
 func,0919:44f0,spotlight_beam_cga,near void(),§1.2
-func,0919:48da,blit_rows_ega,near void(),§5.7
-func,0919:4c18,spotlight_beam_ega,near void(),§1.2
-func,0919:4ce2,sky_water_ega,near void(),§1.2
-func,0919:4d64,water_marks_ega,near void(),§1.2
+func,0919:48da,blit_rows_ega,near void(AL row SI source),§1.4 ported (mode_ega.cpp)
+func,0919:4c18,spotlight_beam_ega,near void(ES page BX widths DX column),§1.4 ported
+func,0919:4ce2,sky_water_ega,near DI(ES page AH sky BL horizon CL top),§1.4 ported
+func,0919:4d64,water_marks_ega,near void(ES page AL colour BX mark CX rows DI),§1.4 ported
+func,0919:4dfa,span_ega_a,near void(ES page),§1.4 DS:D8F8 in EGA; ported
+func,0919:4eb6,span_ega_b,near void(ES page),§1.4 DS:D8FA in EGA; ported
 func,0919:4f96,blit_rows_tandy,near void(AL row SI source),§11.1 Tandy twin of blit_rows_vga (ported)
 func,0919:5494,spotlight_beam_tandy,near void(ES BX widths DX column),§11.2 Tandy twin of spotlight_beam_vga (ported)
 func,0919:5529,sky_water_tandy,near (ES AX BL CL)->DI,§11.3 Tandy twin of sky_water_vga (ported)
@@ -128,7 +130,7 @@ global,DS:D730,atan_raw,u8,§3.3 raw atan table value of the last projection
 global,DS:D731,octant_negate,u8[8],§3.3 1 = the octant angle is subtracted
 global,DS:D739,octant_base,u8[8],§3.3 octant base angle (atan)
 global,DS:D741,octant_base_view,u8[8],§3.3 octant base of the bearing high byte (project)
-global,DS:D816,water_mark_patterns,u16[5][5],§11.4 water mark pixel offsets by size (+-140h a row); four of each five used; read by the CGA (4683) and EGA (4dc7) marks too
+global,DS:D816,water_mark_patterns,u16[5][5],§1.4 §11.4 water mark pixel offsets by size (+-140h a row; five per size and four used); read by the CGA (4683) and EGA (4dc7) and Tandy marks
 global,DS:D848,tandy_nibble_shift,u8[2],§11.1 rotate count of a sprite pixel by its column parity (4: the left nibble)
 global,DS:D84A,tandy_nibble_keep,u8[2],§11.1 the nibble kept beside a sprite pixel by its column parity (0Fh; F0h)
 global,DS:D84C,tandy_beam_start,u8[2],§11.2 the beam's first byte: 08h from a right nibble; 88h
@@ -169,6 +171,10 @@ global,DS:D8C9,slot_bit,u8[8],§5.6
 global,DS:D8D1,slot_bitmap,u8[24],"§5.6 used slots, bit 0 of D8D1 = slot 1; slot 69h reserved"
 global,DS:D8E9,slot_level_first,u8[3],§5.6 first slot number of each level pool
 global,DS:D8EC,slot_level_mask,u16[3],"§5.6 first byte mask, 8 - first bit"
+global,DS:D7ED,mask_low_bits,u8[9],§1.4 the n low bits set (n = 0..8): EGA first byte of a span
+global,DS:D7F6,mask_high_bits_ff,u8[8],§1.4 the n high bits set (FFh for n = 0): EGA last byte of a beam row
+global,DS:D7FE,pixel_bit,u8[8],§1.4 80h >> n: EGA water mark pixels
+global,DS:D80E,mask_high_bits,u8[8],§1.4 the n high bits set (0 for n = 0): EGA last byte of a span
 global,DS:D8F2,slot_level_byte,u16[3],§5.6 first bitmap byte of each pool
 global,DS:D8FC,span_first_row,u8,§3.4
 global,DS:D954,span_colour,u16,§3.4 colour byte twice
