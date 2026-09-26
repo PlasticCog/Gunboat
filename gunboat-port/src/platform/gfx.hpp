@@ -29,5 +29,7 @@ void picture_draw(u16 src_ds, s16 runs, u16 width);                  // 1390:000
 void gfx_copy_rect(u16 x0, u16 x1, u16 y0, u16 y1, u16 dx, u16 dy_bottom, u16 src_page, u16 dst_page);  // 15a4:0006
 void gfx_put_pixel(s16 x, s16 y);                                    // 14b5:000d
 void ega_pal_set(u16 index, u16 value);                              // 14ae:0005
+void gfx_line_to(s16 x, s16 y);                                      // 13d5:000d  (gfx_lines.cpp)
+void gfx_fill_rect_clipped(s16 x0, s16 x1, s16 y0, s16 y1);          // 15d9:0003  (gfx_lines.cpp)
 
 } // namespace gb

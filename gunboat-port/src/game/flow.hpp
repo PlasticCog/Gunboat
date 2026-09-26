@@ -23,6 +23,8 @@ void file_load_near(u16 name_ds, u16 dst_ds);   // 0000:0648
 void file_load_far(u16 name_ds, FarPtr dst);    // 0000:06b4
 void mem_alloc_all();                           // 0000:0a4e
 void mem_free_all();                            // 0000:0c7a
+void far_to_near_copy(FarPtr src, u16 dst_ds, u16 count);  // 0000:072c  counter in DS:F13A
+void near_to_far_copy(u16 src_ds, FarPtr dst, u16 count);  // 0000:0756  counter in DS:F13A
 
 // ---- keys (flow_input.cpp)
 void demo_next_key(u8 *key);    // 08e1:006e

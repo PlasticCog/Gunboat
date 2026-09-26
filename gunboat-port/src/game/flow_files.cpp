@@ -105,6 +105,28 @@ void file_load_far(u16 name_ds, FarPtr dst)
     dos_close(fh);
 }
 
+// 0000:072c far_to_near_copy (world.md §3.3): count bytes from a far buffer into DGROUP. The loop
+// counter is the global flow_scratch (DS:F13A), read for every byte and left equal to the count; a
+// copy that writes over it changes the loop, as in the original.
+void far_to_near_copy(FarPtr src, u16 dst_ds, u16 count)
+{
+    for (ds_u16(DS_flow_scratch) = 0; count > ds_u16(DS_flow_scratch); ds_u16(DS_flow_scratch)++) {
+        const u16 si = ds_u16(DS_flow_scratch);
+        const u8 al = mem_u8(src.seg, u16(src.off + si));
+        ds_u8(u16(dst_ds + si)) = al;
+    }
+}
+
+// 0000:0756 near_to_far_copy (world.md §4): the other way, with the same global counter.
+void near_to_far_copy(u16 src_ds, FarPtr dst, u16 count)
+{
+    for (ds_u16(DS_flow_scratch) = 0; count > ds_u16(DS_flow_scratch); ds_u16(DS_flow_scratch)++) {
+        const u16 si = ds_u16(DS_flow_scratch);
+        const u8 al = ds_u8(u16(src_ds + si));
+        mem_u8(dst.seg, u16(dst.off + si)) = al;
+    }
+}
+
 // 0000:0a4e mem_alloc_all (platform.md §5): the far buffers, each stored as a far pointer; any
 // failure is fatal error 1 ("Insufficient memory").
 void mem_alloc_all()

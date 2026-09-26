@@ -1,6 +1,6 @@
 kind,address,name,type,notes
 func,0919:0000,panel_redraw_all,far void(),hud §2.1 (kept here: same address as 08e1:0380)
-func,08e1:016f,lzw_decode_cracks,far void(),§6 crack picture
+func,08e1:016f,crack_table_entry,far u16(u16 index),§6 not LZW: AL = crack_table[index]; AH = the next byte | the third byte rotated right by 2 (hud §5)
 func,08e1:01bd,lzw_decode_picture,far void(u8 far *src u16 dst_off u16 dst_seg),§6 into DS:1094
 func,121b:0575,dos_close,far void(u16 handle),§4 INT 21h AH=3Eh
 func,121b:07ae,pal_fade_out,far void(),video §3
