@@ -25,5 +25,6 @@ void gfx_copy_rect_to_copy_page(u16 x0, u16 x1, u16 y0, u16 y1);     // 1522:000
 void gfx_draw_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows);      // 13e2:0002
 void gfx_read_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows);      // 1432:000c
 void text_exit_clear();                                              // 14ff:0001
+void picture_draw(u16 src_ds, s16 runs, u16 width);                  // 1390:0000
 
 } // namespace gb

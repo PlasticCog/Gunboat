@@ -106,4 +106,28 @@ void picture_draw_vga(u16 src_ds, u16 runs, u16 y_bottom)
     } while (--n);
 }
 
+// 121b:0581 dissolve_page1_to_0 (video.md §4): page 1 (page_segments[1]) onto page 0 in 64 steps;
+// each step copies one pixel of every 8x8 block and waits for the next timer tick. PORT: only the
+// VGA path (EED2 above 0Dh); the CGA/Hercules, EGA and Tandy paths are not ported.
+void dissolve_page1_to_0()
+{
+    if (u8(ds_u16(DS_video_mode)) <= 0x0D) return;  // PORT: other adapters
+    for (u16 step = 0; step < 0x40; step++) {
+        const u16 col = ds_u8(u16(DS_dissolve_order + step));
+        u16 di = u16((ds_u16(u16(DS_dissolve_rows + 2 * (step & 7))) << 3) + col);
+        const u16 src = ds_u16(u16(DS_page_segments + 2)), dst = ds_u16(DS_page_segments);
+        const u16 start = ds_u16(DS_tick_counter);
+        ds_u8(DS_scratch_b7e3) = 0x19;
+        do {
+            ds_u8(DS_scratch_b7e2) = 0x28;
+            do {
+                mem_u8(dst, di) = mem_u8(src, di);
+                di = u16(di + 8);
+            } while (--ds_u8(DS_scratch_b7e2));
+            di = u16(di + 0x8C0);
+        } while (--ds_u8(DS_scratch_b7e3));
+        while (ds_u16(DS_tick_counter) == start) host_pump();
+    }
+}
+
 } // namespace gb

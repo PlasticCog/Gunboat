@@ -40,3 +40,6 @@ BRIDGE(pal_fade_in) { pal_fade_in(); }
 BRIDGE(pal_black) { pal_black(); }
 BRIDGE(pal_apply) { pal_apply(); }
 BRIDGE(picture_draw_vga) { picture_draw_vga(a[0], a[1], a[2]); }
+BRIDGE(picture_draw) { picture_draw(a[0], s16(a[1]), a[2]); r.ax = 0; }
+BRIDGE(lzw_decode_picture) { lzw_decode_picture({a[0], a[1]}, {a[2], a[3]}); }
+BRIDGE(dissolve_page1_to_0) { dissolve_page1_to_0(); }

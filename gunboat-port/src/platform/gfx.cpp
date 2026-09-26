@@ -359,6 +359,47 @@ void gfx_read_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows)
     } while (--rows);
 }
 
+// 1390:006e picture_hline: x0..x1 of the pen row in the current colour.
+void picture_hline(u16 x0, u16 x1)
+{
+    ds_u16(DS_fill_x0) = x0;
+    ds_u16(DS_fill_x1) = x1;
+    if (!mode13()) return;  // PORT: other modes
+    const u16 seg = ds_u16(DS_gfx_draw_seg);
+    u16 di = addr13(x0, ds_u16(DS_gfx_pen_y));
+    const u8 c = ds_u8(DS_gfx_colour);
+    for (u16 n = u16(ds_u16(DS_fill_x1) + 1 - ds_u16(DS_fill_x0)); n; n--) mem_u8(seg, di++) = c;
+}
+
+// 1390:0000 picture_draw (platform.md §6): (colour, count) runs from DS:src at the pen, `width`
+// pixels per row; a run that passes the right edge continues on the row above, at the pen's x.
+// The colour and the pen row are restored afterwards.
+void picture_draw(u16 src_ds, s16 runs, u16 width)
+{
+    const u8 saved_colour = ds_u8(DS_gfx_colour);
+    const u16 saved_y = ds_u16(DS_gfx_pen_y);
+    u16 si = src_ds;
+    u16 x = ds_u16(DS_gfx_pen_x);
+    const u16 right = u16(width + x - 1);
+    while (runs > 0) {
+        ds_u8(DS_gfx_colour) = ds_u8(si++);
+        u16 count = ds_u8(si++);
+        runs--;
+        while (count) {
+            u16 end = u16(x + count - 1);
+            if (s16(end) > s16(right)) end = right;
+            count = u16(count + x - end - 1);
+            picture_hline(x, end);
+            x = u16(end + 1);
+            if (s16(x) <= s16(right)) break;
+            x = ds_u16(DS_gfx_pen_x);
+            ds_u16(DS_gfx_pen_y)--;
+        }
+    }
+    ds_u16(DS_gfx_pen_y) = saved_y;
+    ds_u8(DS_gfx_colour) = saved_colour;
+}
+
 // 14ff:0001 text_exit_clear: in a text mode (mode_width 0), DOS prints CS:002C (an ANSI clear
 // sequence; PORT: there is no console to print to) and the page is cleared unless the cursor is home.
 void text_exit_clear()

@@ -76,9 +76,12 @@ func,08e1:018e,lzw_alloc,,platform,td3-match,"TD3 0ab4:000f lzw_alloc, score 0.5
 func,08e1:01aa,lzw_free,,platform,td3-match,"TD3 0ab4:0034 lzw_free, score 1.00"
 func,08e1:01bd,lzw_decode_picture,far void(u8 far *src u16 dst_off u16 dst_seg),platform,spec:platform,§6 into DS:1094
 func,08e1:01db,lzw_decode_body,,platform,td3-match,"TD3 0ab4:006a lzw_decode_body, score 1.00"
-func,08e1:02b1,lzw_fill_input,,platform,td3-match,"TD3 0ab4:0140 lzw_fill_input, score 1.00"
-func,08e1:02cd,lzw_get_code,,platform,td3-match,"TD3 0ab4:015c lzw_get_code, score 1.00"
-func,08e1:0361,lzw_add_entry,,platform,td3-match,"TD3 0ab4:01f0 lzw_add_entry, score 1.00"
+func,08e1:02b1,lzw_fill_input,near,platform,td3-match+spec:platform,"§6 400h source bytes into the input window; the source offset advances | TD3 0ab4:0140 lzw_fill_input, score 1.00"
+func,08e1:02cd,lzw_get_code,near AX(),platform,td3-match+spec:platform,"§6 next nbits-bit code | TD3 0ab4:015c lzw_get_code, score 1.00"
+func,08e1:033b,lzw_reset_width,near,platform,spec:platform,§6 nbits 9; maxcode 200h; next 102h
+func,08e1:034e,lzw_out,near (AL),platform,spec:platform,§6 one byte to the output far pointer (offset only advances)
+func,08e1:035a,lzw_idx3,near BX(BX),platform,spec:platform,§6 BX * 3 (clobbers BP)
+func,08e1:0361,lzw_add_entry,near,platform,td3-match+spec:platform,"§6 dict[next] = {old; firstchar}; next++ | TD3 0ab4:01f0 lzw_add_entry, score 1.00"
 func,0919:0000,panel_redraw_all,far void(),world,spec:world+spec:platform,hud §2.1 (kept here: same address as 08e1:0380) | §3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
 func,0919:000e,panel_blink,near void(),hud,spec:hud,§2.1 every frame; timer DS:D5BE
 func,0919:0027,indicator_draw,near void(AL mode_id AH value),hud,spec:hud,§2.1
@@ -296,6 +299,7 @@ func,121b:0524,dos_open_read,,platform,td3-match,"TD3 0c1c:0868 dos_open_read, s
 func,121b:0536,dos_file_size,,platform,td3-match,"TD3 0c1c:087a dos_file_size, score 1.00"
 func,121b:055c,dos_read,,platform,td3-match,"TD3 0c1c:08a0 dos_read, score 1.00"
 func,121b:0575,dos_close,far void(u16 handle),platform,spec:platform,§4 INT 21h AH=3Eh
+func,121b:0581,dissolve_page1_to_0,far void(),video,spec:video,§4 64 steps; each copies one pixel of every 8x8 block of page 1 (D9B8) to page 0 (D9B6) and waits for a tick_counter change
 func,121b:07ae,pal_fade_out,far void(),platform,spec:platform,video §3
 func,121b:0804,pal_fade_in,far void(),platform,spec:platform,video §3
 func,121b:085d,pal_black,far void(),platform,spec:platform,video §3
@@ -326,6 +330,7 @@ func,12ed:08f3,sfx_remove,near void(),sound,spec:sound,§2
 func,137e:0000,gfx_alloc_page,,video,td3-match,"TD3 172d:000e gfx_alloc_page, score 1.00"
 func,1386:0004,gfx_detect,,video,td3-match,"TD3 16cf:0006 gfx_detect, score 0.97"
 func,1390:0000,picture_draw,far void(u16 src u16 size u16 width),platform,spec:platform,§6 all modes
+func,1390:006e,picture_hline,near (AX x0 BX x1),platform,spec:platform,§6 fills x0..x1 of the pen row in the current colour
 func,13d5:000d,gfx_line_to,,video,td3-match,"TD3 16d9:0002 gfx_line_to, score 0.95"
 func,13e2:0002,gfx_draw_bitmap,,video,td3-match,"TD3 185f:000b gfx_draw_bitmap, score 0.88"
 func,142c:0009,gfx_free_page,,video,td3-match,"TD3 1736:0004 gfx_free_page, score 1.00"
@@ -431,6 +436,8 @@ cglobal,121b:006e,font_8x8,u8[][8],platform,spec:platform,§7 glyphs from 20h
 cglobal,121b:093e,scancode_e0_table,u8[20],simulation,spec:simulation,§3.1
 cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
+cglobal,121b:0a32,kbd_dir_or,u8[16],platform,spec:platform,§2 held_keys bits set by a make code (8) and kept by a break code (8)
+cglobal,121b:0a42,kbd_keypad_dir,u8[11],platform,spec:platform,§2 keypad 47h..51h -> direction index + 1Fh
 global,DS:0066,data_file_name,char[10],platform,spec:platform,"§4 ""dataa.dat""; archive_open writes the bank letter at +4"
 global,DS:006A,data_file_bank,u8,platform,spec:platform,§4 bank letter of data_file_name
 global,DS:0070,demo_mode,u16,simulation,spec:simulation+spec:game_flow,§3 simulation §3.1 | §3.1
@@ -449,7 +456,22 @@ global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,§4 TACTCOLR.BI
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
 global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation+spec:hud,§5 per station | §8.6 per station
+global,DS:0C6C,lzw_src,u16[2],platform,spec:platform,§6 source far pointer
+global,DS:0C70,lzw_dst,u16[2],platform,spec:platform,§6 output far pointer
+global,DS:0C74,lzw_window,u8[1024],platform,spec:platform,§6 input window
+global,DS:1074,lzw_window_far,u16[2],platform,spec:platform,§6 far pointer to lzw_window
 global,DS:1078,lzw_dict_seg,u16,platform,spec:platform,§6 DOS block of the LZW dictionary (DOS error code if lzw_alloc failed)
+global,DS:107A,lzw_cur,u16,platform,spec:platform,§6
+global,DS:107C,lzw_old,u16,platform,spec:platform,§6
+global,DS:107E,lzw_incode,u16,platform,spec:platform,§6
+global,DS:1080,lzw_next,u16,platform,spec:platform,§6 next dictionary code
+global,DS:1082,lzw_stack_n,u16,platform,spec:platform,§6 characters on the CPU stack
+global,DS:1084,lzw_nbits,u16,platform,spec:platform,§6
+global,DS:1086,lzw_maxcode,u16,platform,spec:platform,§6
+global,DS:1088,lzw_finchar,u8,platform,spec:platform,§6
+global,DS:1089,lzw_firstchar,u8,platform,spec:platform,§6
+global,DS:108A,lzw_masks,u16[4],platform,spec:platform,§6 code masks for 9..12 bits
+global,DS:1092,lzw_bitpos,u16,platform,spec:platform,§6 bit position in the window
 global,DS:1096,vertex_control,u8[1024],render3d,spec:render3d,§8
 global,DS:1496,vertex_height,u16[1024],render3d,spec:render3d,§8
 global,DS:1C96,vertex_x,u16[1024],render3d,spec:render3d,§8
@@ -722,8 +744,11 @@ global,DS:D9BF,text_fg,u16,platform,spec:platform,§7 colour << 8
 global,DS:D9C1,text_col,u8,platform,spec:platform,§7 character column (advanced by text_draw_char)
 global,DS:D9C2,text_y,u8,platform,spec:platform,§7 pixel row of the glyph top
 global,DS:D9C3,text_glyph,u8[8],platform,spec:platform,§7
+global,DS:D9CF,dissolve_order,u8[64],video,spec:video,§4 pixel offset of each step within its block row
+global,DS:DA1D,dissolve_rows,u16[8],video,spec:video,§4 VGA: block row offset / 8 by step & 7
 global,DS:DA39,fast_forward_key,u8,simulation,spec:simulation,§3.1 Backspace held
 global,DS:DA3A,ctrl_held,u8,simulation,spec:simulation,§3.1
+global,DS:DA3B,kbd_old_vector,u16[2],platform,spec:platform,§2 INT 9 vector saved by kbd_install
 global,DS:DA3F,kbd_prefix_state,u8,platform,spec:platform,§2
 global,DS:DA40,kbd_typematic,u8,platform,spec:platform,§2
 global,DS:DA41,kbd_last_scancode,u8,platform,spec:platform,§2
@@ -738,7 +763,7 @@ global,DS:DCF5,gfx_colour,u8,video,spec:video,§2 colour used by the drawing rou
 global,DS:DCF6,gfx_colour_raw,u8,video,spec:video,§2
 global,DS:DCF7,gfx_copy_page,u8,video,spec:video,§1
 global,DS:DCF8,gfx_mode_x2,u16,video,spec:video,§1 library mode * 2 (dispatch index)
-global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
+global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
 global,DS:DCFD,gfx_visible_page,u8,video,spec:video,§1
 global,DS:DCFF,gfx_pen_x,u16,video,spec:video,§2
 global,DS:DD01,gfx_pen_y,u16,video,spec:video,§2

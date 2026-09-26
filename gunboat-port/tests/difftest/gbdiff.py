@@ -96,8 +96,9 @@ def load_image():
 
 
 def returns_far(file_seg, off, entry):
-    """True if the function returns with RETF. The index marks only far-call targets as far, but
-    MSC also calls far functions with PUSH CS / CALL near, so the code decides."""
+    """True if the function returns with RETF, 'iret' for an interrupt handler, False for RET. The
+    index marks only far-call targets as far, but MSC also calls far functions with PUSH CS / CALL
+    near, so the code decides."""
     from capstone import Cs, CS_ARCH_X86, CS_MODE_16
     image = load_image()
     start = lin(seg_of(file_seg), off)
@@ -105,6 +106,8 @@ def returns_far(file_seg, off, entry):
     for insn in md.disasm(image[start:start + 0x2000], off):  # the index's end can be early
         if insn.mnemonic in ('retf', 'lret'):
             return True
+        if insn.mnemonic == 'iret':
+            return 'iret'
         if insn.mnemonic == 'ret':
             return False
     return entry['far'] if entry else True
@@ -248,7 +251,10 @@ class Original:
         uc.reg_write(UC_X86_REG_EFLAGS, 0x0002)
         sp = TEST_SP
         words = list(reversed(stack_args))
-        if far:
+        if far == 'iret':                        # an interrupt: FLAGS, then CS:IP
+            words += [0x0202, FAR_RET[0], FAR_RET[1]]
+            ret = lin(*FAR_RET)
+        elif far:
             words += [FAR_RET[0], FAR_RET[1]]
             ret = lin(*FAR_RET)
         else:

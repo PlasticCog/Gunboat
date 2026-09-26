@@ -36,6 +36,11 @@ void bios_init()
     mem_u16(BDA, BDA_COLS) = 80;
     mem_u16(BDA, BDA_PAGE_SIZE) = 0x1000;
     mem_u16(BDA, BDA_CURSOR_SHAPE) = 0x0607;
+    // the BIOS timer and keyboard handlers (the IBM PC entry points)
+    mem_u16(0, 8 * 4) = 0xFEA5;
+    mem_u16(0, 8 * 4 + 2) = 0xF000;
+    mem_u16(0, 9 * 4) = 0xE987;
+    mem_u16(0, 9 * 4 + 2) = 0xF000;
 }
 
 // INT 10h AH=00h: the mode number; the screen is cleared unless bit 7 is set (text modes with blank

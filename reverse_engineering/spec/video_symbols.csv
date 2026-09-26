@@ -45,3 +45,6 @@ global,DS:DFED,mode_height,u16[21],§1
 global,DS:E124,gfx_e124,u16,§1 cleared by gfx_set_mode
 global,DS:E16F,mode_text_rows,u8,§1 19h; 1Eh in modes 11h/12h
 cglobal,121b:000e,dac_buffer,u8[96],§3 DAC 0..31 as uploaded
+func,121b:0581,dissolve_page1_to_0,far void(),§4 64 steps; each copies one pixel of every 8x8 block of page 1 (D9B8) to page 0 (D9B6) and waits for a tick_counter change
+global,DS:D9CF,dissolve_order,u8[64],§4 pixel offset of each step within its block row
+global,DS:DA1D,dissolve_rows,u16[8],§4 VGA: block row offset / 8 by step & 7

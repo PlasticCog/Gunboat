@@ -52,6 +52,8 @@ void crt_ffree(FarPtr p);                               // 15ee:06ac
 // ---- LZW (08e1)
 s16 lzw_alloc();  // 08e1:018e  DOS 48h 300h paragraphs -> DS:1078; 1 ok, 0 fail
 void lzw_free();  // 08e1:01aa  DOS 49h on DS:1078
+void lzw_decode_picture(FarPtr src, FarPtr dst);  // 08e1:01bd
+void lzw_decode_body(FarPtr src, FarPtr dst);     // 08e1:01db
 
 // ---- BIOS model (bios.cpp): INT 10h video and INT 1Ah on the BIOS data area in mem[]
 void bios_init();                                        // as DOS leaves it: text mode 3
@@ -64,6 +66,14 @@ void bios_dac_set_block(u16 first, u16 count, FarPtr table);  // INT 10h AX=1012
 u32 bios_ticks();                                        // INT 1Ah AH=00h
 void bios_tick();                                        // the BIOS timer interrupt's count
 
+// ---- keyboard (kbd.cpp), segment 121b
+void kbd_install();        // 121b:0a4d
+void kbd_restore();        // 121b:0a88
+void kbd_isr(u8 sc);       // 121b:0a9c  (sc = the port 60h byte)
+bool kbd_isr_installed();  // PORT: INT 9 points at kbd_isr
+void kbd_byte(u8 b);       // PORT: the keyboard controller (host keyboard bytes)
+void kbd_focus_lost();     // PORT: releases the shift bits
+
 // ---- text and pictures (text.cpp, pal.cpp), segment 121b
 FarPtr far_normalize(FarPtr p);             // 121b:0380
 void text_set_colours(s16 fg, s16 bg);      // 121b:0397
@@ -75,5 +85,6 @@ void pal_fade_in();                         // 121b:0804
 void pal_black();                           // 121b:085d
 void pal_apply();                           // 121b:087f
 void picture_draw_vga(u16 src_ds, u16 runs, u16 y_bottom);  // 121b:08a8
+void dissolve_page1_to_0();                 // 121b:0581
 
 } // namespace gb

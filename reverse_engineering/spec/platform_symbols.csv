@@ -56,3 +56,28 @@ global,DS:D9C1,text_col,u8,§7 character column (advanced by text_draw_char)
 global,DS:D9C2,text_y,u8,§7 pixel row of the glyph top
 global,DS:D9C3,text_glyph,u8[8],§7
 cglobal,121b:006e,font_8x8,u8[][8],§7 glyphs from 20h, bottom row first
+func,08e1:02b1,lzw_fill_input,near,§6 400h source bytes into the input window; the source offset advances
+func,08e1:02cd,lzw_get_code,near AX(),§6 next nbits-bit code, LSB first; refills the window near its end
+func,08e1:033b,lzw_reset_width,near,§6 nbits 9; maxcode 200h; next 102h
+func,08e1:034e,lzw_out,near (AL),§6 one byte to the output far pointer (offset only advances)
+func,08e1:035a,lzw_idx3,near BX(BX),§6 BX * 3 (clobbers BP)
+func,08e1:0361,lzw_add_entry,near,§6 dict[next] = {old; firstchar}; next++
+func,1390:006e,picture_hline,near (AX x0 BX x1),§6 fills x0..x1 of the pen row in the current colour
+global,DS:0C6C,lzw_src,u16[2],§6 source far pointer
+global,DS:0C70,lzw_dst,u16[2],§6 output far pointer
+global,DS:0C74,lzw_window,u8[1024],§6 input window
+global,DS:1074,lzw_window_far,u16[2],§6 far pointer to lzw_window
+global,DS:107A,lzw_cur,u16,§6
+global,DS:107C,lzw_old,u16,§6
+global,DS:107E,lzw_incode,u16,§6
+global,DS:1080,lzw_next,u16,§6 next dictionary code
+global,DS:1082,lzw_stack_n,u16,§6 characters on the CPU stack
+global,DS:1084,lzw_nbits,u16,§6
+global,DS:1086,lzw_maxcode,u16,§6
+global,DS:1088,lzw_finchar,u8,§6
+global,DS:1089,lzw_firstchar,u8,§6
+global,DS:108A,lzw_masks,u16[4],§6 code masks for 9..12 bits
+global,DS:1092,lzw_bitpos,u16,§6 bit position in the window
+global,DS:DA3B,kbd_old_vector,u16[2],§2 INT 9 vector saved by kbd_install
+cglobal,121b:0a32,kbd_dir_or,u8[16],§2 held_keys bits set by a make code (8) and kept by a break code (8)
+cglobal,121b:0a42,kbd_keypad_dir,u8[11],§2 keypad 47h..51h -> direction index + 1Fh

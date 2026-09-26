@@ -213,6 +213,10 @@ class DosModel:
             pos = self.lseek(bx, offset, al)
             self._ret(6 if pos == 0xFFFFFFFF else pos & 0xFFFF, pos == 0xFFFFFFFF,
                       None if pos == 0xFFFFFFFF else pos >> 16)
+        elif ah == 0x35:                                 # get an interrupt vector
+            off, seg = struct.unpack('<HH', uc.mem_read(al * 4, 4))
+            uc.reg_write(UC_X86_REG_BX, off)
+            uc.reg_write(UC_X86_REG_ES, seg)
         elif ah == 0x25:                                 # set an interrupt vector
             uc.mem_write(al * 4, struct.pack('<HH', dx, ds))
         elif ah == 0x09:                                 # print a string: no console (dos.cpp)

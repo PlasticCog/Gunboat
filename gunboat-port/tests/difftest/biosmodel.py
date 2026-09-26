@@ -23,6 +23,7 @@ def bios_init(m):
     struct.pack_into('<H', m, BDA + COLS, 80)
     struct.pack_into('<H', m, BDA + PAGE_SIZE, 0x1000)
     struct.pack_into('<H', m, BDA + CURSOR_SHAPE, 0x0607)
+    struct.pack_into('<HHHH', m, 8 * 4, 0xFEA5, 0xF000, 0xE987, 0xF000)   # INT 8, INT 9: the BIOS
 
 
 class BiosModel:
@@ -36,6 +37,16 @@ class BiosModel:
         orig.ins[0x3DA] = lambda uc: 0x08           # always in the vertical retrace (see gbdiff)
         for port in (0x3CE, 0x3C4, 0x3B4, 0x3B5, 0x3B8, 0x3BF):
             orig.outs[port] = lambda uc, value: None  # graphics/sequencer/Hercules registers
+        # system port B (61h): bit 7 keyboard acknowledge, bits 0-1 the speaker gate (read back as
+        # written); the keyboard data port 60h (a test sets what IN 60h reads)
+        self.port61 = 0
+        orig.ins[0x61] = lambda uc: self.port61
+        orig.outs[0x61] = self._out61
+        orig.outs[0x60] = lambda uc, value: None
+        orig.outs[0x20] = lambda uc, value: None    # PIC end of interrupt
+
+    def _out61(self, uc, value):
+        self.port61 = value & 0xFF
 
     def rd8(self, a):
         return self.uc.mem_read(a, 1)[0]
