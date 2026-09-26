@@ -43,8 +43,8 @@ def run(name, keys, seconds, out):
     env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(d),
                GB_VIEW_CHECK='1', GB_VIEW_CHECK_DIR=str(d), GB_PRESENT_STATS='1', GB_KEYS=INTRO_KEYS + ',' + keys)
     try:
-        p = subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Original DOS version'),
-                            '--no-launcher', '--enhanced'], env=env, timeout=seconds, capture_output=True, text=True)
+        p = subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Game'),
+                            '--no-launcher', '--enhanced', '--window', '--aspect', '4:3', '--filter', 'sharp'], env=env, timeout=seconds, capture_output=True, text=True)
         text = p.stdout
     except subprocess.TimeoutExpired as e:
         text = e.stdout.decode() if isinstance(e.stdout, bytes) else (e.stdout or '')

@@ -3,9 +3,11 @@
 
 #include <SDL3/SDL.h>
 
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 
 namespace gb {
 
@@ -35,6 +37,37 @@ const char *filter_name(Filter f)
 }
 
 const char *sound_name(Sound s) { return s == Sound::Adlib ? "adlib" : s == Sound::Speaker ? "speaker" : "auto"; }
+
+const char *wide_name(Wide w) { return w == Wide::World ? "world" : w == Wide::Cockpit ? "cockpit" : "off"; }
+
+namespace {
+
+bool has_gb_exe(const std::filesystem::path &dir)
+{
+    std::error_code ec;
+    for (const auto &entry : std::filesystem::directory_iterator(dir, ec)) {
+        std::string n = entry.path().filename().string();
+        for (char &c : n) c = char(std::toupper(static_cast<unsigned char>(c)));
+        if (n == "GB.EXE") return true;
+    }
+    return false;
+}
+
+} // namespace
+
+std::string default_game_dir()
+{
+    namespace fs = std::filesystem;
+    const char *base = SDL_GetBasePath();  // the folder of gunboat.exe (SDL owns the string)
+    const fs::path exe_dir = base ? fs::path(base) : fs::current_path();
+    std::error_code ec;
+    for (const fs::path &p : {exe_dir / "Game", exe_dir / ".." / "Game", exe_dir / ".." / ".." / "Game",
+                              fs::current_path(ec) / "Game"})
+        if (has_gb_exe(p)) return fs::weakly_canonical(p, ec).string();
+    return (exe_dir / "Game").lexically_normal().string();
+}
+
+std::string game_dir_of(const Settings &s) { return s.game_dir.empty() ? default_game_dir() : s.game_dir; }
 
 std::string settings_path()
 {
@@ -69,7 +102,12 @@ bool settings_load(Settings &s)
         }
         else if (!std::strcmp(k, "hires_view")) s.hires_view = truthy(v);
         else if (!std::strcmp(k, "smooth_motion")) s.smooth_motion = truthy(v);
-        else if (!std::strcmp(k, "widescreen")) s.widescreen = truthy(v);
+        else if (!std::strcmp(k, "far_view")) s.far_view = truthy(v);
+        else if (!std::strcmp(k, "widescreen")) {  // (the first settings files had 0 / 1)
+            s.widescreen = !std::strcmp(v, "world")                    ? Wide::World
+                           : !std::strcmp(v, "cockpit") || truthy(v) ? Wide::Cockpit
+                                                                       : Wide::Off;
+        }
         else if (!std::strcmp(k, "sound")) {
             s.sound = !std::strcmp(v, "adlib") ? Sound::Adlib : !std::strcmp(v, "speaker") ? Sound::Speaker : Sound::Auto;
         }
@@ -94,11 +132,12 @@ bool settings_save(const Settings &s)
                  "; enhancements (0 = as the original)\n"
                  "hires_view = %d\n"
                  "smooth_motion = %d\n"
-                 "widescreen = %d\n"
+                 "far_view = %d\n"
+                 "widescreen = %s\n"
                  "sound = %s\n"
                  "fps = %d\n",
                  s.game_dir.c_str(), s.launcher, s.fullscreen, s.window_scale, aspect_name(s.aspect),
-                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.widescreen, sound_name(s.sound), s.fps);
+                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), s.fps);
     return std::fclose(f) == 0;
 }
 

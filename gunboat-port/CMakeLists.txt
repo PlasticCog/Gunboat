@@ -7,7 +7,7 @@ if(WIN32 AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL3-3.4.16/cmake")
   list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/deps/SDL3-3.4.16/cmake")
 endif()
 find_package(SDL3 REQUIRED CONFIG)
-set(GB_GAME_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Original DOS version" CACHE PATH "Folder with the original game files, for the tests")
+set(GB_GAME_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../Game" CACHE PATH "Folder with the original game files, for the tests")
 
 # Nuked-OPL3 (LGPL-2.1), its own library; see THIRD_PARTY.md.
 add_library(nuked_opl3 STATIC vendor/nuked-opl3/opl3.c)

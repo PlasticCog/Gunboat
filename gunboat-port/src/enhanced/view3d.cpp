@@ -122,6 +122,7 @@ public:
         sky_and_water();
         water_marks();
         for (int i = 0; i < 0x400; i++) projected_[i] = false;
+        if (tg_.far && sc_.far) far_world();
         group_b();
         group_a_and_sprites();
         spotlights();
@@ -244,14 +245,85 @@ private:
     {
         if (projected_[i]) return;
         projected_[i] = true;
-        const double dx = wrap16(sc_.u16_at(u16(DS_vertex_x + 2 * i)) - cam_.qx);
-        const double dy = wrap16(sc_.u16_at(u16(DS_vertex_y + 2 * i)) - cam_.qy);
+        point(sc_.u16_at(u16(DS_vertex_x + 2 * i)), sc_.u16_at(u16(DS_vertex_y + 2 * i)),
+              sc_.u16_at(u16(DS_vertex_height + 2 * i)) & 0xFF, vx_[i], vy_[i]);
+    }
+
+    // A point at (x, y) quarter units, height h, on the page; returns its scale.
+    double point(double x, double y, double h, double &px, double &py) const
+    {
+        const double dx = wrap16(x - cam_.qx), dy = wrap16(y - cam_.qy);
         const double d = wrap16(bearing16(dx, dy) - cam_.view);
         const double dist = std::hypot(dx, dy);
         const double s = dist > 32767.5 / 255.0 ? 32767.5 / dist : 255.0;
-        const double h = sc_.u16_at(u16(DS_vertex_height + 2 * i)) & 0xFF;
-        vx_[i] = VIEW_X + 130 + d / 128.0;
-        vy_[i] = cam_.horizon + std::max(0.0, 512.0 + s - s * h / 32.0) / 8.0;
+        px = VIEW_X + 130 + d / 128.0;
+        py = cam_.horizon + std::max(0.0, 512.0 + s - s * h / 32.0) / 8.0;
+        return s;
+    }
+
+    // ---- the extended draw distance: the far cells from the farthest in, each its group B (from its
+    // last primitive down, as draw_group_b), its group A (farthest first) and the objects standing in
+    // it (farthest first).
+    void far_world()
+    {
+        const FarWorld &fw = *sc_.far;
+        std::vector<std::pair<double, size_t>> cells;
+        for (size_t k = 0; k < fw.cells.size(); k++)
+            cells.push_back({std::hypot(wrap16(fw.cells[k].cx - cam_.qx), wrap16(fw.cells[k].cy - cam_.qy)), k});
+        std::sort(cells.begin(), cells.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+        std::vector<double> px, py, scale;
+        auto project_all = [&](const std::vector<FarVertex> &v) {
+            px.resize(v.size());
+            py.resize(v.size());
+            scale.resize(v.size());
+            for (size_t i = 0; i < v.size(); i++) scale[i] = point(v[i].x, v[i].y, v[i].height, px[i], py[i]);
+        };
+        auto prim = [&](const std::vector<FarVertex> &v, int i) {
+            const u8 ctrl = v[size_t(i)].control, mode = u8(ctrl >> 6);
+            if (!(ctrl & 0x3F) || mode == 1) return;
+            const int a = mode & 2 ? i - 1 : i, b = i + 1, c = i + 2;
+            if (a < 0 || c >= int(v.size())) return;
+            const double x0 = px[size_t(a)];
+            triangle(x0, py[size_t(a)], x0 + wrap16((px[size_t(b)] - x0) * 128.0) / 128.0, py[size_t(b)],
+                     x0 + wrap16((px[size_t(c)] - x0) * 128.0) / 128.0, py[size_t(c)], ctrl & 0x3F);
+        };
+        std::vector<std::pair<double, int>> order;
+        std::vector<std::pair<double, const FarObject *>> objects;
+        for (const auto &ck : cells) {
+            const FarCell &cell = fw.cells[ck.second];
+            project_all(cell.b);
+            for (int i = int(cell.b.size()) - 1; i >= 0; i--) prim(cell.b, i);
+            project_all(cell.a);
+            order.clear();
+            for (int i = 0; i < int(cell.a.size()); i++) {
+                const int a = (cell.a[size_t(i)].control & 0x80) ? i - 1 : i;
+                if (a < 0 || i + 2 >= int(cell.a.size())) continue;
+                order.push_back({std::max({scale[size_t(a)], scale[size_t(i + 1)], scale[size_t(i + 2)]}), i});
+            }
+            std::sort(order.begin(), order.end());
+            for (const auto &o : order) prim(cell.a, o.second);
+            // the objects standing in this cell: its scenery, and the authored ones inside it
+            objects.clear();
+            auto add = [&](const FarObject &obj) {
+                objects.push_back({std::hypot(wrap16(obj.x * 4.0 - cam_.qx), wrap16(obj.y * 4.0 - cam_.qy)), &obj});
+            };
+            for (const FarObject &obj : cell.objects) add(obj);
+            for (const FarObject &obj : sc_.far_objects)
+                if (std::fabs(obj.x * 4.0 - cell.cx) <= 2048 && std::fabs(obj.y * 4.0 - cell.cy) <= 2048) add(obj);
+            std::sort(objects.begin(), objects.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+            for (const auto &o : objects) far_object(*o.second);
+        }
+    }
+
+    // A far object's sprite: its image in the view the capture saw it in.
+    void far_object(const FarObject &obj) const
+    {
+        const double cdx = double(u16(obj.x << 2)) - sc_.u16_at(DS_camera_qx);
+        const double cdy = double(u16(obj.y << 2)) - sc_.u16_at(DS_camera_qy);
+        const u8 angle = u8(int(std::floor(std::atan2(cdx, cdy) * (128.0 / PI))) & 0xFF);
+        const SpriteImage *img = far_sprite(obj.kind, far_view_byte(obj.kind, obj.flags, angle));
+        if (!img) return;
+        sprite_at(*img, obj.x, obj.y, obj.kind);
     }
 
     // ---- draw_primitive (0919:767a): the triangle i, i+1, i+2 (mode 0) or i-1, i+1, i+2 (mode 2),
@@ -387,15 +459,19 @@ private:
     // at the apparent size of the kind's size against the distance.
     void sprite_draw(int e) const
     {
-        const SpriteImage &img = sc_.sprites[e];
         const u16 object = sc_.u16_at(u16(DS_visible_object + 2 * e));
         double ox, oy;
         object_position(object, ox, oy);
+        sprite_at(sc_.sprites[e], ox, oy, sc_.u8_at(u16(DS_object_word + object)));
+    }
+
+    // An image standing at the map position (ox, oy), at the size of its kind against the distance.
+    void sprite_at(const SpriteImage &img, double ox, double oy, u8 kind) const
+    {
         const double dx = wrap16(ox * 4 - cam_.qx), dy = wrap16(oy * 4 - cam_.qy);
         const double d = wrap16(bearing16(dx, dy) - cam_.view);
         const double dist_word = std::min(2.0 * std::hypot(dx, dy), double(0x7FFF));
         const double inv = dist_word < 256 ? 255.0 : std::min(255.0, 65535.0 / dist_word);
-        const u8 kind = sc_.u8_at(u16(DS_object_word + object));
         const double world = double((sc_.u8_at(u16(DS_kind_sprite_info + kind)) & 0xFC) << 3);
         const double size = world == 0 && dist_word == 0 ? 0 : std::atan2(world, dist_word) * (128.0 / PI);
         double fx, fy;

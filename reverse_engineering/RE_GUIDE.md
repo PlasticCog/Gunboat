@@ -155,7 +155,7 @@ names; `-r SSSS:OOOO LEN` for any range), `tools/calltree.py NAME [depth]`,
 From the repository root, with Python 3 + Capstone, and JDK 21 or later for Ghidra:
 
 ```text
-python reverse_engineering/tools/unexepack.py "Original DOS version/GB.EXE" reverse_engineering/out/GB_unp.exe
+python reverse_engineering/tools/unexepack.py Game/GB.EXE reverse_engineering/out/GB_unp.exe
 python reverse_engineering/tools/gbindex.py reverse_engineering/out/GB_unp.exe reverse_engineering/map/gb [gaps]
 python reverse_engineering/tools/unexepack.py <TD3 game>/TDIII.EXE reverse_engineering/out/td3/TDIII_unp.exe
 python reverse_engineering/tools/gbmatch.py reverse_engineering/out/td3/TDIII_unp.exe \

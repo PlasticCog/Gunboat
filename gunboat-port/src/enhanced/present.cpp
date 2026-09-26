@@ -23,6 +23,7 @@
 
 #include "enhanced/capture.hpp"
 #include "enhanced/view3d.hpp"
+#include "enhanced/widen.hpp"
 #include "host.hpp"
 #include "mem.hpp"
 #include "platform/vga.hpp"
@@ -34,11 +35,13 @@ namespace {
 
 Settings cfg;
 bool enhanced_on = true;  // F11
+constexpr int FAR_RADIUS = 5;  // the extended draw distance: 11 x 11 cells around the boat's
 std::unique_ptr<Scene> scene_store[2];
 Scene *cur, *prev;
 
 SDL_Texture *cockpit_tex;
-u32 cockpit_px[320 * 200];
+int cockpit_w;
+std::vector<u32> cockpit_px;
 bool hole[320 * 200];
 u32 pal[256];
 
@@ -99,6 +102,7 @@ void check_frame(const Scene &sc)
     t.h = VIEW_H;
     t.ox = VIEW_X;
     t.oy = VIEW_Y;
+    t.far = false;  // the original has no far cells
     view3d_render(sc, nullptr, 1.0, t);
     unsigned long long n = 0, same = 0;
     for (int i = 0; i < VIEW_W * VIEW_H; i++) {
@@ -126,6 +130,12 @@ void check_frame(const Scene &sc)
         view3d_render(sc, nullptr, 1.0, t);
         std::snprintf(path, sizeof path, "%s/view%03u_4x.bmp", check.dir, check.saved);
         save_indexed(path, big.data(), VIEW_W * 4, VIEW_H * 4, 1);
+        if (sc.far) {  // the same frame with the extended draw distance
+            t.far = true;
+            view3d_render(sc, nullptr, 1.0, t);
+            std::snprintf(path, sizeof path, "%s/view%03u_4x_far.bmp", check.dir, check.saved);
+            save_indexed(path, big.data(), VIEW_W * 4, VIEW_H * 4, 1);
+        }
         check.saved++;
     }
 }
@@ -143,7 +153,7 @@ void frame_hook()
     // The check also proves that a capture leaves the game's memory as it found it.
     static std::vector<u8> before;
     if (check.on) before.assign(mem, mem + MEM_SIZE);
-    scene_capture(*cur);
+    scene_capture(*cur, cfg.far_view ? FAR_RADIUS : 0, prev);
     capture_ns += SDL_GetTicksNS() - t0;
     if (check.on) {
         if (std::memcmp(before.data(), mem, MEM_SIZE) != 0) check.memory_changed++;
@@ -340,6 +350,85 @@ void stats(Uint64 start, bool live, bool animating)
     }
 }
 
+// ---- the wide cockpit
+constexpr int MAX_WIDEN = 28;  // columns added on a side at most (enough for 16:9 with square pixels)
+Widening widening;
+struct WideKey {  // what the widening was made for
+    int ow = 0, oh = 0, side = 0;
+    u16 station = 0, look = 0;
+    u8 chase = 0, bow = 0, midship = 0, stern = 0;
+    bool operator==(const WideKey &o) const
+    {
+        return ow == o.ow && oh == o.oh && side == o.side && station == o.station && look == o.look &&
+               chase == o.chase && bow == o.bow && midship == o.midship && stern == o.stern;
+    }
+};
+WideKey wide_key;
+bool wide_made, wide_settled;
+
+// The key without the window's part.
+WideKey station_key_only(WideKey k)
+{
+    k.ow = k.oh = k.side = 0;
+    return k;
+}
+
+WideKey station_key(const Scene &s)
+{
+    WideKey k;
+    k.station = s.u16_at(DS_station);
+    k.look = s.u16_at(DS_look_direction);
+    k.chase = s.u8_at(DS_chase_view);
+    k.bow = s.u8_at(DS_bow_weapon);
+    k.midship = s.u8_at(DS_midship_weapon);
+    k.stern = s.u8_at(DS_stern_weapon);
+    return k;
+}
+
+// The widening is made again when the window or the station's cockpit changes. A new station's
+// cockpit is drawn in the pass after the capture that first shows it, so a widening made before two
+// captures agree is made again once they do. On a station, every pixel that has shown the view is
+// free to widen (the gun frames slide over it), and the pixels seen changing outside it (digits,
+// needles, lamps) are avoided: when one changes on a repeated column, the widening is made again
+// around it (at most four times a second), so it settles in the first seconds on a station.
+bool ever_view[64000], changing[64000];
+std::vector<u32> last_frame(64000);
+Uint64 wide_made_ns;
+
+void update_widening(const Layout &l, const u32 *frame, int side)
+{
+    WideKey k = station_key(*cur);
+    k.ow = l.ow;
+    k.oh = l.oh;
+    k.side = side;
+    const bool settled = prev && prev->valid && station_key(*prev) == station_key(*cur);
+    const bool window = !wide_made || k.ow != wide_key.ow || k.oh != wide_key.oh || k.side != wide_key.side;
+    const bool station = settled && (!(station_key(*cur) == station_key_only(wide_key)) || !wide_settled);
+    if (station) {  // a new cockpit: nothing learnt about it yet
+        std::fill(std::begin(ever_view), std::end(ever_view), false);
+        std::fill(std::begin(changing), std::end(changing), false);
+        std::copy(frame, frame + 64000, last_frame.begin());
+    }
+    const u16 start = vga_start();
+    bool hit = false;
+    for (int i = 0; i < 64000; i++) {
+        const u16 p = u16(start + i);
+        if (p < 64000 && cur->map[p] != NOT_VIEW) ever_view[i] = true;
+        if (frame[i] != last_frame[size_t(i)] && !ever_view[i] && !changing[i]) {
+            changing[i] = true;
+            hit |= wide_made && widening.repeated[size_t(i)];
+        }
+        last_frame[size_t(i)] = frame[i];
+    }
+    const Uint64 now = SDL_GetTicksNS();
+    if (!window && !station && !(hit && now - wide_made_ns > 250 * SDL_NS_PER_MS)) return;
+    widen_build(widening, frame, ever_view, changing, side, side, 12);  // rows 0-11: the message line
+    wide_key = k;
+    wide_made = true;
+    wide_settled = settled;
+    wide_made_ns = now;
+}
+
 Layout last_layout;
 bool was_live;
 
@@ -369,41 +458,56 @@ bool present(const u32 *frame, bool changed)
     was_live = live;
 
     read_palette();
-    if (!cockpit_tex) {
-        cockpit_tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 320, 200);
+    // The wide cockpit: on the 3D stations the frame widened to the window's edges.
+    const bool wide = live && cfg.widescreen == Wide::Cockpit && l.pic.x >= 1;
+    // Columns added on each side: as many as the window needs, at most MAX_WIDEN (then the widened
+    // frame is drawn a little wider, all of it alike, the view too).
+    const int side = wide ? std::min(int(std::ceil(l.pic.x / l.sx)), MAX_WIDEN) : 0;
+    if (wide) update_widening(l, frame, side);
+    const int fw = wide ? widening.width : 320;  // the columns of the frame as shown
+    auto source = [&](int x, int y) { return wide ? int(widening.at(x, y)) : x; };
+    const double xs = wide ? double(l.ow) / fw : l.sx;  // output pixels per shown column
+    const SDL_FRect pic = wide ? SDL_FRect{0, l.pic.y, float(l.ow), l.pic.h} : l.pic;
+    // The view drawn again: for the high-resolution view, smooth motion, and the widened openings.
+    const bool redraw = live && (cfg.hires_view || cfg.smooth_motion || wide);
+
+    if (!cockpit_tex || cockpit_w != fw) {
+        if (cockpit_tex) SDL_DestroyTexture(cockpit_tex);
+        cockpit_tex = SDL_CreateTexture(r, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, fw, 200);
         SDL_SetTextureBlendMode(cockpit_tex, SDL_BLENDMODE_BLEND);
+        cockpit_w = fw;
+        cockpit_px.assign(size_t(fw) * 200, 0);
     }
     SDL_SetTextureScaleMode(cockpit_tex, filter_mode());
-    const bool redraw = live && (cfg.hires_view || cfg.smooth_motion);  // the view in the cockpit
-    for (int i = 0; i < 64000; i++)
-        cockpit_px[i] = redraw && hole[i] ? (frame[i] & 0x00FFFFFFu) : (frame[i] | 0xFF000000u);
-    SDL_UpdateTexture(cockpit_tex, nullptr, cockpit_px, 320 * 4);
+    for (int y = 0; y < 200; y++)
+        for (int x = 0; x < fw; x++) {
+            const int p = y * 320 + source(x, y);
+            cockpit_px[size_t(y) * fw + x] = redraw && hole[p] ? (frame[p] & 0x00FFFFFFu) : (frame[p] | 0xFF000000u);
+        }
+    SDL_UpdateTexture(cockpit_tex, nullptr, cockpit_px.data(), fw * 4);
 
     SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
     SDL_RenderClear(r);
-    if (live) {
-        const double rsx = cfg.hires_view ? l.sx : 1.0, rsy = cfg.hires_view ? l.sy : 1.0;
-        const SDL_ScaleMode mode = cfg.hires_view ? SDL_SCALEMODE_NEAREST : filter_mode();
-        // The world beside the picture.
-        int ltx, lty, rtx, rty;
-        if (cfg.widescreen && l.pic.x >= 1 && cur->u8_at(DS_chase_view) == 0 &&
-            side_translations(ltx, lty, rtx, rty)) {  // (the chase view is framed in black: no extension)
-            const double side = l.pic.x / l.sx, top = -l.pic.y / l.sy, height = l.oh / l.sy;
-            render_region(left_tex, -side + ltx, top + lty, side, height, rsx, rsy, t, mode);
-            render_region(right_tex, 320 + rtx, top + rty, side, height, rsx, rsy, t, mode);
-            const SDL_FRect ld = {0, 0, l.pic.x, float(l.oh)};
-            const SDL_FRect rd = {l.pic.x + l.pic.w, 0, float(l.ow) - (l.pic.x + l.pic.w), float(l.oh)};
-            const SDL_FRect src = {0, 0, float(side * rsx), float(height * rsy)};
-            SDL_RenderTexture(r, left_tex.tex, &src, &ld);
-            SDL_RenderTexture(r, right_tex.tex, &src, &rd);
-        }
+    const double rsx = cfg.hires_view ? xs : 1.0, rsy = cfg.hires_view ? l.sy : 1.0;
+    const SDL_ScaleMode mode = cfg.hires_view ? SDL_SCALEMODE_NEAREST : filter_mode();
+    // The world beside the picture.
+    int ltx, lty, rtx, rty;
+    if (live && cfg.widescreen == Wide::World && l.pic.x >= 1 && cur->u8_at(DS_chase_view) == 0 &&
+        side_translations(ltx, lty, rtx, rty)) {  // (the chase view is framed in black: no extension)
+        const double w = l.pic.x / l.sx, top = -l.pic.y / l.sy, height = l.oh / l.sy;
+        render_region(left_tex, -w + ltx, top + lty, w, height, rsx, rsy, t, mode);
+        render_region(right_tex, 320 + rtx, top + rty, w, height, rsx, rsy, t, mode);
+        const SDL_FRect ld = {0, 0, l.pic.x, float(l.oh)};
+        const SDL_FRect rd = {l.pic.x + l.pic.w, 0, float(l.ow) - (l.pic.x + l.pic.w), float(l.oh)};
+        const SDL_FRect src = {0, 0, float(w * rsx), float(height * rsy)};
+        SDL_RenderTexture(r, left_tex.tex, &src, &ld);
+        SDL_RenderTexture(r, right_tex.tex, &src, &rd);
     }
     if (redraw) {
         // The view through the cockpit's openings: the holes in rectangles of one offset each (runs
         // of a row merged with the same run of the rows below), their edges on whole output pixels.
-        const double rsx = cfg.hires_view ? l.sx : 1.0, rsy = cfg.hires_view ? l.sy : 1.0;
-        render_region(win_tex, VIEW_X, VIEW_Y, VIEW_W, VIEW_H, rsx, rsy, t,
-                      cfg.hires_view ? SDL_SCALEMODE_NEAREST : filter_mode());
+        // A shown column x is page 1's column x - side + the offset of the frame column it shows, so
+        // a widened opening shows the world beyond the original one.
         struct Rect {
             int x0, x1, y0, y1, tx, ty;
         };
@@ -412,16 +516,16 @@ bool present(const u32 *frame, bool changed)
         size_t open_from = 0;  // rects that reach the previous row start here
         for (int y = 0; y < 200; y++) {
             const size_t row_from = rects.size();
-            for (int x = 0; x < 320;) {
-                if (!hole[y * 320 + x]) {
+            for (int x = 0; x < fw;) {
+                if (!hole[y * 320 + source(x, y)]) {
                     x++;
                     continue;
                 }
                 int tx, ty;
-                translation(x, y, tx, ty);
+                translation(source(x, y), y, tx, ty);
                 int x1 = x + 1;
-                for (int ax, ay; x1 < 320 && hole[y * 320 + x1]; x1++) {
-                    translation(x1, y, ax, ay);
+                for (int ax, ay; x1 < fw && hole[y * 320 + source(x1, y)]; x1++) {
+                    translation(source(x1, y), y, ax, ay);
                     if (ax != tx || ay != ty) break;
                 }
                 bool merged = false;
@@ -445,22 +549,33 @@ bool present(const u32 *frame, bool changed)
             open_from = rects.size();
             rects.insert(rects.end(), reached.begin(), reached.end());
         }
-        for (const Rect &q : rects) {
-            const float X0 = std::round(l.pic.x + float(q.x0 * l.sx)), X1 = std::round(l.pic.x + float(q.x1 * l.sx));
-            const float Y0 = std::round(l.pic.y + float(q.y0 * l.sy)), Y1 = std::round(l.pic.y + float(q.y1 * l.sy));
-            const SDL_FRect dst = {X0, Y0, X1 - X0, Y1 - Y0};
-            const SDL_FRect src = {float(((X0 - l.pic.x) / l.sx + q.tx - VIEW_X) * rsx),
-                                   float(((Y0 - l.pic.y) / l.sy + q.ty - VIEW_Y) * rsy), float((X1 - X0) / l.sx * rsx),
-                                   float((Y1 - Y0) / l.sy * rsy)};
-            SDL_RenderTexture(r, win_tex.tex, &src, &dst);
+        if (!rects.empty()) {
+            // The part of page 1 the rectangles show, drawn again.
+            int px0 = 1 << 30, px1 = -(1 << 30), py0 = 1 << 30, py1 = -(1 << 30);
+            for (const Rect &q : rects) {
+                px0 = std::min(px0, q.x0 - side + q.tx);
+                px1 = std::max(px1, q.x1 - side + q.tx);
+                py0 = std::min(py0, q.y0 + q.ty);
+                py1 = std::max(py1, q.y1 + q.ty);
+            }
+            render_region(win_tex, px0, py0, px1 - px0, py1 - py0, rsx, rsy, t, mode);
+            for (const Rect &q : rects) {
+                const float X0 = std::round(pic.x + float(q.x0 * xs)), X1 = std::round(pic.x + float(q.x1 * xs));
+                const float Y0 = std::round(pic.y + float(q.y0 * l.sy)), Y1 = std::round(pic.y + float(q.y1 * l.sy));
+                const SDL_FRect dst = {X0, Y0, X1 - X0, Y1 - Y0};
+                const SDL_FRect src = {float(((X0 - pic.x) / xs - side + q.tx - px0) * rsx),
+                                       float(((Y0 - pic.y) / l.sy + q.ty - py0) * rsy), float((X1 - X0) / xs * rsx),
+                                       float((Y1 - Y0) / l.sy * rsy)};
+                SDL_RenderTexture(r, win_tex.tex, &src, &dst);
+            }
         }
     }
-    SDL_RenderTexture(r, cockpit_tex, nullptr, &l.pic);
+    SDL_RenderTexture(r, cockpit_tex, nullptr, &pic);
     if (cfg.filter == Filter::Crt && l.sy >= 2) {
         SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
         SDL_SetRenderDrawColor(r, 0, 0, 0, 96);
         for (int y = 0; y < 200; y++) {
-            const SDL_FRect band = {l.pic.x, l.pic.y + float((y + 0.6) * l.sy), l.pic.w, float(0.4 * l.sy)};
+            const SDL_FRect band = {pic.x, pic.y + float((y + 0.6) * l.sy), pic.w, float(0.4 * l.sy)};
             SDL_RenderFillRect(r, &band);
         }
     }
@@ -495,7 +610,7 @@ void enhanced_install(const Settings &s)
     SDL_Window *w = host_window();
     if (w && !s.fullscreen && !host_fullscreen()) {
         const int base_h = s.aspect == Aspect::Square ? 200 : 240;
-        const int base_w = s.widescreen ? base_h * 16 / 9 : (s.aspect == Aspect::Square ? 320 : 320);
+        const int base_w = s.widescreen != Wide::Off ? base_h * 16 / 9 : 320;
         int ww = base_w * s.window_scale, wh = base_h * s.window_scale;
         SDL_Rect usable;
         if (SDL_GetDisplayUsableBounds(SDL_GetDisplayForWindow(w), &usable)) {

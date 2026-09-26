@@ -4,7 +4,7 @@ Goal: a behaviour-exact port of Accolade's **Gunboat** (DOS, 1990; `GB.EXE`), re
 function in C++ on SDL3. It reads the original game files at run time and never redistributes them.
 The method is the one that produced the finished Test Drive III port (`test-drive-3-sdl3/`, same
 engine family): **reverse-engineer → document → port each original function → verify it against the
-original machine code.** Enhancements (resolution, widescreen, 60 fps) live in a separate
+original machine code.** Enhancements (resolution, widescreen, 60 fps, draw distance) live in a separate
 layer (`gunboat-port/src/enhanced/`), are each the player's choice, and never change the faithful
 core.
 
@@ -18,8 +18,9 @@ core.
   launcher, the command line, F11 in the game); "Original" shows exactly the faithful picture. They
   only read the game's memory: anything they run on it (the capture's scratch runs of ported
   routines) is undone before the game continues, and `scene_enhanced.py` checks that.
-* The original game data is copyrighted: `Original DOS version/` and everything derived from it
-  (`reverse_engineering/out/`, `gunboat-port/out/`) stay out of git.
+* The original game data is copyrighted and never goes to GitHub: the game files live in `Game/`
+  (as in the Test Drive III port; only `Game/README.md` is tracked), and everything derived from
+  them (`reverse_engineering/out/`, `gunboat-port/out/`) stays out of git too.
 * **GitHub** (`origin` = github.com/PlasticCog/Gunboat, public): push only what the remake needs
   (port code, tests, specs, symbols, the RE tools and format docs). No game files, generated
   output, tool installs, editor settings or archived material.
@@ -37,7 +38,8 @@ core.
 | `reverse_engineering/spec/` | One spec per subsystem, with its `<owner>_symbols.csv` |
 | `reverse_engineering/tools/` | Unpacker, indexer, matcher, disassembler, Ghidra scripts, format tools |
 | `reverse_engineering/out/` | Generated: unpacked EXE, Ghidra project, decompilation `decomp/gb_ds.c` (ignored) |
-| `Original DOS version/` | The original game (ignored). `SteelThunder/` is the predecessor game, for reference. |
+| `Game/` | The original game's files (ignored except its README): the port, the tests and the tools read them here |
+| `Original DOS version/` | Local reference copy of the release (ignored): its DOSBox set-up, `SteelThunder/` (the predecessor game) |
 | `test-drive-3-sdl3/` | Reference port (MIT, separate git repo, ignored): specs, tools, `td3port/` skeleton |
 | `_tools/` | Ghidra install (ignored) |
 
@@ -80,7 +82,7 @@ core.
 ```text
 # toolchain: MSYS2 UCRT64 (GCC 15, CMake, Ninja) at C:\msys64\ucrt64\bin; Python 3.13 with capstone, unicorn, pillow
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
-gunboat-port/build/gunboat.exe --game-dir "Original DOS version" --check
+gunboat-port/build/gunboat.exe --check                         # finds Game/ by itself
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
 python gunboat-port/tests/scenes/scene_enhanced.py             # the enhancements, headless (needs the game)
 gunboat-port/build/gunboat.exe --help                          # launcher, --original / --enhanced, display options
@@ -137,13 +139,29 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     (drawn with holes where the view shows);
   * smooth motion: the view drawn at 60 fps between the last two captured frames (the camera
     and moving objects interpolated, one game frame behind); the game keeps its 15 frames/s;
-  * widescreen: in a wider window the world continues beside the 4:3 picture (not for the
-    pilot's sheared side windows or the black-framed chase view);
+  * widescreen, three choices: off; the world beside the 4:3 picture (not for the pilot's
+    sheared side windows or the black-framed chase view); or the **wide cockpit** (default of
+    the Enhanced preset): the frame widened to the window's edges by seam insertion (`widen.cpp`):
+    in each outer band the 16 cheapest top-to-bottom paths (cost: neighbour differences, strong
+    edges weighted and spread 3 columns, sideways steps, the view's openings free, pixels seen
+    changing avoided) get a block of the columns before them repeated; the message line is padded
+    at its ends; at most 28 columns a side (16:9 with square pixels), a wider window draws the
+    widened frame a little wider (the view too, so aiming stays exact); the widening is made again
+    when the station's cockpit changes or a changing pixel lands on a repeated column;
+  * extended draw distance: the terrain cells 2..5 from the boat's (the game draws 3 x 3), loaded
+    with `tile_load` on the scratch memory (with their structures and scenery) when the window's
+    centre cell or the time-of-day colours change, drawn behind the game's terrain far to near
+    with the objects standing in them (scenery and authored objects; their images built like the
+    visible ones, by kind and view);
   * checks (`scene_enhanced.py`): the view drawn again at 1x equals the original's pixels on
     94.7% (pilot practice) and 97.0% (night gunnery) of the view (the rest: sub-pixel terrain
     edges, the original's bit-pattern sprite scaling), no capture changes the game's memory,
-    60 presents/s with the game at 15.0 frames/s; capture 0.27 ms, drawing ~0.5 ms per present
-    at 852x480 (software renderer).
+    60 presents/s with the game at 15.0 frames/s; capture 0.3-0.4 ms, drawing ~0.5-1.3 ms per
+    present at 710-852 x 400-480 (software renderer).
+  * the game folder `Game/` (2026-09-26, as the TD3 port): `gunboat.exe` looks for `Game` next to
+    itself, one or two folders up (a build in `gunboat-port/build`), then in the current folder;
+    the launcher or `--game-dir` can point elsewhere. The files were copied there from the local
+    `Original DOS version/`.
 * **Next:** optionally the parked video modes and sound devices; more enhancements only as
   player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`

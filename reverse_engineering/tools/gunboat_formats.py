@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-ORIGINAL_DIR = ROOT / "Original DOS version"
+ORIGINAL_DIR = ROOT / "Game"
 OUT_DIR = ROOT / "reverse_engineering" / "out"
 ASSET_DIR = OUT_DIR / "assets"
 UNPACKED_IMAGE = OUT_DIR / "gunboat_unpacked_image.bin"

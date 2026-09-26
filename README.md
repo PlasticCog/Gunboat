@@ -17,21 +17,33 @@ original function and check it against the original machine code.
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
 | Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
 | Porting | Done for VGA: the whole game runs natively and matches the original (433 functions of GB.EXE and the Ad Lib driver's 52, each verified; `gunboat-port/Run Port.cmd`) |
-| Enhancements | Optional, chosen in the launcher: a high-resolution 3D view, smooth 60 fps motion, widescreen, picture aspect and scaling filters. "Original" shows the faithful picture; F11 switches in the game. The game itself is the same either way |
+| Enhancements | Optional, chosen in the launcher: a high-resolution 3D view, smooth 60 fps motion, an extended draw distance, a wide cockpit (or the world beside the picture) in widescreen, picture aspect and scaling filters. "Original" shows the faithful picture; F11 switches in the game. The game itself is the same either way |
 
 ## Layout
 
 | Path | What |
 | --- | --- |
+| `Game/` | **Your original game files** (not in the repository: `Game/README.md` lists them) |
 | `CLAUDE.md` | Porting rules and conventions |
 | `reverse_engineering/` | Executable map, symbols, specs, format notes and Python tools |
 | `gunboat-port/` | C++ / SDL3 code (CMake) and differential tests against the original code |
 
 ## Building and playing (Windows)
 
-MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1` builds
-and tests everything. `gunboat-port/Run Port.cmd` plays the game from `Original DOS version/` next to
-`gunboat-port/`, or run `gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE>`.
+1. Copy the files of your original DOS *Gunboat* into the folder `Game` (`Game/README.md` lists
+   the ones the port reads). They are never committed: Git ignores that folder.
+2. MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1` builds and
+   tests everything.
+3. `gunboat-port/Run Port.cmd` (or `gunboat-port/build/gunboat.exe`) starts the game; it finds
+   `Game` by itself. For a copy elsewhere, put `gunboat.exe` and `SDL3.dll` next to a `Game`
+   folder, as in the Test Drive III port:
+
+   ```text
+   Gunboat\
+   ├── Game\          <- your original game files (GB.EXE, DATAA.DAT, ...)
+   ├── gunboat.exe
+   └── SDL3.dll
+   ```
 
 The launcher opens first: choose the game folder, **Original** or **Enhanced** (or each enhancement
 on its own), the picture and the sound, then Play. The choices are saved. In the game, F11

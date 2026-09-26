@@ -18,13 +18,15 @@ namespace gb {
 
 namespace {
 
-enum Item { FOLDER, PRESET, VIEW, MOTION, WIDE, ASPECT, FILTER, DISPLAY, SOUND, SHOW, PLAY, QUIT, ITEMS };
+enum Item { FOLDER, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, SHOW, PLAY, QUIT, ITEMS };
 
-const char *const LABELS[ITEMS] = {"Game folder",  "Preset",  "3D view", "Motion",       "Widescreen", "Picture",
-                                   "Scaling",      "Display", "Sound",   "This screen", "Play",       "Quit"};
+const char *const LABELS[ITEMS] = {"Game folder", "Preset",  "3D view", "Motion",      "Draw distance",
+                                   "Widescreen",  "Picture", "Scaling", "Display",     "Sound",
+                                   "This screen", "Play",    "Quit"};
 
 const char *const HELP[ITEMS][3] = {
-    {"The folder with the original game (GB.EXE and its files).", "Enter: choose another folder.", ""},
+    {"The folder with the original game's files: by default the folder Game next to gunboat.exe",
+     "(Game/README.md lists the files). Enter: choose another folder.", ""},
     {"Original: the picture exactly as the DOS game drew it.",
      "Enhanced: every enhancement below. The game itself is the same either way;",
      "the enhancements only change how its frames are shown. In the game, F11 switches."},
@@ -34,9 +36,12 @@ const char *const HELP[ITEMS][3] = {
     {"Smooth: 60 frames per second in the 3D view, drawn between the game's frames",
      "(the game still runs at its own rate, so the view is one game frame behind).",
      "Original: the view changes with the game's frames (15 per second)."},
-    {"Extended world: in a window wider than the picture, the world continues beside",
-     "the cockpit on the 3D stations (not through the pilot's side windows).",
-     "Off: black borders, as a 4:3 monitor."},
+    {"Extended: the terrain, scenery and objects beyond the 3 x 3 cells around the boat that the",
+     "game draws, out to 5 cells, behind its own: islands and shores on the horizon. The game",
+     "itself is unchanged (what it sees and hits). Original: only the game's cells."},
+    {"Wide cockpit: in a window wider than the picture, the cockpit art is widened to its",
+     "edges where it has the least detail (the centre stays as drawn). Extended world: the",
+     "world continues beside the cockpit instead. Off: black borders. (3D stations only.)"},
     {"4:3: the 320 x 200 picture stretched to 4:3 as on a VGA monitor (tall pixels).",
      "Square pixels: 16:10, every pixel square.", ""},
     {"Sharp pixels: crisp at any window size. Nearest: plain pixel copies (uneven at",
@@ -96,14 +101,18 @@ void recheck(const std::string &dir)
 std::string value_of(const Settings &s, int item)
 {
     switch (item) {
-    case FOLDER: return s.game_dir.empty() ? "(none)" : s.game_dir;
+    case FOLDER: return s.game_dir.empty() ? "Game: " + default_game_dir() : s.game_dir;
     case PRESET:
         if (!s.any_enhancement()) return "Original";
-        if (s.hires_view && s.smooth_motion && s.widescreen) return "Enhanced";
+        if (s.all_enhancements()) return "Enhanced";
         return "Custom";
     case VIEW: return s.hires_view ? "High resolution" : "Original (320 x 200)";
     case MOTION: return s.smooth_motion ? "Smooth (60 fps)" : "Original (the game's frames)";
-    case WIDE: return s.widescreen ? "Extended world" : "Off (4:3 with borders)";
+    case DISTANCE: return s.far_view ? "Extended" : "Original (3 x 3 cells)";
+    case WIDE:
+        return s.widescreen == Wide::Cockpit ? "Wide cockpit"
+               : s.widescreen == Wide::World ? "Extended world"
+                                             : "Off (4:3 with borders)";
     case ASPECT: return s.aspect == Aspect::Square ? "Square pixels (16:10)" : "4:3 (VGA monitor)";
     case FILTER:
         switch (s.filter) {
@@ -127,12 +136,13 @@ void change(Settings &s, int item, int dir)
 {
     switch (item) {
     case PRESET:
-        if (s.hires_view && s.smooth_motion && s.widescreen) s.set_original();
+        if (s.all_enhancements()) s.set_original();
         else s.set_enhanced();
         break;
     case VIEW: s.hires_view = !s.hires_view; break;
     case MOTION: s.smooth_motion = !s.smooth_motion; break;
-    case WIDE: s.widescreen = !s.widescreen; break;
+    case DISTANCE: s.far_view = !s.far_view; break;
+    case WIDE: s.widescreen = Wide((int(s.widescreen) + 3 + dir) % 3); break;
     case ASPECT: s.aspect = s.aspect == Aspect::Crt43 ? Aspect::Square : Aspect::Crt43; break;
     case FILTER: s.filter = Filter((int(s.filter) + 4 + dir) % 4); break;
     case DISPLAY:
@@ -183,7 +193,7 @@ bool launcher_run(Settings &s)
     int sel = PLAY;
     std::string message;
     Uint64 message_until = 0;
-    recheck(s.game_dir);
+    recheck(game_dir_of(s));
     if (!game.ok) sel = FOLDER;
     float scale = 2;
     const float row0 = 64, row_h = 13, value_x = 16 + 15 * 8;
@@ -197,7 +207,7 @@ bool launcher_run(Settings &s)
 
     auto activate = [&](int item, int dir) -> int {  // 1 play, -1 quit, 0 stay
         if (item == PLAY) {
-            recheck(s.game_dir);
+            recheck(game_dir_of(s));
             if (game.ok) return 1;
             sel = FOLDER;
             message = game.why.empty() ? "Choose the folder with GB.EXE first." : game.why;
@@ -206,7 +216,7 @@ bool launcher_run(Settings &s)
         }
         if (item == QUIT) return -1;
         if (item == FOLDER) {
-            if (dir == 0) SDL_ShowOpenFolderDialog(folder_picked, nullptr, win, s.game_dir.c_str(), false);
+            if (dir == 0) SDL_ShowOpenFolderDialog(folder_picked, nullptr, win, game_dir_of(s).c_str(), false);
             return 0;
         }
         change(s, item, dir == 0 ? 1 : dir);
@@ -218,8 +228,9 @@ bool launcher_run(Settings &s)
             std::lock_guard<std::mutex> lock(picked_mutex);
             if (picked) {
                 picked = false;
-                s.game_dir = picked_dir;
-                recheck(s.game_dir);
+                // the Game folder itself is remembered as the default (it moves with the program)
+                s.game_dir = picked_dir == default_game_dir() ? std::string() : picked_dir;
+                recheck(game_dir_of(s));
                 if (game.ok) sel = PLAY;
             }
         }

@@ -8,20 +8,23 @@ and damage report, the debrief and the roster. `Run Port.cmd` starts it; the lau
 
 **Enhancements, all optional** (`src/enhanced/`; the launcher, the command line, F11 in the game):
 the 3D view drawn again at the window's resolution under the original cockpit, smooth 60 fps motion
-in the 3D view, the world continued beside the picture in a wide window, the picture's aspect (4:3
-like the VGA monitor, or square pixels) and scaling (sharp, nearest, smooth, CRT scanlines). With the
+in the 3D view, an extended draw distance (the terrain and objects out to 5 cells instead of the
+game's 3 x 3), in a wide window the cockpit widened to its edges (or the world continued beside
+the picture), the picture's aspect (4:3 like the VGA monitor, or square pixels) and scaling (sharp,
+nearest, smooth, CRT scanlines). With the
 **Original** preset the picture is the faithful one. The game is the same either way: the
 enhancements only read what it drew.
 
 ```text
 gunboat.exe [--launcher | --no-launcher] [--game-dir DIR] [--original | --enhanced]
-            [--view original|hires] [--motion original|smooth] [--widescreen on|off]
-            [--aspect 4:3|square] [--filter sharp|nearest|smooth|crt] [--fullscreen | --window]
+            [--view original|hires] [--motion original|smooth] [--draw-distance original|extended]
+            [--widescreen off|world|cockpit] [--aspect 4:3|square] [--filter sharp|nearest|smooth|crt] [--fullscreen | --window]
             [--scale N] [--fps N] [--sound adlib|speaker] [--check] [--host-test]
 ```
 
-The settings are saved in `%APPDATA%\Gunboat\gunboat.ini`; options given on the command line apply
-to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
+The game's files go in `Game/` at the top of the repository (or a `Game` folder next to
+`gunboat.exe`), which the program finds by itself. The settings are saved in
+`%APPDATA%\Gunboat\gunboat.ini`; options given on the command line apply to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
 
 | Part | State |
 | --- | --- |
@@ -62,7 +65,7 @@ The tests: `load_exe` (`gunboat --check`), `host_timer` (`gunboat --host-test`, 
 `python gunboat-port/tests/scenes/scene_check.py` runs the port headless and compares its frames
 with the DOSBox captures in `reverse_engineering/out/dosbox_captures`;
 `scene_enhanced.py` checks the enhancements (see the table).
-`GB_GAME_DIR` points the tests at the original files (default `../Original DOS version`).
+`GB_GAME_DIR` points the tests at the original files (default `../Game`).
 
 `python gunboat-port/tests/difftest/run_all.py [--scale N] [--seed N] [-k name]` runs the
 differential tests alone (it builds `gb_difftest` first) and writes `out/difftest-report.json`.

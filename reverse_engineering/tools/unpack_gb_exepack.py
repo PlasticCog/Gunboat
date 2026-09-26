@@ -152,7 +152,7 @@ def unpack(exe_path: pathlib.Path, out_dir: pathlib.Path, dump_size: int) -> Non
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("exe", type=pathlib.Path, nargs="?", default=pathlib.Path("Original DOS version/GB.EXE"))
+    parser.add_argument("exe", type=pathlib.Path, nargs="?", default=pathlib.Path("Game/GB.EXE"))
     parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path("reverse_engineering/out"))
     parser.add_argument("--dump-size", type=lambda value: int(value, 0), default=0x30000)
     args = parser.parse_args()

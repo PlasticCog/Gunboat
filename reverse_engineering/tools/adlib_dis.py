@@ -2,7 +2,7 @@
 
     python reverse_engineering/tools/adlib_dis.py [ADLIB.COM] [--all | --fn 1ee7 ...] [--data]
 
-Reads the user's ADLIB.COM (default: "Original DOS version/ADLIB.COM"); never copies it. A .COM runs
+Reads the user's ADLIB.COM (default: "Game/ADLIB.COM"); never copies it. A .COM runs
 at CS:0100; addresses below are CS offsets (file offset + 100h). The driver's data segment is
 DS = CS + 25Ch (DS:0000 = CS:25C0), so `[x]` in a C function is DS:x. Recursive descent from the
 INT 65h dispatch table (CS:0213, 24 entries; argument word counts at CS:0243) and the handler;
@@ -17,7 +17,7 @@ from capstone import Cs, CS_ARCH_X86, CS_MODE_16
 from capstone.x86 import X86_OP_IMM, X86_OP_MEM
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-DEFAULT = ROOT / 'Original DOS version' / 'ADLIB.COM'
+DEFAULT = ROOT / 'Game' / 'ADLIB.COM'
 ORG = 0x100
 DATA_PARA = 0x25C                   # DS = CS + 25Ch
 DATA_BASE = DATA_PARA * 16          # DS:0000 = CS:25C0

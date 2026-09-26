@@ -6,6 +6,7 @@
 // pass of a 3D station); the game's memory is left exactly as it was.
 #include <SDL3/SDL_stdinc.h>
 
+#include <memory>
 #include <vector>
 
 #include "types.hpp"
@@ -31,6 +32,32 @@ struct SpriteImage {
     u8 shift = 0;
 };
 
+// The extended draw distance: the terrain cells around the game's own window (which is the boat's
+// cell and its neighbours), loaded as the game loads its window (tile_load, with the structures
+// standing in them), and the objects standing in them.
+struct FarVertex {
+    u8 control, height;
+    u16 x, y;  // quarter units, as DS:1C96 / DS:2496
+};
+struct FarObject {
+    u8 kind, flags;
+    u16 x, y;  // map units, as the object arrays
+};
+struct FarCell {
+    double cx = 0, cy = 0;  // the centre, quarter units
+    std::vector<FarVertex> a, b;  // group A and group B, each in its load order
+    std::vector<FarObject> objects;
+};
+struct FarWorld {
+    u16 centre = 0xFFFF;  // the game's window centre cell (DS:D9AD) it was loaded around
+    u32 key = 0;          // the time-of-day colours it was loaded with
+    int radius = 0;       // cells loaded: those 2..radius cells (Chebyshev) from the centre
+    std::vector<FarCell> cells;
+};
+
+// A far object's image by kind and view (built as the capture builds the visible ones), or null.
+const SpriteImage *far_sprite(u8 kind, u8 view);
+
 struct Scene {
     bool valid = false;
     Uint64 time_ns = 0;
@@ -41,12 +68,21 @@ struct Scene {
     u8 overlay[VIEW_W * VIEW_H];   // 1 where view_present drew over the view (the gun sprites)
     SpriteImage sprites[MAX_ENTRIES];
     bool has_sprite[MAX_ENTRIES];  // the entry is drawn this frame and has its image
+    std::shared_ptr<const FarWorld> far;  // the extended draw distance, or null
+    std::vector<FarObject> far_objects;   // the authored objects standing in the far cells
 
     u8 u8_at(u16 off) const { return ds[off]; }
     u16 u16_at(u16 off) const { return u16(ds[off] | ds[u16(off + 1)] << 8); }
 };
 
-// Captures the frame now in memory into `sc` (the game's memory is restored afterwards).
-void scene_capture(Scene &sc);
+// Captures the frame now in memory into `sc` (the game's memory is restored afterwards). With
+// far_radius > 1 the terrain up to that many cells from the boat's cell is loaded too (reused from
+// `previous` while the window and the colours stay the same).
+void scene_capture(Scene &sc, int far_radius, const Scene *previous);
+
+// The view byte of sprite_view_angle (0919:60e0) for an object of this kind and flags seen at the
+// compass angle byte `angle` (256 per turn): its facing x 32 minus the angle; 0 for the kinds that
+// have one view.
+u8 far_view_byte(u8 kind, u8 flags, u8 angle);
 
 } // namespace gb

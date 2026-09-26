@@ -2,12 +2,14 @@
 //
 // usage: gunboat [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window]
 //                [--fps N] [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]
-//                [--motion original|smooth] [--widescreen on|off] [--aspect 4:3|square]
+//                [--motion original|smooth] [--draw-distance original|extended]
+//                [--widescreen off|world|cockpit] [--aspect 4:3|square]
 //                [--filter sharp|nearest|smooth|crt] [--check] [--host-test]
 //   The player's settings (gunboat.ini, src/enhanced/settings.hpp) give the defaults; the options
 //   override them for this run. The launcher (src/enhanced/launcher.cpp) shows first unless the
 //   settings say not to or --no-launcher is given; it saves the settings when the game starts.
-//   --game-dir   folder with the original game files
+//   --game-dir   folder with the original game files (default: the Game folder next to gunboat.exe,
+//                src/enhanced/settings.hpp)
 //   --scale      initial window scale: 320x240 times N (default 3)
 //   --fullscreen start in full screen (Alt+Enter switches); --window: in a window
 //   --fps        frames per second of the 3D stations (default 15: the mission clock then runs in
@@ -21,8 +23,10 @@
 //                speaker either way, as in the original.)
 //   --original   no enhancements: the picture exactly as the original drew it (F11 in the game
 //                switches); --enhanced: all of them. Or one by one: --view hires (the 3D view at the
-//                window's resolution), --motion smooth (60 fps, interpolated), --widescreen on (the
-//                world beside the picture in a wide window). --aspect and --filter: the picture.
+//                window's resolution), --motion smooth (60 fps, interpolated), --draw-distance
+//                extended (the terrain and objects beyond the game's 3 x 3 cells), --widescreen
+//                cockpit (the cockpit widened to a wide window's edges) or world (the world beside
+//                the picture). --aspect and --filter: the picture.
 //   --check      load and verify GB.EXE, print a summary and exit (no window)
 //   --host-test  developer check of the SDL host: runs the three timer rates for a moment and
 //                compares the interrupts counted with the PIT rates (use SDL_VIDEO_DRIVER=dummy)
@@ -56,7 +60,8 @@ int usage(const char *prog)
     std::fprintf(stderr,
                  "usage: %s [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window] [--fps N]\n"
                  "          [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]\n"
-                 "          [--motion original|smooth] [--widescreen on|off] [--aspect 4:3|square]\n"
+                 "          [--motion original|smooth] [--draw-distance original|extended]\n"
+                 "          [--widescreen off|world|cockpit] [--aspect 4:3|square]\n"
                  "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test]\n",
                  prog);
     return 2;
@@ -139,8 +144,11 @@ int main(int argc, char **argv)
         else if (val("--view", "hires")) st.hires_view = true;
         else if (val("--motion", "original")) st.smooth_motion = false;
         else if (val("--motion", "smooth")) st.smooth_motion = true;
-        else if (val("--widescreen", "off")) st.widescreen = false;
-        else if (val("--widescreen", "on")) st.widescreen = true;
+        else if (val("--draw-distance", "original")) st.far_view = false;
+        else if (val("--draw-distance", "extended")) st.far_view = true;
+        else if (val("--widescreen", "off")) st.widescreen = Wide::Off;
+        else if (val("--widescreen", "world")) st.widescreen = Wide::World;
+        else if (val("--widescreen", "cockpit") || val("--widescreen", "on")) st.widescreen = Wide::Cockpit;
         else if (val("--aspect", "4:3")) st.aspect = Aspect::Crt43;
         else if (val("--aspect", "square")) st.aspect = Aspect::Square;
         else if (val("--filter", "sharp")) st.filter = Filter::Sharp;
@@ -157,8 +165,7 @@ int main(int argc, char **argv)
         }
         else return usage(argv[0]);
     }
-    if (st.game_dir.empty()) st.game_dir = ".";
-    {  // saved and shown as an absolute path
+    if (!st.game_dir.empty()) {  // saved and shown as an absolute path
         std::error_code ec;
         const auto abs = std::filesystem::absolute(st.game_dir, ec);
         if (!ec) st.game_dir = abs.lexically_normal().string();
@@ -166,7 +173,7 @@ int main(int argc, char **argv)
     host_set_frame_rate(st.fps);
 
     if (host_test) {
-        if (!host_init(st.game_dir.c_str(), st.window_scale, false)) return 1;
+        if (!host_init(".", st.window_scale, false)) return 1;
         vga_init();
         bool ok = host_test_rate("menus", PIT_DIV_MENU, 1.0);
         ok = host_test_rate("missions", PIT_DIV_MISSION, 0.5) && ok;
@@ -178,7 +185,7 @@ int main(int argc, char **argv)
     // The launcher opens the window first; the settings it returns are saved.
     bool window = false;
     if (!check && (force_launcher || (st.launcher && !no_launcher))) {
-        if (!host_init(st.game_dir.c_str(), st.window_scale, st.fullscreen)) return 1;
+        if (!host_init(".", st.window_scale, st.fullscreen)) return 1;
         window = true;
         if (!launcher_run(st)) {
             host_shutdown();
@@ -188,10 +195,13 @@ int main(int argc, char **argv)
         host_set_frame_rate(st.fps);
     }
 
-    const std::string exe = find_game_file(st.game_dir, "GB.EXE");
+    const std::string dir = game_dir_of(st);
+    const std::string exe = find_game_file(dir, "GB.EXE");
     ExeInfo info;
     std::string err;
-    if (!mem_load_exe(exe, info, err)) return fail(window, err);
+    if (!mem_load_exe(exe, info, err))
+        return fail(window, err + "\n\nPut the original game's files in " + dir +
+                                " (the Game folder), or choose their folder with --game-dir or the launcher.");
     if (check) {
         std::printf("GB.EXE ok (%s): image %u bytes, %u relocations, at %04X:0000, DGROUP %04X\n",
                     info.packed ? "EXEPACK" : "unpacked", unsigned(info.image_size), unsigned(info.relocations),
@@ -202,7 +212,7 @@ int main(int argc, char **argv)
     // AdLib: DOS loads ADLIB.COM below GB.EXE (checked before the game's window opens).
     bool adlib = false;
     if (st.sound != Sound::Speaker) {
-        const std::string com = find_game_file(st.game_dir, "ADLIB.COM");
+        const std::string com = find_game_file(dir, "ADLIB.COM");
         std::error_code ec;
         const bool found = std::filesystem::exists(com, ec);
         if (st.sound == Sound::Adlib && !found)
@@ -216,8 +226,8 @@ int main(int argc, char **argv)
     // The machine as DOS leaves it to GB.EXE, then the program (it ends through the runtime's exit).
     dos_heap_init();
     bios_init();
-    if (!window && !host_init(st.game_dir.c_str(), st.window_scale, st.fullscreen)) return 1;
-    host_set_game_dir(st.game_dir.c_str());
+    if (!window && !host_init(dir.c_str(), st.window_scale, st.fullscreen)) return 1;
+    host_set_game_dir(dir.c_str());
     vga_init();
     enhanced_install(st);
     host_set_kbd_handler(kbd_byte);

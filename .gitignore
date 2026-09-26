@@ -1,4 +1,8 @@
-# Original game (copyrighted; supply your own copy). The port reads it at run time.
+# The original game (copyrighted; never committed): put your own copy in Game/ (Game/README.md
+# lists the files). The port reads it at run time. Only the README in it is tracked.
+/Game/*
+!/Game/README.md
+# A local reference copy of the original release (its DOSBox set-up, Steel Thunder)
 /Original DOS version/
 
 # Reference projects, third-party material and tool installs (not ours; large)

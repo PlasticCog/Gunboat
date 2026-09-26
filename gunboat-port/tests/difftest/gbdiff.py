@@ -38,7 +38,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[3]
 PORT = ROOT / 'gunboat-port'
 RE = ROOT / 'reverse_engineering'
 UNPACKED = RE / 'out' / 'GB_unp.exe'
-GAME_DIR = ROOT / 'Original DOS version'
+GAME_DIR = ROOT / 'Game'
 BUILD = pathlib.Path(os.environ.get('GB_BUILD_DIR', PORT / 'build'))
 
 MEM_SIZE = 0x110000

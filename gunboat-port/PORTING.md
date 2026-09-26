@@ -206,6 +206,11 @@ original's.
   spotlights), its projection in floating point (bearing 128 units per column, rows from 7FFFh /
   distance), its triangles grown as its row-inclusive spans grow them (so distant thin terrain
   keeps its size), its sprite scale factors (the densities of the scale patterns).
+* `widen.*`: the wide cockpit: the frame widened by seam insertion (few cheap top-to-bottom paths
+  in the outer bands, a block of columns repeated beside each; the message line padded).
+* The extended draw distance: `scene_capture` also loads the far cells (tile_load on the scratch
+  memory, per cell, with the structures), keeps them while the window's centre and colours stay,
+  and builds the far objects' images by kind and view; `view3d` draws them before group B.
 * `present.*`: the host's presenter: the 320x200 frame as a texture (the player's filter and
   aspect), with holes where the frame still shows the captured view; the view drawn under it at the
   window's resolution per rectangle of one offset, and beside the picture in a wider window; F11

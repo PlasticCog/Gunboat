@@ -39,8 +39,8 @@ def run(name, keys, seconds, out):
     env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(snaps),
                GB_KEYS=INTRO_KEYS + ',' + keys)
     try:
-        subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Original DOS version'),
-                        '--no-launcher', '--original'],
+        subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Game'),
+                        '--no-launcher', '--original', '--window'],
                        env=env, timeout=seconds)
     except subprocess.TimeoutExpired:
         pass

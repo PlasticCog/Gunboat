@@ -1,6 +1,6 @@
 # The Ad Lib sound driver `ADLIB.COM` V1.51 (not part of GB.EXE)
 
-Target: the user's `Original DOS version/ADLIB.COM`, 13,280 bytes, the Ad Lib Inc. sound driver
+Target: the user's `Game/ADLIB.COM`, 13,280 bytes, the Ad Lib Inc. sound driver
 V1.51 of 1989 (its banner says so; FNV-1a 44561E68h; its texts are not quoted here). Gunboat does
 not contain an AdLib driver: on an AdLib the player ran this TSR before `GB.EXE`, and the game's
 music back end (sound.md §4.5) calls it through INT 65h.
