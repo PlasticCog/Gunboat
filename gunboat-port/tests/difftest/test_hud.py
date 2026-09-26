@@ -394,7 +394,6 @@ def test_radar(h, rng, scale):
     return n
 
 
-
 # ---------------------------------------------------------------- the view copies
 
 def presenting(h, key):
@@ -421,7 +420,8 @@ def test_view_copies(h, rng, scale):
             for src, dst in [(1, get16(base, VIEW_PAGE)), (1, 0), (0, 1), (1, 1), (2, 0)][:5 if key == '' else 2]:
                 m = bytearray(base)
                 shake_pages(m, rng)
-                h.check('view_copy_%d' % k, m, stack_args=[src, dst], label='station key %r pages %d -> %d' % (key, src, dst))
+                h.check('view_copy_%d' % k, m, stack_args=[src, dst],
+                        label='station key %r pages %d -> %d' % (key, src, dst))
                 n += 1
     # the VGA routines by themselves (the harness runs them with DS = DGROUP): ES = the screen, page 1,
     # DGROUP itself (overlapping copies)
@@ -479,7 +479,8 @@ def test_damage_report(h, rng, scale):
             for off in range(0x1E):
                 put8(m, LAMPS + off, (get8(m, LAMPS + off) & 0xFC) | rng.randrange(4))
             put8(m, 0xB7FE, rng.choice([0, 1, 2, 3, 0xFF, rng.randrange(256)]))
-        h.check('damage_report_screen', m, label='case %d leak %d objective %02X' % (i, get8(m, 0xB7FE), get8(m, 0xD505)))
+        h.check('damage_report_screen', m,
+                label='case %d leak %d objective %02X' % (i, get8(m, 0xB7FE), get8(m, 0xD505)))
         n += 1
     return n + screen_variants(h, 'damage_report_screen', base, 'modes', TEXT_SCREEN_VARIANTS)
 
