@@ -118,7 +118,7 @@ Glyphs 13h–17h are used by the assignment map (world §6.2).
 | 121b:0380 | far_normalize | TD3 |
 | 1469:0008 | gfx_saved_mode | returns `DS:DCFC`, the video mode the graphics library saved at start-up (restored on exit) |
 | 15d4:0007 | bios_wait_ticks | TD3 (INT 1Ah ticks) |
-| 121b:0902 | cga_composite_setup | the special mode 0Ch (parked) |
+| 121b:0902 | hercules_setup | the Hercules choice (mode 0Ch) on CGA mode 4: shows B800h as a 640 x 300 bitmap (ported; video.md, Hercules) |
 
 ## 9. PORT summary
 

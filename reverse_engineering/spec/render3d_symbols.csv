@@ -1,10 +1,12 @@
 kind,address,name,type,notes
 func,0919:2c35,palette_flash,near void(),§7.1 DAC register 8 by D9B5 level
 func,0919:2e57,screen_shake_step,near void(),§7.2 display offset by B7F2; not in VGA
-func,0919:4056,blit_rows_cga,near void(),§5.7
-func,0919:4587,sky_water_cga,near void(),§1.2
-func,0919:4639,water_marks_cga,near void(),§1.2
-func,0919:44f0,spotlight_beam_cga,near void(),§1.2
+func,0919:4056,blit_rows_cga,near void(AL row SI source),§5.7 CGA (and Hercules): the sprite rows ORed in 2-bit pixels (zero transparent); port render/mode_cga.cpp
+func,0919:4587,sky_water_cga,near DI(ES BL CL),§1.2 CGA: sky D94F / horizon colour 2 / water D950 as 2-bit colour bytes; AX unused; returns the horizon row address
+func,0919:4639,water_marks_cga,near void(ES BX CX DI),§1.2 CGA: marks of 1-4 pixels in colour 3 (OR) by age and row; AX and DX unused; changes SI
+func,0919:44f0,spotlight_beam_cga,near void(ES BX DX),§1.2 CGA: the beam rows ORed with colour 2 (bit 1 of each pixel)
+func,0919:46e8,span_cga_a,near void(ES),§1.2 DS:D8F8 in CGA: the rows of a triangle half (view_row_table rows; D8FC advanced per row)
+func,0919:47cf,span_cga_b,near void(ES),§1.2 DS:D8FA in CGA: a line (as span_vga_b; a zero width becomes 1)
 func,0919:48da,blit_rows_ega,near void(),§5.7
 func,0919:4c18,spotlight_beam_ega,near void(),§1.2
 func,0919:4ce2,sky_water_ega,near void(),§1.2
@@ -122,6 +124,15 @@ global,DS:B7F9,sprite_rows_left,u8,§5.7 rows left to scale or to blit
 global,DS:B7FA,sprite_row_pixels,u8,§5.7 pixels of the current source row
 global,DS:D6C0,detail_distance,u8,"§5.6 distance class limit for sprites (FFh high detail, 16h low)"
 global,DS:D6E6,flash_ega_colours,u8[4],§7.1 EGA/Tandy palette register 8 per flash level
+global,DS:D7CD,cga_pixel_shift,u8[4],§1.2 CGA: the rotate count of a 2-bit value to pixel 0-3 of a byte (6 4 2 0)
+global,DS:D7D1,cga_pixel_keep,u8[4],§1.2 CGA: the byte without pixel 0-3 (3F CF F3 FC)
+global,DS:D7D5,cga_beam_head,u8[4],§1.2 CGA spotlight: the last 1-4 pixels in colour 2 (read at D7D4 + 1..4)
+global,DS:D7D9,cga_beam_tail,u8[4],§1.2 CGA spotlight: the first 0-3 pixels in colour 2
+global,DS:D7DD,cga_pixel_mask,u8[4],§1.2 CGA: pixel 0-3 of a byte (C0 30 0C 03)
+global,DS:D7E1,cga_mask_last,u8[4],§1.2 CGA spans: the last 0-3 pixels of a byte (00 03 0F 3F)
+global,DS:D7E5,cga_mask_first,u8[4],§1.2 CGA spans: the first 0-3 pixels of a byte (00 C0 F0 FC)
+global,DS:D7E9,cga_colour_byte,u8[4],§1.2 CGA: colour 0-3 in all four pixels of a byte (00 55 AA FF)
+global,DS:D816,cga_mark_offsets,s16[5][5],§1.2 CGA water marks: per size 0-4 the pixel offsets (x + 140h per row) of its four pixels
 global,DS:D730,atan_raw,u8,§3.3 raw atan table value of the last projection
 global,DS:D731,octant_negate,u8[8],§3.3 1 = the octant angle is subtracted
 global,DS:D739,octant_base,u8[8],§3.3 octant base angle (atan)

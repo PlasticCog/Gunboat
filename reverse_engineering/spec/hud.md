@@ -316,8 +316,9 @@ content.
 1. **The view copies** `view_copy_*` (`0919:8a32`, `8ad5`, `8b43`, `8bf9`,
    `8cd3`, `8d45`, `8db7`, `8e47`). Each takes **(source page, destination page)**, loads DS and ES
    from `page_segments` (`DS:D9B6`) and, when the low byte of `DS:EED2` is above 0Dh, runs its VGA
-   routine (`8a72`, `8b15`, `8b83`, `8c39`, `8d13`, `8d85`, `8df7`, `8e87`; the EGA / Tandy / CGA
-   twins at `0919:4xxx`/`5xxx` are parked). The VGA routines are fixed `REP MOVSW` runs: `8a72` 8
+   routine (`8a72`, `8b15`, `8b83`, `8c39`, `8d13`, `8d85`, `8df7`, `8e87`; otherwise mode 0Dh
+   runs the EGA twin, 9-0Ch the Tandy twin and any mode below 9 the CGA twin, each taking ES and DS and returning
+   SI like the VGA routine; CGA below). The VGA routines are fixed `REP MOVSW` runs: `8a72` 8
    rows from 9678h to 6480h of a left run (60 words, 8 fewer per row) and a right run (20 words, 8
    fewer, while positive) after a gap (destination 20h, source 10h, both growing by 20h per row),
    then 64 source rows of 80 bytes from 5028h, each as 5 pieces of 16 bytes on 5 successive rows
@@ -329,6 +330,19 @@ content.
    48h, 4 + 30h + 4, 4 rows of 30h); `8d13`..`8e87` share `view_copy_head_vga` (`0919:8e29`, 9 rows
    of 68h words from 8880h to 4778h) and add rows of 18h words and rows of two short runs (5: 4 + 6
    rows of 4 + 4 words 20h apart; 6: 4 + 6 rows of 8 + 8 words 10h apart; 7: 6 + 4; 8: 2 + 2).
+   **The CGA twins** (ported, `src/hud/views_cga.cpp`, `tests/difftest/test_modes_cga.py`):
+   `411f`, `41a3`, `41e5`, `427c`, `4366`, `43bc`, `4412`, `449a` and `view_copy_head_cga`
+   (`4468`) copy the same windows on the CGA layout (80-byte rows in two banks, hence runs of a
+   quarter of the bytes), stepping from row to row by toggling 2000h and moving 50h on leaving
+   (going up) or re-entering (going down) the even bank: `411f` 8 rows from 12DEh to 0CA0h (runs
+   0Fh and 5 words, 2 fewer per row, gaps 8/4 growing by 8), then 64 source rows of 20 bytes from
+   0A0Ah as 5 pieces of 4 bytes going up from the row above 24B6h; `41a3` 8 rows of two runs (0Fh
+   words, 2 fewer) from 12CAh to 0C86h; `41e5` runs 5 and 0Fh words from 12CAh to 0C80h (the gap
+   growing by 8, 6, then 4), the pieces from 0A36h to 0446h going down; `427c` the outline at
+   10EAh/08C8h (2, 18h, 2, 18h words, 9 rows of 16h, 4 of 12h, 1 + 0Ch + 1, 4 rows of 0Ch);
+   `4468` 9 rows of 1Ah words from 30F0h to 28CEh, then `4366`..`449a` rows of 6 words and rows of
+   two short runs (5: 4 + 6 rows of 1 + 1 words 8 bytes apart; 6: 4 + 6 rows of 2 + 2, 4 apart; 7:
+   6 + 4; 8: 2 + 2).
 2. **`gun_frame_draw`** (`05bd:2cde`, argument: the gun's bearing relative to the hull, + 20h or
    − 60h by the station): b = low byte. Within 30h of 40h (v = 2·(30h − (b − 40h))) the left frame
    piece `F112` at (20h + v, 7Fh), and for v > 8 a second one at (18h + v, 5Fh) with a fill
