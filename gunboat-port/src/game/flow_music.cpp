@@ -1,8 +1,6 @@
 // The title music (game_flow.md §3.1, sound.md §4).
 #include "game/flow.hpp"
 
-#include <cstring>
-
 #include "mem.hpp"
 #include "platform/platform.hpp"
 #include "sound/sound.hpp"
@@ -13,13 +11,6 @@ namespace gb {
 namespace {
 constexpr u16 S_VALKPC = 0x09A4, S_VALK12 = 0x09AF, S_VALK3V = 0x09BA;
 constexpr u16 TIMBRE_A = 0x0822, TIMBRE_B = 0x0856, TIMBRE_C = 0x088A;  // AdLib instruments (DGROUP)
-
-void ds_strcpy(u16 dst, u16 src)  // 15ee:0786 strcpy
-{
-    u16 i = 0;
-    do ds_u8(u16(dst + i)) = ds_u8(u16(src + i));
-    while (ds_u8(u16(src + i++)) != 0);
-}
 } // namespace
 
 // 00f2:1044 music_start (game_flow.md §3.1): the sound device is detected, the music file chosen by
@@ -29,10 +20,10 @@ void music_start()
 {
     sound_detect(0x0F, far_normalize(ds_far(DS_world_b_far)), far_normalize(ds_far(DS_tile_bin_offset)));
     if (ds_u16(DS_sound_muted) == 0) {
-        ds_strcpy(DS_name_buffer, S_VALKPC);
+        crt_strcpy(DS_name_buffer, S_VALKPC);
         const u16 device = ds_u16(DS_sound_device);
-        if (device == 8 || device == 4) ds_strcpy(DS_name_buffer, S_VALK12);
-        if (device == 1 || device == 2) ds_strcpy(DS_name_buffer, S_VALK3V);
+        if (device == 8 || device == 4) crt_strcpy(DS_name_buffer, S_VALK12);
+        if (device == 1 || device == 2) crt_strcpy(DS_name_buffer, S_VALK3V);
         if (device == 4) {  // AdLib: the instruments of voices 4..8 (INT 65h; parked, sound.md)
             adlib_call(4, TIMBRE_C, DGROUP);
             for (s16 v = 5; v < 8; v++) adlib_call(u16(v), TIMBRE_B, DGROUP);

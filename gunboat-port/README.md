@@ -2,8 +2,9 @@
 
 The faithful port of `GB.EXE`, rebuilt one original function at a time on the original memory
 layout (see `/CLAUDE.md` for the method and `PORTING.md` for how the code is organised).
-**The start-up, the title sequence and the main menu run natively** (phase 4, first milestone);
-choosing an item stops with "not ported yet" at the headquarters or the mission.
+**The start-up, the title sequence, the main menu, the headquarters and the front end run
+natively** (phase 4, milestones 1 and 2): report for duty, answer the quiz, sign in, pick a
+mission and outfit the boat; the game then stops with "not ported yet" at the mission.
 `Run Port.cmd` starts it; `Run Gunboat.cmd` starts the earlier Codex prototype.
 
 | Part | State |
@@ -11,10 +12,10 @@ choosing an item stops with "not ported yet" at the headquarters or the mission.
 | Memory model and loader (`src/mem.*`) | GB.EXE (EXEPACK) unpacked, relocated and checked in C++ |
 | Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio, files |
 | Platform (`src/platform/`) | DOS files and memory, the C runtime models, the BIOS model, the graphics library (VGA), palette, LZW pictures, text, keyboard and timer interrupts, joystick (host gamepad) |
-| Game flow (`src/game/flow_*`) | main, config_load, the archive and far buffers, keys and the demo script, the title sequence, the credits, the menu |
+| Game flow (`src/game/flow_*`) | main, config_load, the archive and far buffers, keys and the demo script, the title sequence, the credits, the menu, the headquarters quiz, the roster file, the whole front end (office, roster, personnel files, briefings, maps, spec sheets, outfitting, debrief) |
 | Sound (`src/sound/`) | the effects driver, the music sequencer and speaker music on the PC speaker, the device detection (AdLib, MT-32, CMS parked) |
-| Ported functions | 161 original functions, each matching the original on all memory |
-| Differential tests (`tests/difftest/`) | 46 tests, 44,801 cases, 0 mismatches: memory, DAC writes, speaker and timer events, open files |
+| Ported functions | 206 original functions, each matching the original on all memory |
+| Differential tests (`tests/difftest/`) | 64 tests, 46,845 cases, 0 mismatches: memory, DAC writes, speaker and timer events, open files, written files |
 | Scene checks (`tests/scenes/`) | the copyright screen and the title picture match DOSBox captures of the original on 100% of pixels |
 | Codex prototype (`legacy/`) | The earlier playable patrol mode, kept as a reference |
 

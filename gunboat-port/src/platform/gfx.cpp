@@ -359,6 +359,63 @@ void gfx_read_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows)
     } while (--rows);
 }
 
+// 15a4:0006 gfx_copy_rect (13h path 019b): a rectangle of page src_page (x0..x1, rows y1 up to
+// y0) to page dst_page at (dx, dy_bottom), rows upward. The interleaved layouts (mode_interleave
+// 2000h, 6000h) have their own steps; mode 13h has none.
+void gfx_copy_rect(u16 x0, u16 x1, u16 y0, u16 y1, u16 dx, u16 dy_bottom, u16 src_page, u16 dst_page)
+{
+    u16 rows = u16(y1 + 1 - y0);
+    ds_u16(DS_fill_x0) = dx;
+    ds_u16(DS_copy_dst_y) = dy_bottom;
+    if (!mode13()) return;  // PORT: other modes
+    u16 si = addr13(x0, y1);
+    const u16 width = u16(x1 + 1 - x0);
+    u16 di = addr13(ds_u16(DS_fill_x0), ds_u16(DS_copy_dst_y));
+    const u16 es = page_seg(dst_page), ds = page_seg(src_page);
+    const u16 interleave = ds_u16(DS_mode_interleave), row = ds_u16(DS_mode_row_bytes);
+    if (interleave == 0x6000) {
+        do {
+            for (u16 n = width; n; n--) mem_u8(es, di++) = mem_u8(ds, si++);
+            di = u16(di - width);
+            if (!(di & 0xE000)) di = u16((di | 0x8000) - row);
+            si = u16(si - width);
+            if (!(si & 0xE000)) si = u16((si | 0x8000) - row);
+            di = u16(di - 0x2000);
+            si = u16(si - 0x2000);
+        } while (--rows);
+    } else if (interleave == 0x2000) {
+        do {
+            for (u16 n = width; n; n--) mem_u8(es, di++) = mem_u8(ds, si++);
+            si = u16(si - width);
+            if (!(si & 0x2000)) si = u16(si - row);
+            di = u16(di - width);
+            if (!(di & 0x2000)) di = u16(di - row);
+            si ^= 0x2000;
+            di ^= 0x2000;
+        } while (--rows);
+    } else {
+        const u16 step = u16(row + width);
+        do {
+            for (u16 n = width; n; n--) mem_u8(es, di++) = mem_u8(ds, si++);
+            si = u16(si - step);
+            di = u16(di - step);
+        } while (--rows);
+    }
+}
+
+// 14b5:000d gfx_put_pixel (13h path 0169): one pixel in the current colour, inside the clip box.
+void gfx_put_pixel(s16 x, s16 y)
+{
+    if (x < ds_s16(DS_clip_x_min) || x > ds_s16(DS_clip_x_max)) return;
+    if (y < ds_s16(DS_clip_y_min) || y > ds_s16(DS_clip_y_max)) return;
+    if (!mode13()) return;  // PORT: other modes
+    mem_u8(ds_u16(DS_gfx_draw_seg), addr13(u16(x), u16(y))) = ds_u8(DS_gfx_colour);
+}
+
+// 14ae:0005 ega_pal_set: an EGA/CGA/Tandy palette entry (DDC1 table, hardware). In mode 13h it does
+// nothing. PORT: the other modes are not ported.
+void ega_pal_set(u16, u16) {}
+
 // 1390:006e picture_hline: x0..x1 of the pen row in the current colour.
 void picture_hline(u16 x0, u16 x1)
 {

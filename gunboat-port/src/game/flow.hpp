@@ -33,6 +33,7 @@ void kbd_flush_key();           // 00f2:103e
 // ---- screens (flow_screens.cpp)
 u16 print_records(u16 base, u16 off);  // 00f2:0dbc
 u16 print_text(u16 base, u16 off);     // 00f2:0e10
+void print_chars(u16 base, u16 n);     // 00f2:0e44
 void screen_present();                 // 00f2:0ece
 u16 credits_text(u16 records);         // 00f2:0d3e
 void pal_apply_vga();                  // 00f2:0eec
@@ -48,5 +49,49 @@ void music_start();                    // 00f2:1044
 // ---- title (flow_title.cpp)
 void menu_cursor_init();  // 020d:064a
 u16 title_menu();         // 00f2:000e
+
+// ---- headquarters (flow_hq.cpp), segment 020d
+u16 hq_quiz();                                   // 020d:0008  0 right (always, in this GB.EXE)
+u16 choice_menu(u16 timeout, u16 items, u16 deltas, u16 y0, u16 y1, u16 key_fe, u16 count,
+                u16 key_fd);                     // 020d:0824  the index, FEh, FDh or FFh
+void menu_cursor_move(u16 index, u16 items, u16 y0, u16 y1);  // 020d:09a0
+void menu_cursor_draw(u16 y0, u16 y1);           // 020d:09cc
+void menu_tick_mark(u16 x, u16 y, u16 y0, u16 y1);            // 020d:0a56
+void roster_load();                              // 020d:0b28
+void roster_save();                              // 020d:0bdc
+
+// ---- the office (flow_office.cpp), segment 02d2
+void office_face_draw();                         // 02d2:076c
+void office_idle();                              // 02d2:07d2
+void speech_clear();                             // 02d2:0994
+void folder_draw(u16 c1, u16 c2);                // 02d2:09da
+void folder_present();                           // 02d2:0bac
+u16 wait_key_idle(u16 n);                        // 02d2:2c52  0 on a key, or n
+void office_draw();                              // 02d2:2c9e
+void office_restore();                           // 02d2:2df4
+u16 bcd_inc(u16 x);                              // 02d2:2b4a
+u16 bcd_add(u16 a, u16 b);                       // 02d2:2b72
+u16 bcd_to_bin(u16 x);                           // 02d2:2bae
+u16 bin_to_bcd(u16 x);                           // 02d2:2bea
+
+// ---- the front end (flow_front.cpp), segment 02d2
+void front_end();                                // 02d2:0008
+u16 name_entry();                                // 02d2:0bd8
+void roster_edit();                              // 02d2:106c
+void roster_new_record(u16 slot);                // 02d2:123e
+void personnel_files(u16 ret_state);             // 02d2:1306
+void personnel_file_show(u16 slot);              // 02d2:13cc
+void bcd_stats_print(u16 table, u16 cells);      // 02d2:1598
+void byte_stats_print(u16 table, u16 cells);     // 02d2:1626  (no caller)
+void pbr_specs(u16 ret_state);                   // 02d2:1712
+void spec_sheet_draw(u16 ret_state);             // 02d2:1826
+void mission_select();                           // 02d2:1b6e
+void mission_folder_draw();                      // 02d2:1d04
+void assignment_map(u16 ret_state);              // 02d2:1ec2
+void map_draw(u16 ret_state);                    // 02d2:209a
+void outfitting();                               // 02d2:22aa
+u16 outfitting_draw();                           // 02d2:24ac  the pencil's y
+void debrief();                                  // 02d2:273e
+void roster_update();                            // 02d2:2a6c
 
 } // namespace gb

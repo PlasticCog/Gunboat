@@ -22,6 +22,9 @@ BRIDGE(gfx_clear_page) { gfx_clear_page(); r.ax = 0; }
 BRIDGE(gfx_copy_rect_from_copy_page) { gfx_copy_rect_from_copy_page(a[0], a[1], a[2], a[3]); r.ax = 0; }
 BRIDGE(gfx_copy_rect_to_copy_page) { gfx_copy_rect_to_copy_page(a[0], a[1], a[2], a[3]); r.ax = 0; }
 BRIDGE(gfx_draw_bitmap) { gfx_draw_bitmap(a[0], a[1], a[2]); r.ax = 0; }
+BRIDGE(gfx_copy_rect) { gfx_copy_rect(a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]); r.ax = 0; }
+BRIDGE(gfx_put_pixel) { gfx_put_pixel(s16(a[0]), s16(a[1])); r.ax = 0; }
+BRIDGE(ega_pal_set) { ega_pal_set(a[0], a[1]); r.ax = 0; }
 BRIDGE(gfx_read_bitmap) { gfx_read_bitmap(a[0], a[1], a[2]); r.ax = 0; }
 BRIDGE(text_exit_clear) { text_exit_clear(); r.ax = 0; }
 

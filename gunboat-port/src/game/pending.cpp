@@ -7,8 +7,6 @@
 namespace gb {
 
 void show_message_far(u16 id) { host_fatal("not ported yet: show_message (0919:1589), message %02Xh", id); }
-u16 hq_quiz() { host_fatal("not ported yet: the headquarters (hq_quiz 020d:0008)"); }
-void front_end() { host_fatal("not ported yet: the front end (02d2:0008)"); }
 void mission_run() { host_fatal("not ported yet: the mission (mission_run 05bd:000a)"); }
 void joystick_calibrate(u16) { host_fatal("not ported yet: joystick_calibrate (146e:000e)"); }
 

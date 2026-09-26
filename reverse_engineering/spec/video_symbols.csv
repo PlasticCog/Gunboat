@@ -7,7 +7,6 @@ func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),§3 parked
 func,00f2:0f46,ega_pal_apply,far void(),§3 parked
 func,147b:000c,gfx_move_to,far void(u16 x u16 y),§2 DS:DCFF/DD01
 func,147c:000f,ega_pal_register,far void(u16 reg u16 value),§2 parked
-func,14ae:0005,ega_pal_set,far void(u16 u16),§2 parked
 func,1502:0001,gfx_copy_rect_from_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),§2 copy page -> draw page (mode 13h: rows y1 up to y0)
 func,1522:000e,gfx_copy_rect_to_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),§2 draw page -> copy page
 func,1432:0008,gfx_get_draw_seg,far u16(),§2 returns DD2D
@@ -48,3 +47,7 @@ cglobal,121b:000e,dac_buffer,u8[96],§3 DAC 0..31 as uploaded
 func,121b:0581,dissolve_page1_to_0,far void(),§4 64 steps; each copies one pixel of every 8x8 block of page 1 (D9B8) to page 0 (D9B6) and waits for a tick_counter change
 global,DS:D9CF,dissolve_order,u8[64],§4 pixel offset of each step within its block row
 global,DS:DA1D,dissolve_rows,u16[8],§4 VGA: block row offset / 8 by step & 7
+global,DS:DD25,copy_dst_y,u16,§2 gfx_copy_rect's destination bottom row
+func,15a4:0006,gfx_copy_rect,far u16(u16 x0 u16 x1 u16 y0 u16 y1 u16 dx u16 dy_bottom u16 src u16 dst),§2 page src -> page dst; destination by its bottom row
+func,14b5:000d,gfx_put_pixel,far u16(s16 x s16 y),§2 clipped to DD05..DD03 / DD09..DD07
+func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),§2 EGA/CGA palette entry; nothing in mode 13h

@@ -137,97 +137,159 @@ file (`{u16 count; bytes}`) goes into the far buffer `F5BE` and `music_play` sta
 the speaker music), `DS:08BE` = 0, and `engine_sound_on` puts the effects timer back.
 Details: sound spec.
 
-## 4. HQ and the copy-protection quiz (`hq_quiz`, 020d:0008) **verified**
+## 4. HQ and the copy-protection quiz (`hq_quiz`, 020d:0008) **verified**, **ported**
 
 ```
-QUIZCOLR.BIN palette; HQ1/HQ2/HQ3.LZ drawn (the HQ office)
-repeat: r = pit_random(random()); ship = r & 0Fh (−11 if > 10); question = (r & F0h) >> 4
-        (−4 if ≥ 12); until the answer table DS:7C2D[question·37h + ship·5] is not FCh
-print the question (DS:6FF4[…] + DS:6E54) and the ship class ("of River Patrol Boats (PBR)?" …)
-HQARM.LZ (an arm/hand animation); the player types a number (input_read_key, blinking cursor)
-right: "Right. Welcome to Headquarters." (DS:6E5F); disk-2 check; roster_load(); return 0
-wrong: "WRONG! Go practice gunnery." (DS:6E81); return 1 (main starts gunnery practice)
+engine_sound_on; pal_fade_out_vga; engine_sound_off; tick-mark colour DS:09FE = 0
+QUIZCOLR.BIN palette; HQ1/HQ2/HQ3.LZ drawn on page 1 at rows 34h, 69h, 9Dh; grey text area
+     9Eh..C7h; text colours (0, 7); page 1 copied to the screen and faded in
+repeat: r = pit_random(random())        (random() + the PIT channel-2 counter's low byte, IN 42h)
+        question = r & 0Fh (-11 if >= 11)                 11 questions, texts DS:6E54 + w[6FF4 + 2q]
+        class = (r & F0h) / 16 (-4 if >= 12)              12 ship classes, texts DS:6E54 + w[700A + 2c]
+        answer = DS:7C2D + class*37h + question*5         5 bytes; FCh first = no answer: pick again
+print the question (row 20) and the class (rows 21-22); text area saved to page 1
+typing (DS:B7F3 = 1 while it lasts): '.', '0'..'9' (5 at most) into DS:F626 (20 spaces first),
+     Backspace (the glyph stays drawn), Enter with at least one character; the cursor cell at
+     column 16 + n of row 23 blinks in colours 6..9; one bios_wait_ticks(1) and one random() per
+     iteration
+check: for digit 1..5 (B7F3): expected = 0FFh - swap_nibbles(answer byte), compared with the typed
+     character; after the loop B7F3 = 6
+right: "Right. Welcome to Headquarters." (DS:6E5F); result 0
+wrong: "WRONG! Go practice gunnery." (DS:6E81); HQARM.LZ (loaded before the typing) drawn at
+     (70h, 79h); result 1 (main starts gunnery practice)
+the disk-2 check: DATAB.DAT must open, else "Insert Disk 2 and press any key." (DS:7812)
+roster_load(); wait_key(32h); return the result
 ```
 
-**PORT:** skip the quiz and take the "right" branch (as the TD3 port does with its protection).
-`B7F3 == 1` in the input loop re-asks; `B7F3` is also changed by `mission_setup` (−6) and at
-mission end (+14h): a counter still to identify.
+**In this GB.EXE the answer check is disabled**: at `020d:0412` the compare is followed by `EB 08`
+(an unconditional `jmp`) where the compiled check has `74 08` (`je`), so the "wrong" branch
+(`count + 1`, `B7F3 += 0Eh`) is never taken and every answer is right. The port keeps that code
+as it is, so no PORT deviation is needed. `B7F3` is the check loop's digit index (6 after a pass;
+10h or more after a failure in a copy with the check); `mission_setup` subtracts 6 and the mission
+end adds 14h.
 
-## 5. Roster (`GBROSTER.DAT`) **verified**
+## 5. Roster (`GBROSTER.DAT`) **verified**, **ported**
 
-`roster_load` (`020d:0b28`): opens `GBROSTER.DAT`; accepted only if exactly **703 bytes** (a 704th
-byte must not exist) and `byte[702] == (XOR of bytes 0..701) ^ 5Bh`; then copied to
-**DS:B54E..B80C**. `roster_save` (`020d:0bdc`, "hi_write" in the TD3 match): recomputes the check
-byte into `DS:B80C` and writes the 703 bytes (`wb+`); a short write is fatal 3.
+`roster_load` (`020d:0b28`): opens `GBROSTER.DAT` ("rb"); reads 703 bytes into DS:1094, then a
+704th read must return 0 (the file is exactly 703 bytes); accepted if `byte[702] == (XOR of bytes
+0..701) ^ 5Bh`, then copied to **DS:B54E..B80C**; otherwise the EXE's default roster stays.
+`roster_save` (`020d:0bdc`, "hi_write" in the TD3 match): opens "wb+" (the result is **not**
+checked), recomputes the check byte into `DS:B80C`, writes the 703 bytes; `fwrite` < 703 is fatal
+error 3 ("Roster update failed. Is your disk full?").
 
 | File offset | DS | Content |
 |---|---|---|
-| 0 | B54E | word: the last commander slot used (default 1) |
+| 0 | B54E | word: the **number of commanders** (1..13; the roster screen appends at this index) |
 | 2 + 50k | B550 + 50k | 13 commander records, k = 0..12 |
 | 652 | B7DA..B80B | live game settings saved with the roster (time compression `B7F1`, `B7F3`, `B7FC`, `B800..B80B`: fitted weapons, engines, engine state, fuel) |
 | 702 | B80C | check byte |
 
-Commander record (50 bytes); the working copy is `DS:B4F9..B52A` (same layout):
+The current commander's slot is `DS:B54C`, just before the saved range (not saved).
+
+Commander record (50 bytes); the working copy is `DS:B4F9..B52A` (only B50D..B52A are used):
 
 | Offset | Working copy | Content |
 |---|---|---|
-| 0..19 | B4F9 | Name, space-padded (matched on 17 characters) |
+| 0..16 | | Name, space-padded (17 characters compared) |
+| 17..19 | | never written by the front end (old bytes stay) |
 | 20 | B50D | Rank 1..13 (§7.3) |
 | 21..22 | B50E/B50F | Medals earned (bits, §7.4) |
 | 23..24 | B510 | Missions completed (BCD) |
 | 25..48 | B512..B529 | 12 statistics (BCD words, §8) |
-| 49 | B52A | (copy of score word 0; not used) |
+| 49 | B52A | the low byte of score word 0 (copied back, not used) |
 
-The executable's default roster has one commander, "ACCOLADE".
+`roster_new_record` clears record bytes 21..49; `roster_update` copies working bytes 20..49 into
+the record. The executable's default roster: count 1, "ACCOLADE", rank 5, medals 0003h, missions
+0007, statistics 0001 0001 0008 0033 0009 0016 0037 0008 0011 0005 0001 0002.
 
-## 6. Front end (`front_end`, 02d2:0008) **verified**
+## 6. Front end (`front_end`, 02d2:0008) **verified**, **ported**
 
-Set-up (every call): sub-buffers `F5CC = F5C6 + 125Ch`, `F63C = F280 + 10000`;
-`DAT5.DAT` → DS:6E54 (identical to DAT6, §7.1); GENCOLR.BIN; GENB/GENC, FOLDER, SPEC1..6,
-ADHEAD, SMALL, INSIG pictures; the office (`02d2:2c9e`, GENA); "I'll be with you in a moment.";
-the Mare Island map MP5A/B; `0AB2 = B508 = B4DB = B50C = B50B = 7EF9 = 0`; `F26C = 1`.
+Set-up (every call): sub-buffers `F5CC = F5C6 + 125Ch` (offset only), `F63C = F280 + 2710h`;
+fade out; `DAT5.DAT` -> DS:6E54 (identical to DAT6, §7.1); `0AB2 = 0`, `F26C = 1`, `B508 = B4DB =
+B50C = B50B = 0`, `7EF9 = 0`; GENCOLR.BIN; GENB, GENC; the office (`office_draw` 02d2:2c9e: GENA,
+GENB, GENC on page 1, the speech area cleared, shown and faded in); "I'll be with you in a
+moment."; FOLDER, SPEC1..3; ADHEAD.LZ drawn at (F0h, 43h) on the screen while SPEC4..6 and SMALL
+load, then removed; INSIG.LZ drawn on page 1 at (0, 27h) as the **sprite sheet** (rows 0..0Fh rank
+insignia, 16 px each; 10h..1Fh medals; 20h..27h and C0h..EFh the office animation frames; only
+page 1 rows 28h..C7h are ever shown); MP5A/B (Mare Island, run counts DS:B440/B442); `0AB0 = 0`;
+the key flushed; the effects timer stays on.
 
-Then a state machine on **DS:0084** (table `02d2:0718`) runs until `F26C` is cleared; the
-mission is then played by `main` and `front_end` is called again, continuing at state 12.
+Then a state machine on **DS:0084** (jump table `02d2:0718`; a state above 12 does nothing) runs
+until `F26C` is cleared; **after every state the officer's face is reset** (page 1 (0..1Fh,
+20h..23h) to the screen at (100h, 24h)). The mission is then played by `main`, and `front_end` is
+called again, continuing at state 12.
 
 | State | Handler | Screen and transitions |
 |---|---|---|
-| 0 | `0AAE = 1`; `02d2:076c`; `name_entry` 02d2:0bd8 | "Identify yourself, sailor:" (§6.1) → 1 new commander, 2 F1, 4 known commander |
-| 1 | `roster_edit` 02d2:106c | "PBR COMMANDERS": # ADD # REPLACE # REDO; a new record by `02d2:123e` |
-| 2, 3 | `personnel_files(0 / 1)` 02d2:1306 | "PERSONNEL FILE": rank, name, medals (`02d2:13cc` per commander); F1 returns |
-| 4 | inline 02d2:03a6 | Region brief and conditions (§6.2) → 5 |
-| 5 | `mission_select` 02d2:1b6e | §6.3; F3 → 6, → 7, Enter → 9 (or vacation) |
-| 6, 8 | `assignment_map(5 / 9)` 02d2:1ec2 | Sector map with the objective (`02d2:209a`), returns to state 5 / 9 |
-| 7, 10 | `pbr_specs(5 / 9)` 02d2:1712 | "PBR EQUIPMENT" spec sheets (`02d2:1826`), returns to 5 / 9 |
-| 9 | `outfitting` 02d2:22aa | §6.4; F2 → 8, F4 → 10, done → 11 |
-| 11 | inline 02d2:0616 | `02d2:2df4`; "Take the sector map and the assignment and be on your way. Watch carefully for ambushes…" → state 12, `F26C = 0` (play) |
-| 12 | inline 02d2:06e0 | After the mission: `debrief` (§6.5), `roster_update`, `roster_save` → 0 |
+| 0 | `0AAE = 1`; `office_face_draw`; `name_entry` | "Identify yourself, sailor:" (§6.1) -> 1 new commander, 2 F1, 4 known commander |
+| 1 | `roster_edit` 02d2:106c | "PBR COMMANDERS" folder "4D76": # ADD # REPLACE # REDO (§6.6) -> 4, 0 (REDO), 3 (F1) |
+| 2, 3 | `personnel_files(0 / 1)` 02d2:1306 | "PERSONNEL FILE" folder "4E7n" (§6.6); F1 returns to 0 / 1 |
+| 4 | inline 02d2:03a6 | Region brief and conditions (§6.2) -> 5 |
+| 5 | `mission_select` 02d2:1b6e | §6.3: **F2 -> 6** (map), **F4 -> 7** (specs), Enter -> 9 (or the vacation) |
+| 6, 8 | `assignment_map(5 / 9)` 02d2:1ec2 | The sector map (§6.7): **F3** returns to 5 / 9, F4 -> 7 / 10 |
+| 7, 10 | `pbr_specs(5 / 9)` 02d2:1712 | "PBR EQUIPMENT" sheets (§6.7): **F3** returns to 5 / 9, F2 -> 6 / 8 |
+| 9 | `outfitting` 02d2:22aa | §6.4; F2 -> 8, F4 -> 10, done -> 11 |
+| 11 | inline 02d2:0616 | `office_restore`; if the mood `0AAE` is 0: "It's about time you decided! I have a lot to do, so get out of here before I have you keel-hauled."; then "Take the sector map and the assignment and be on your way. Watch carefully for ambushes..." -> state 12, `F26C = 0` (play) |
+| 12 | inline 02d2:06e0 | After the mission: `debrief` (§6.5), `roster_update`, effects off, 4 BIOS ticks, `roster_save`, state 0, 4 ticks, effects on |
+
+**The office** (screen rows 1Ch..33h; they overlap only the office picture): `office_idle`
+(02d2:07d2) runs once per iteration of every front-end input loop: `r = random()`; two background
+figures get a random 2-row frame (hold `0AB4`); the officer is reset to neutral and, by bits of
+r, blinks (hold `0AB2` = 1) or shows another expression (hold 8); **every 32nd blink on an even r
+lowers the mood `0AAE`** and redraws the face. `office_face_draw` (02d2:076c) draws face frame
+`0AAE & 7` unless a folder is shown (`F27E`). The mood is 1 at state 0, 2 for a known commander,
+the objective progress - 1 after a mission; at 0 the officer loses patience (state 11).
+`speech_clear` (02d2:0994): rows 90h..BFh grey, C0h..C7h black. `folder_draw(c1, c2)`
+(02d2:09da): FOLDER.LZ on page 1 and the folder code "4<c1>7<c2>" (DS:F13C) at row 7, column
+31; `folder_present` (02d2:0bac) shows page 1 rows 28h..C7h and sets `F27E`; `office_restore`
+(02d2:2df4) redraws GENB/GENC and the face. `wait_key_idle(n)` (02d2:2c52) is `wait_key` with
+`office_idle`.
+
+**The pencil menu** `choice_menu(timeout, items, deltas, y0, y1, key_fe, count, key_fd)`
+(020d:0824): the pencil (`menu_cursor_move`/`menu_cursor_draw`, 020d:09a0/09cc) over {x, y} word
+items; keys 91h..99h move by the signed deltas (95h does nothing); Enter draws the tick mark
+(`menu_tick_mark` 020d:0a56: 9 pixels from DS:6E9F on page 1, one per BIOS tick, then
+`wait_key(9)`) and returns the index; `key_fe`/`key_fd` return FEh/FDh. The region menu (items
+DS:7ED3) starts on the **last** item. **DS:007C (`key_delay`) = 2 after a move** blocks moves and
+the two keys (not Enter) for two iterations; nothing else counts it down, and `pbr_specs`,
+`mission_select` and `assignment_map` ignore every key except (in mission_select) Enter while it
+is non-zero: **Enter within one iteration of a menu start or a move leaves it set and locks those
+screens** (a quirk the port keeps). The time-out never fires (the idle count is always 0 when
+tested; every caller passes 0).
 
 ### 6.1 Name entry (`name_entry`, 02d2:0bd8) **verified**
 
-Up to 17 characters into `DS:F626` (letters, digits, space; Backspace; Enter with a name);
-F1 → state 2. The name is compared with the 13 records (17 characters):
+Up to **17** characters into `DS:F626`: MSC `isalnum` (the `_ctype` table DS:E21C) or a space (not
+first), lower case converted to upper; Backspace (the glyph stays drawn); Enter with a name; F1
+(81h) -> state 2. The cursor cell blinks in colours 8..11. The name is compared with all 13
+records (17 characters; `B50D` serves as the match flag):
 
-* found: rank and record bytes 21..48 → working copy; `B54C` = slot; "Welcome back! We need you:"
-  with the rank title (`DS:7B1C + 10·rank`) and name. **Region**: rank < 5: Vietnam (no choice);
-  5..8: "# Vietnam # Colombia"; ≥ 9: "# Vietnam # Colombia # Panama" (menu `020d:0824`) →
-  `B503`; → state 4.
-* not found: working copy cleared, rank 1; "Welcome to Vietnam. I've been waiting for you. We need
-  you for some secret riverine missions." → state 1 (put the new commander on the roster).
-* **Easter egg:** the name "TJL" (`DS:0B0B`, Tom Loughry's initials) prints "Hi Tom! Enjoy your
-  game!" and sets **B803 = 1**: every enemy object becomes a "sleezy lawyer" (world §5).
+* found: rank and record bytes 21..48 -> working copy B50E..B529; `B54C` = slot; mood 2; "Welcome
+  back! We need you:" with the rank title (`DS:7B1C + 10*rank`) and name. `B503 = 0` (Vietnam);
+  rank < 5: `wait_key_idle(3Ch)`; 5..8: "What region are you serving now?" "# Vietnam # Colombia";
+  9 and up: "# Vietnam # Colombia # Panama" (`choice_menu`, starting on the last) -> `B503`;
+  -> state 4.
+* not found: B50E..B529 cleared, rank 1; "Welcome to Vietnam. I've been waiting for you. We need
+  you for some secret riverine missions. How should I update my roster?" -> state 1.
+* `B803 = 0` for every name. **Easter egg:** the name "TJL" (`DS:0B0B`, Tom Loughry's initials,
+  compared with `strncmp` over 17 characters) prints "Hi Tom! Enjoy your game!" and sets
+  **B803 = 1**: every enemy object becomes a "sleezy lawyer" (world §5).
 
 ### 6.2 Region brief and conditions (state 4) **verified**
 
 ```
-region title and brief (DS:6E54 + word B311[region], B317[region]), e.g. "The Viet Cong are tricky…"
-sea state B4FF = random() & 3: "The water surface is calm, and" / "a bit choppy" / "very choppy" /
-     "rough" (DS:B4A0[sea]); it sets the wave bob (simulation camera_pitch_bob)
-missions offered B501 = DS:7BB4[rank] (2, 4, 6, 8 for ranks 1–4, 5–8, 9–12; 8 for 13); the
-     digit in "I have   missions for you" = DS:7BA7[rank]
-     in Vietnam with rank ≥ 5, or Colombia with rank ≥ 9: all 8 ('8')
-selected mission B505 = B501 − 1 (the newest)
-load DATn.DAT → DS:B84C and the region's MPnA/B maps (for the assignment map)
+folder "4S7n" (n = region + 1): the region title in red and the brief (DS:6E54 + w[B311 + 2*region]),
+     "Press ENTER to continue"; a key
+office_restore; sea state B4FF = random() & 3: "The water surface is calm, and" / "a bit choppy" /
+     "very choppy" / "rough" (absolute pointers DS:B4A0[sea]); it sets the wave bob (simulation
+     camera_pitch_bob)
+missions offered B501 = DS:7BB4[rank] (2, 4, 6, 8 for ranks 1-4, 5-8, 9-12; 8 for 13); the
+     digit in "I have   missions for you" = DS:7BA7[rank], written into the loaded text (DS:769C)
+     in Vietnam with rank >= 5, or Colombia with rank >= 9: all 8 ('8')
+the orders (DS:6E54 + w[B317 + 2*region]) and the sea text; selected mission B505 = B501 - 1 (the
+     newest); the text area saved to page 1
+effects off; DATn.DAT -> DS:B84C (mission_record); MPnA -> F5CC, run count EED0 = w[B444 + 4*region];
+     MPnB -> F61A, F100 = w[B446 + 4*region]; effects on; a key -> state 5
 ```
 
 Mission 0 of the list is not a mission (§6.3). So a new captain starts with mission 1 of Vietnam
@@ -235,43 +297,95 @@ only; each rank unlocks two more missions (§7.3).
 
 ### 6.3 Mission select (`mission_select`, 02d2:1b6e) **verified**
 
-Arrows cycle `B505` over 0 .. `B501 − 1` (wrapping), redrawing the folder (`02d2:1d04`, which
-also sets the day flag for the preview). Enter: mission 0 prints "HAVE A NICE VACATION" and calls
-`quit_to_dos`; otherwise `B50C = 1` and **mission type `B509 = 8·region + mission`** → state 9. F3
-→ state 6 (assignment map), the spec key → state 7.
+The folder "4A7n" (`mission_folder_draw` 02d2:1d04): the briefing (DS:6E54 + w[B2DB / B2EB /
+B2FB + 2*mission] by region); the byte after its text is the **day flag `B7FC`** (DAY/NIGHT
+MISSION in red); mission 1 adds "You are invulnerable for this PRACTICE mission."; the medal the
+mission can earn (DS:AD7F[8*region + mission], from the sprite sheet); the pencil at "# Accept"
+until one is accepted (then the mark '\', a crossed box). Arrows 91h/92h/93h/96h next,
+94h/97h/98h/99h previous, wrapping over 0 .. `B501 - 1`. Enter: the tick mark; mission 0 prints
+"HAVE A NICE VACATION", waits `wait_key_idle(64h)` and calls `quit_to_dos`; otherwise `B50C = 1`
+and **mission type `B509 = 8*region + mission`**; the next iteration goes to state 9 (arrows can
+still change the mission until then). F2 -> state 6, F4 -> state 7.
 
 ### 6.4 Outfitting (`outfitting`, 02d2:22aa) **verified**
 
-First visit (`B4DB == 0`): bow 0, stern 0, midship 1, engines 1. Four choices in turn
-(`B4DA` = 0..3 → `B804` bow, `B805` engines, `B806` stern, `B807` midship; world §4 for the art and
-simulation §6.1 for the weapons): the cursor moves in 8-pixel rows between `DS:AD97[i]` and
-`DS:AD9B[i]`; Enter stores `(row − top) >> 3`. After the fourth → state 11. F2 → state 8
-(assignment map), F4 → state 10 (specs).
+First visit (`B4DB == 0`): bow 0, stern 0, item 0, midship 1, engines 1. The folder "4I7n"
+(`outfitting_draw` 02d2:24ac): SMALL.LZ (the boat), DAY/NIGHT, "PBR OUTFIT" and the lines; the
+choices made so far are marked with '\' at column 13, row 11 + 3i + choice. Four choices in turn
+(`B4DA` = 0..3 -> `B804` bow: M2HB guns / Minigun, `B805` engines: 215HP / 450HP, `B806` stern:
+M129 / M60D, `B807` midship: mortar / M2HB / M60D; world §4 for the art and simulation §6.1 for the
+weapons): only **92h/96h move up and 94h/98h down**, 8 pixels, between `DS:AD97[i]` (5Bh 73h 8Bh
+A3h) and `DS:AD9B[i]` (63h 7Bh 93h B3h), with a 2-iteration debounce (also for Enter); the pencil
+starts on the second line for items 1 and 3. Enter stores `(y - top) >> 3` and draws the tick
+mark. After the fourth -> state 11. F2 -> state 8 (assignment map), F4 -> state 10 (specs).
 
 ### 6.5 Debrief (`debrief`, 02d2:273e) and roster update (`roster_update`, 02d2:2a6c) **verified**
 
 ```
 debrief()
-  objective_progress B544 = min(B544, 5); if hours B52E == 0: B52E = 1
+  office_restore; "Press ENTER to continue" and "Your mission was"
+  objective_progress B544 = min(B544, 5); if hours B52E == 0: B52E = bcd_add(B52E, 1)
   if friendly_hits B546 > 5: B545 = 0; B544 = 0
-  0AAE = max(B544 − 1, 0)
-  B545 == 0: "You shot my men!" (DS:AFE0); medals B50E = B50F = 0; rank B50D = 1   (demotion)
+  mood 0AAE = B544 - 1 (0 if B544 = 0); office_face_draw
+  B545 == 0: "You shot my men! YOU WILL BE COURT-MARTIALED!" (DS:AFE0); medals B50E = B50F = 0;
+             rank B50D = 1 (demotion)
   B545 == 1: "You got killed." (DS:AF2E)
-  else: result text DS:B472[B544]: "…a failure." / "…n't completed." ×2 / "…completed." /
-        "…well done." / "…perfectly"
+  else: result text by absolute pointer DS:B472[B544]: "...a failure." / "...n't completed." x2 /
+        "...completed. They never knew what hit them." / "...well done. You almost wiped them all
+        out." / "...perfectly done!"
         if B544 >= 3 (success):
            missions completed B510 = bcd_add(B510, 1)
-           if rank < DS:B2C3[type]: rank = that value; promotion screen (insignia, rank title
-              DS:B456[rank], "Press ENTER to continue")
-           m = DS:B293[type]; if m and not yet earned: medals |= m; medal screen (picture by
-              DS:AD7F[8·region + mission])
+           if DS:B2C3[type] > rank: rank = it; a key; the promotion screen (the insignia from the
+              sprite sheet at (F0h, AFh), "CONGRATULATIONS! You are now a" + DS:B456[rank])
+           m = DS:B293[type]; if m and not yet earned: medals |= m; a key; the medal screen (icon
+              DS:AD7F[8*region + mission], "Your outstanding heroism earned you a medal!")
+  a key
 roster_update()
-  "Press ENTER…"; 02d2:1598 (stats page); for k in 0..11: stats[k] (B512+2k) = bcd_add(stats[k],
-  score word k (B52A+2k)); roster record B54C ← working copy bytes 20..49
+  "Press ENTER..."; "You lost ... PBRs in exchange for ... men ... armored vehicles ..." with the
+  mission's scores (bcd_stats_print, list DS:B4C4); for k in 0..11: career stat k (B512+2k) =
+  bcd_add(stat k, score word k (B52A+2k)); roster record B54C <- working copy bytes 20..49; a key
 ```
 
-`bcd_add` (`02d2:2b72`, and `bcd_inc` `02d2:2b4a` = `bcd_add(x, 1)`) are 16-bit BCD additions
-(`02d2:2bae`/`2bea` are helpers).
+BCD helpers: `bcd_to_bin` (02d2:2bae, 4 digits, nibbles not checked), `bin_to_bcd` (02d2:2bea,
+unsigned divisions), `bcd_add` (02d2:2b72: the binary sum wraps at 16 bits, then saturates at
+9999), `bcd_inc` (02d2:2b4a: + 1, saturating at 9999).
+
+### 6.6 Roster screen and personnel files **verified**
+
+`roster_edit` (02d2:106c): "PBR COMMANDERS" and the list (rank title and name at rows 11..23);
+the pencil menu ADD / REPLACE / REDO (items DS:7BED; F1 -> state 3). ADD appends at `B54E`
+(`B54E + 1`), or overwrites the last slot when 13 exist. REPLACE (`B50B = 1`, marked '\') lists the
+13 slots (items DS:7BF9, vertical deltas DS:7ECA); a slot beyond the end appends; F1 -> state 3.
+`B50B` is reset only by the front end's set-up: after F1 and back the list comes at once.
+`roster_new_record(slot)` (02d2:123e) writes the typed name and the rank, prints them, clears
+record bytes 21..49 and waits `wait_key_idle(1Eh)`; it calls `gfx_set_colour(0, 7)` where
+`text_set_colours(0, 7)` was meant (only the graphics colour changes). -> state 4.
+
+`personnel_files(ret)` (02d2:1306) starts at the file last viewed (`DS:7EF9`, inside the DAT5
+buffer); 91h/92h/93h/96h next, 94h/97h/98h/99h previous (wrapping over `B54E`), F1 -> `ret`.
+`personnel_file_show(slot)` (02d2:13cc): rank title and name, the statistics
+(`bcd_stats_print` 02d2:1598, list DS:B4A8 with cells DS:7EDF, 4 digits with leading zeros
+blanked), the insignia and one 16-pixel medal icon per set bit (the loop shifts the medals word
+arithmetically: with bit 15 set it would never end). **Viewing a file copies that commander's
+record bytes 21..48 into the working copy B50E..B529 and the rank into B507**: a commander added
+afterwards inherits the viewed medals and statistics (kept). `byte_stats_print` (02d2:1626) has
+no callers.
+
+### 6.7 Assignment map and spec sheets **verified**
+
+`assignment_map(ret)` (02d2:1ec2) and `map_draw` (02d2:209a): folder "4B7n"; mission 0 shows Mare
+Island (MP5A/B), others the region's map (MPnA/B); `EA84` = the mission drawn: between two real
+missions page 1 is only shown again (the folder code keeps the first digit). With a mission, the
+objective (DS:B3C0[8*region + mission] (x, y)) blinks with the pencil masks and the boat's start
+(object 0 of the mission file: x = `C12D >> 6` + 18h, y from `C8FD >> 7`) is marked. Arrows change
+the mission while none is accepted; F3 returns, F4 -> specs.
+
+`pbr_specs(ret)` (02d2:1712) and `spec_sheet_draw` (02d2:1826): folder "4C7n" (n = page / 2 + 1),
+pages 0..16 in `B508` (13 and 15 skipped), arrows as above; text pages 1, 3, 5, 7, 9, 10, 12, 14,
+16 (absolute pointers DS:B47E: "PATROL BOAT, RIVER", Propulsion, Radar, M2HB, GE Minigun, M60D,
+M129, M224 Mortar, "SPECIAL BOAT UNIT STANDING ORDERS"); picture pages 0, 2, 4, 6, 8, 11 = SPEC1..6
+(run counts in `F284`) with their EGA/Tandy colours (`D9CB..D9CE`; `ega_pal_entry` does nothing
+in VGA). F3 returns, F2 -> map.
 
 ## 7. Data
 
@@ -315,23 +429,23 @@ Promotion rank by mission type (`DS:B2C3`): Vietnam 1–7 → 2, 3, 3, 4, 4, 5, 
 `DS:B293[type]` (word bit): type 5 → 1, 7 → 2, 13 → 4, 14 → 8, 15 → 10h, 19 → 20h, 20 → 40h,
 21 → 80h, 22 → 100h, 23 → 200h. The personnel file draws one 16-pixel icon per set bit.
 
-## 8. Mission score words and career statistics **verified** (mapping), **likely** (labels)
+## 8. Mission score words and career statistics **verified**
 
 `mission_run` clears the 12 score words `B52A..B541`; the mission adds to them; `roster_update`
 adds them to the commander's statistics `B512..B529` in the same order.
 
 | Word | Score | Set by |
 |---|---|---|
-| 0 B52A | PBR lost | `boat_destroyed` (1) |
-| 1 B52C | hurt or killed | +1 on the mission-ending messages (simulation §9.1) and Tab with a crippled boat |
+| 0 B52A | hurt or killed | `boat_destroyed` (1) |
+| 1 B52C | PBRs lost | +1 on the mission-ending messages (simulation §9.1) and Tab with a crippled boat |
 | 2 B52E | hours of duty | +1 per game hour (simulation §9.2); at least 1 in the debrief |
-| 3..11 B530..B540 | targets destroyed | `score_add(DS:5401[kind])`: value v adds to word 2+v |
+| 3..11 B530..B540 | men, armored vehicles, key targets, boats, aircraft, missiles, mines, docks, bridges | `score_add(DS:5401[kind])`: value v adds to word 2+v |
 
 Per-kind values (`DS:5401`, world §6.3), region 0: tanks/APC 2 (B532), boats 04–06 4 (B536),
 guns/mortars/forts 07–09 3 (B534), infantry 0A–0C and 14 1 (B530), caches/huts 0D–0F 3 (B534),
-dock 10 8 (B53E), bridge base 11 9 (B540), missile 12 6 (B53A), mine 13 7 (B53C). The personnel
-file shows these as men, armored vehicles, boats, docks, mines, aircraft, missiles, bridges and
-key targets; the exact label of each word is to be checked on the personnel screen (hud spec).
+dock 10 8 (B53E), bridge base 11 9 (B540), missile 12 6 (B53A), mine 13 7 (B53C). The labels are
+those of the personnel file ("hurt or killed ... times" = career word 0 B512, "He lost ... PBRs" =
+word 1 B514) and of the debrief ("You lost ... PBRs" = score word 1 B52C).
 
 ## 9. Function table
 
@@ -344,35 +458,52 @@ key targets; the exact label of each word is to be checked on the personnel scre
 | 0000:0d74 | archive_open | 1 |
 | 00f2:000e | title_menu | 3 |
 | 00f2:0d3e | credits_text | 3 |
+| 00f2:0e44 | print_chars | 6 |
 | 00f2:1044 | music_start | 3.1 |
 | 00f2:119c | music_stop | 3.1 |
 | 020d:0008 | hq_quiz | 4 |
 | 020d:064a | menu_cursor_init | 3 |
-| 020d:0824 | choice_menu | 6.1 |
+| 020d:0824 | choice_menu | 6 |
+| 020d:09a0 | menu_cursor_move | 6 |
+| 020d:09cc | menu_cursor_draw | 6 |
+| 020d:0a56 | menu_tick_mark | 6 |
 | 020d:0b28 | roster_load | 5 |
 | 020d:0bdc | roster_save | 5 |
 | 02d2:0008 | front_end | 6 |
+| 02d2:076c | office_face_draw | 6 |
+| 02d2:07d2 | office_idle | 6 |
+| 02d2:0994 | speech_clear | 6 |
+| 02d2:09da | folder_draw | 6 |
+| 02d2:0bac | folder_present | 6 |
 | 02d2:0bd8 | name_entry | 6.1 |
-| 02d2:106c | roster_edit | 6 |
-| 02d2:123e | roster_new_record | 6 |
-| 02d2:1306 | personnel_files | 6 |
-| 02d2:13cc | personnel_file_show | 6 |
-| 02d2:1712 | pbr_specs | 6 |
+| 02d2:106c | roster_edit | 6.6 |
+| 02d2:123e | roster_new_record | 6.6 |
+| 02d2:1306 | personnel_files | 6.6 |
+| 02d2:13cc | personnel_file_show | 6.6 |
+| 02d2:1598 | bcd_stats_print | 6.6 (also `chase_view_screen` 05bd:07da) |
+| 02d2:1626 | byte_stats_print | 6.6 (no callers) |
+| 02d2:1712 | pbr_specs | 6.7 |
+| 02d2:1826 | spec_sheet_draw | 6.7 |
 | 02d2:1b6e | mission_select | 6.3 |
 | 02d2:1d04 | mission_folder_draw | 6.3 |
-| 02d2:1ec2 | assignment_map | 6 |
+| 02d2:1ec2 | assignment_map | 6.7 |
+| 02d2:209a | map_draw | 6.7 |
 | 02d2:22aa | outfitting | 6.4 |
 | 02d2:24ac | outfitting_draw | 6.4 |
 | 02d2:273e | debrief | 6.5 |
 | 02d2:2a6c | roster_update | 6.5 |
 | 02d2:2b4a | bcd_inc | 6.5 |
 | 02d2:2b72 | bcd_add | 6.5 |
+| 02d2:2bae | bcd_to_bin | 6.5 |
+| 02d2:2bea | bin_to_bcd | 6.5 |
+| 02d2:2c52 | wait_key_idle | 6 |
 | 02d2:2c9e | office_draw | 6 |
+| 02d2:2df4 | office_restore | 6 |
 
 ## 10. Open questions
 
-* The title menu's key table (`00f2:0AF0`) and which key starts the demo (the code compares with
-  44h, 'D').
-* `B7F3`, `0AAE`, `0AB0/0AB2/0AB4`, `D9BC`, `F398` beyond "first run", `B507`, `B508`.
-* Exact labels of statistics words 3–11 (the personnel screen's print order).
-* `02d2:1626` has no callers (dead code?).
+* Whether the `EB 08` at `020d:0414` (the disabled quiz check) is a crack or the shipped code.
+* A reader of `B7F3` outside the indexed code.
+* `roster_save` after a failed `fopen` (fwrite on a null stream, runtime 15ee:0524); both of the
+  port's runtime models return 0 items, so fatal error 3.
+* `D9BC`, and `F398` beyond "first run".

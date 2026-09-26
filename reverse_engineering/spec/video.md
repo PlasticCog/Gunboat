@@ -31,6 +31,14 @@ Gunboat-only helpers in the same range: `1390:0000` (picture draw, all modes; pl
 `1432:0008` (returns `DS:DD2D`), `147c:000f` (EGA/CGA palette register set via INT 10h), `14ae:0005` (EGA palette
 entry, wrapped by `00f2:0f24`), `1469:0008` (returns the mode saved at start-up, `DS:DCFC`).
 
+Used by the front end (game_flow §6), ported: `gfx_copy_rect(x0, x1, y0, y1, dx, dy_bottom, src,
+dst)` copies a rectangle between two explicit pages, the destination given by its **bottom** row
+(rows copied from y1 up to y0; `DD25` = the destination's bottom row, `DD27` = dx; no clipping);
+`gfx_put_pixel(x, y)` sets one pixel in the current colour on the draw page, clipped to the window
+`DD03..DD09`. `ega_pal_set` (`14ae:0005`) dispatches on the library mode through the table at
+`14ae:0055`; the mode-13h entry (`14ae:0050`) only returns 0, so the EGA colour calls that the spec
+sheets make in every mode do nothing in VGA.
+
 ## 3. Palette **verified**
 
 The 3D view and most screens use one 225-byte palette file (`TACTCOLR.BIN`, `TITLCOLR.BIN`,

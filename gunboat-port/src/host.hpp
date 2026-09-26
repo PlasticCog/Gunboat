@@ -54,6 +54,9 @@ bool host_joy_read(s16 *x, s16 *y, u8 *buttons);
 // effect from the current tick onward.
 void host_opl_write(u8 reg, u8 value);
 void host_speaker(u16 divisor, bool on);  // PIT channel 2 divisor (0 = 65536) and the port 61h gate
+// The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
+// moment it is read.
+u8 host_pit2_low();
 
 // Game files: case-insensitive lookup in the game folder. Returns a path to free with host_free,
 // or null if the file does not exist; with create = true, the path for a new file.

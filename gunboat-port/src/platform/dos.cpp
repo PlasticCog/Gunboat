@@ -326,6 +326,38 @@ void crt_ffree(FarPtr p)
     dos_free(p.seg);
 }
 
+// 15ee:0786 strcpy (MSC): returns dst.
+u16 crt_strcpy(u16 dst_ds, u16 src_ds)
+{
+    u16 i = 0;
+    do ds_u8(u16(dst_ds + i)) = ds_u8(u16(src_ds + i));
+    while (ds_u8(u16(src_ds + i++)) != 0);
+    return dst_ds;
+}
+
+// 15ee:07d4 strncmp (MSC): the length is limited by the first NUL of s1 within n (REPNE SCASB,
+// the NUL included), then the strings are compared (REPE CMPSB); returns 0, -1 or 1 by the last
+// bytes compared.
+s16 crt_strncmp(u16 s1_ds, u16 s2_ds, u16 n)
+{
+    if (n == 0) return 0;
+    u16 len = 0;
+    while (len < n) {  // REPNE SCASB: counts up to and including the NUL
+        len++;
+        if (ds_u8(u16(s1_ds + len - 1)) == 0) break;
+    }
+    u16 i = 0;
+    while (i < len) {  // REPE CMPSB
+        const u8 a = ds_u8(u16(s2_ds + i)), b = ds_u8(u16(s1_ds + i));
+        i++;
+        if (a != b) break;
+    }
+    const u8 a = ds_u8(u16(s2_ds + i - 1)), b = ds_u8(u16(s1_ds + i - 1));
+    if (a > b) return -1;  // CMP AL,[DI-1] / JA: NOT 0
+    if (a == b) return 0;
+    return 1;              // DEC CX twice, NOT
+}
+
 // 15ee:01a0 exit: flushes and closes the files, then the host ends the program.
 void crt_exit(s16 code)
 {

@@ -17,8 +17,10 @@ src/platform/           platform.md and video.md: dos (DOS memory, files, the C 
                         bios (INT 10h / 1Ah model), gfx (graphics library, pictures), pal (palette,
                         RLE pictures, dissolve), text, lzw, kbd (INT 9), timer (INT 8, the host's
                         timer dispatch, BIOS waits), joystick, vga (DAC/CRTC model), helpers
-src/game/               the game: flow_* (game_flow.md: main, files, keys, screens, title, music),
-                        sim_* (simulation.md); pending.cpp: placeholders for calls not ported yet
+src/game/               the game: flow_* (game_flow.md: main, files, keys, screens, title, music,
+                        flow_hq the headquarters (020d), flow_office and flow_front the front end
+                        (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md);
+                        pending.cpp: placeholders for calls not ported yet
 src/sound/              sound.md: effects and music
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
@@ -90,7 +92,19 @@ helper when the first such function is ported.
   executes a poll point (the instruction where it re-reads the tick counter or the BIOS clock),
   the port one per `host_pump()`. `kind` is `tick_counter` (DS:08C0 + 1), `bios` (the BIOS clock)
   or `both`; `keys` (a byte list) delivers one key per tick into isr_key_code. The game's own timer
-  programming (`host_set_timer`) is recorded but does not drive the test.
+  programming (`host_set_timer`) is recorded but does not drive the test. A key script must fit
+  the screens it drives: a key that arrives during a timed wait (`wait_key(n)`, a tick mark) is
+  taken by that wait (`test_front.py` spaces its keys by 80 ticks for that reason).
+* **Hardware values and files**: `h.set_pit2(v)` sets what IN 42h reads on both sides (the quiz's
+  question); `h.set_game_dirs(orig_dir, port_dir)` gives each side its own game folder, so a test
+  that writes a file (`roster_save`) runs on temporary copies and compares the written files.
+  **Tests never write the real game folder.**
+* **Program exit**: `h.check(..., exit_code=0)` expects both sides to end the program with
+  `exit(0)` (`quit_to_dos`, e.g. the vacation choice) and compares the memory at that point.
+* **Snapshots of a running original**: `Original.stub(seg, off, fn)` returns its hook; a test can
+  stop the original when it reaches a function (`fn` calls `h.orig.fail(...)`) and use the memory
+  there as the state for other tests (`test_front.front_state`: the front end after its set-up),
+  then remove the hook with `h.orig.uc.hook_del`.
 * **Callees** run for real on both sides. A port that calls a function not ported yet goes through
   `src/game/pending.cpp`: a placeholder that is exact in the tested states (and says so), or a
   fatal "not ported yet" error if it could be reached otherwise.

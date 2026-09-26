@@ -100,6 +100,33 @@ def test_drawing(h, rng, scale):
     return n
 
 
+def test_copy_rect_and_pixel(h, rng, scale):
+    """gfx_copy_rect between pages 0 and 1 (destination by its bottom row), gfx_put_pixel with the
+    clip window, ega_pal_set (nothing in mode 13h)."""
+    n = 0
+    for _ in range(60 * scale):
+        m = vga_state(h, rng)
+        x0 = rng.randrange(320)
+        x1 = rng.randrange(x0, 320)
+        y0 = rng.randrange(200)
+        y1 = rng.randrange(y0, 200)
+        dx = rng.randrange(0, 320 - (x1 - x0))
+        dy = rng.randrange(y1 - y0, 200)
+        src, dst = rng.randrange(2), rng.randrange(2)
+        args = [x0, x1, y0, y1, dx, dy, src, dst]
+        h.check('gfx_copy_rect', m, stack_args=args, outputs=['ax'], label=str(args))
+        put8(m, 0xDCF5, rng.randrange(256))
+        put16(m, 0xDD2D, rng.choice([0xA000, struct.unpack_from('<H', m, DS_BASE + 0xDD33)[0]]))
+        for off in (0xDD03, 0xDD05, 0xDD07, 0xDD09):
+            put16(m, off, rng.choice([0, 0x13F, 0xC7, rng.randrange(-20, 340) & 0xFFFF]))
+        for _ in range(4):
+            x, y = rng.randrange(-40, 360), rng.randrange(-40, 240)
+            h.check('gfx_put_pixel', m, stack_args=[x & 0xFFFF, y & 0xFFFF], outputs=['ax'], label='(%d, %d)' % (x, y))
+        h.check('ega_pal_set', m, stack_args=[rng.randrange(32), rng.randrange(0x10000)], outputs=['ax'])
+        n += 6
+    return n
+
+
 def test_text_mode_exit(h, rng, scale):
     """gfx_set_mode(3) at exit, then text_exit_clear with the cursor home or not."""
     n = 0
@@ -167,5 +194,5 @@ def test_picture(h, rng, scale):
     return n
 
 
-TESTS = [test_set_mode, test_mode_queries, test_pages, test_drawing, test_text_mode_exit, test_text, test_palette,
+TESTS = [test_set_mode, test_mode_queries, test_pages, test_drawing, test_copy_rect_and_pixel, test_text_mode_exit, test_text, test_palette,
          test_picture]

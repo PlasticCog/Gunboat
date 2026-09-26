@@ -46,7 +46,7 @@ def main():
                     added += 1
                     continue
                 notes = old['notes']
-                if old['name'] != s['name']:
+                if old['name'] != s['name'] and 'was %s' % old['name'] not in notes:
                     notes = ('was %s | ' % old['name'] + notes) if notes else 'was %s' % old['name']
                 if s.get('notes') and s['notes'] not in notes:
                     notes = s['notes'] + (' | ' + notes if notes else '')

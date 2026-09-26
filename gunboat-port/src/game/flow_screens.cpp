@@ -41,6 +41,15 @@ u16 print_text(u16 base, u16 off)
     return u16(off + 1);
 }
 
+// 00f2:0e44 print_chars: exactly n characters of DS:base at the text cursor (no terminator test).
+void print_chars(u16 base, u16 n)
+{
+    for (s16 i = 0; i < s16(n); i++) {
+        const u8 c = ds_u8(u16(base + i));
+        text_draw_char(&c);
+    }
+}
+
 // 00f2:0ece screen_present: page 1 onto the screen with the dissolve.
 void screen_present()
 {
@@ -88,9 +97,12 @@ void pal_fade_out_vga()
     if (ds_u16(DS_video_mode) == 0x13) pal_fade_out();
 }
 
-// 00f2:0f24 ega_pal_entry: an EGA palette register (ega_pal_set 14ae:0005). PORT: the EGA, Tandy and
-// CGA palettes are not ported; the callers use it only in those modes.
-void ega_pal_entry(u16, u16) {}
+// 00f2:0f24 ega_pal_entry: a palette register through ega_pal_set (14ae:0005; the value's low byte
+// only in Tandy mode 9). In mode 13h ega_pal_set does nothing.
+void ega_pal_entry(u16 index, u16 value)
+{
+    ega_pal_set(index, ds_u16(DS_video_mode) == 9 ? u8(value) : value);
+}
 
 // 00f2:0f46 ega_pal_apply: the 16 (EGA, Tandy) or 32 (CGA) palette registers from the tables
 // DS:0944 / DS:0964; nothing in other modes. PORT: those modes are not ported.

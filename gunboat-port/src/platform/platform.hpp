@@ -12,7 +12,9 @@
 namespace gb {
 
 // ---- helpers (platform.md §8)
-u16 random();  // 0000:0780
+u16 random();                // 0000:0780
+u16 world_a_base();          // 121b:036e  6E54h
+u16 pit_random(u16 base);    // 121b:0372
 
 // A NUL-terminated string in DGROUP.
 const char *ds_str(u16 off);
@@ -47,6 +49,8 @@ u16 crt_fwrite(u16 buf_ds, u16 size, u16 count, u16 f); // 15ee:0524
 s16 crt_fclose(u16 f);                                  // 15ee:023e
 FarPtr crt_fmalloc(u16 size);                           // 15ee:06c1
 void crt_ffree(FarPtr p);                               // 15ee:06ac
+u16 crt_strcpy(u16 dst_ds, u16 src_ds);                // 15ee:0786  dst
+s16 crt_strncmp(u16 s1_ds, u16 s2_ds, u16 n);           // 15ee:07d4
 [[noreturn]] void crt_exit(s16 code);                   // 15ee:01a0
 
 // ---- LZW (08e1)

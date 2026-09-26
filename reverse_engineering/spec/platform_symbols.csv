@@ -24,7 +24,6 @@ global,DS:DA41,kbd_last_scancode,u8,§2
 global,DS:DA44,menu_timer_divider,u8,§1
 global,DS:DA52,sfx_timer_divider,u16,§1
 global,DS:DA8F,sfx_timer_vector,u8,§1
-global,DS:DCFC,gfx_saved_mode_byte,u8,§8
 global,DS:F0DA,sprite_cache_a_far,u16[2],§5
 global,DS:F0E0,sprite_cache_b_far,u16[2],§5
 global,DS:0066,data_file_name,char[10],"§4 ""dataa.dat""; archive_open writes the bank letter at +4"
@@ -87,3 +86,4 @@ global,DS:DD1F,joy_y_low,u16[2],§3 per stick: y below this = up
 func,15ea:0003,joystick_axis_y,far u16(u16 stick),§3 port 201h: the stick's y count (as joystick_axis for x)
 cglobal,121b:0c96,menu_timer_old_vector,u16[2],§1 the INT 8 vector timer_install replaced (code-segment data)
 global,DS:08BE,music_timer_on,u8,§1 1 while the menu timer runs (music_start .. music_stop)
+func,15ee:07d4,strncmp,far int(u16 s1 u16 s2 u16 n),MSC runtime strncmp (the name entry's TJL test)

@@ -63,6 +63,11 @@ void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handl
 bool host_joy_read(s16 *, s16 *, u8 *) { return false; }
 void host_opl_write(u8, u8) {}
 namespace {
+u8 pit2_low;
+}
+u8 host_pit2_low() { return pit2_low; }
+void host_stub_set_pit2(u8 v) { pit2_low = v; }
+namespace {
 std::vector<SpeakerEvent> speaker_log;
 }
 void host_speaker(u16 divisor, bool on) { speaker_log.push_back({divisor, on}); }

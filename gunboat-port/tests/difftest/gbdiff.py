@@ -178,7 +178,7 @@ class Original:
         """Replaces the original function at file_seg:off by fn(args) -> None | (ax, dx or None):
         args(i) is the i-th stack word after the return address. fn runs when the function is
         entered; then the stub returns to the caller (retf, or ret for near). fn may raise
-        dosmodel.ProgramExit to end the run."""
+        dosmodel.ProgramExit to end the run. Returns the hook (uc.hook_del removes the stub)."""
         at = lin(seg_of(file_seg), off)
 
         def hook(uc, address, size, _):
@@ -203,7 +203,7 @@ class Original:
                 uc.reg_write(UC_X86_REG_CS, word(2))
             uc.reg_write(UC_X86_REG_SP, (sp + (2 if near else 4)) & 0xFFFF)
             uc.reg_write(UC_X86_REG_IP, ip)
-        self.uc.hook_add(UC_HOOK_CODE, hook, None, at, at)
+        return self.uc.hook_add(UC_HOOK_CODE, hook, None, at, at)
 
     def _on_int(self, uc, intno, _):
         if intno in self.ints:
@@ -401,6 +401,17 @@ class Harness:
             at = lin(seg_of(s), o)
             self._tick_hooks.append(self.orig.uc.hook_add(UC_HOOK_CODE, on_poll, None, at, at))
 
+    def set_pit2(self, value):
+        """What IN 42h (the PIT channel-2 counter's low byte) reads on both sides."""
+        self.orig.ins[0x42] = lambda uc: value & 0xFF
+        self.port.dll.gb_set_pit2(value & 0xFF)
+
+    def set_game_dirs(self, orig_dir, port_dir=None):
+        """The game folder of each side (default: the same one), e.g. temporary copies for tests
+        that write files."""
+        self.dos.dir = pathlib.Path(orig_dir)
+        self.port.dll.gb_set_game_dir(str(port_dir or orig_dir).encode())
+
     def reset_files(self):
         """Closes every DOS file on both sides."""
         self.dos.reset()
@@ -420,12 +431,13 @@ class Harness:
         return model, {fh: pos for fh, pos in port.items() if pos >= 0}
 
     def check(self, name, m, regs=None, stack_args=(), outputs=(), label='', keep_files=False, dac=None,
-              tick=None, max_insns=5_000_000):
+              tick=None, max_insns=5_000_000, exit_code=None):
         """Runs `name` on both sides from memory m and compares all memory, `outputs`, the open DOS
         files and the VGA DAC. Files are closed first unless keep_files (after open_both). Both DACs
         start as `dac` (768 bytes, default black). `tick` = (list of file_seg:off poll points,
         kind): the original gets one timer tick each time it executes a poll point, the port one per
-        host_pump() (see set_tick)."""
+        host_pump() (see set_tick). exit_code: both sides must end the program with exit(code)
+        (the memory is compared at that point; outputs are not)."""
         regs = regs or {}
         if not keep_files:
             self.reset_files()
@@ -441,10 +453,25 @@ class Harness:
             raise Mismatch('%s is not in bridge.cpp' % name)
         file_seg, off, far = self.sym.func(name)
         self.orig.set_memory(m)
-        want = self.orig.call(file_seg, off, far, regs, stack_args, max_insns=max_insns)
+        ended = 'exit(%d)' % exit_code if exit_code is not None else None
+        try:
+            want = self.orig.call(file_seg, off, far, regs, stack_args, max_insns=max_insns)
+            if ended:
+                raise Mismatch('original returned instead of %s' % ended)
+        except Mismatch as e:
+            if not ended or str(e) != 'original: ' + ended:
+                raise
+            want, outputs = None, ()
         mo = self.orig.memory()
         self.port.set_memory(m)
-        got = self.port.call(name, regs, stack_args)
+        try:
+            got = self.port.call(name, regs, stack_args)
+            if ended:
+                raise Mismatch('port returned instead of %s' % ended)
+        except Mismatch as e:
+            if not ended or str(e) != 'port: ' + ended:
+                raise
+            got = None
         mp = self.port.memory()
         # The stack segment differs by design: the original's frames, and the port's StackLocal
         # slots (mem.hpp) at the top of it. It is not game state.

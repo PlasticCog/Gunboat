@@ -374,6 +374,13 @@ void host_set_frame_source(bool (*compose)(u32 *), int w, int h)
 
 void host_opl_write(u8 reg, u8 value) { OPL3_WriteReg(&opl, reg, value); }
 
+u8 host_pit2_low()
+{
+    const Uint64 ns = SDL_GetTicksNS();
+    const Uint64 counts = ns / SDL_NS_PER_SECOND * PIT_HZ + ns % SDL_NS_PER_SECOND * PIT_HZ / SDL_NS_PER_SECOND;
+    return u8(0 - counts);
+}
+
 void host_speaker(u16 divisor, bool on)
 {
     spk_div = divisor;
