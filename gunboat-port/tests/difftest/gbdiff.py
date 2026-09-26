@@ -368,7 +368,7 @@ class Harness:
         biosmodel.bios_init(m)
         return m
 
-    TICK_KINDS = {None: 0, 'tick_counter': 1}
+    TICK_KINDS = {None: 0, 'tick_counter': 1, 'bios': 2}
 
     def set_tick(self, tick):
         """The timer model of the next check: None (no ticks), or (poll points, kind); kind
@@ -384,6 +384,12 @@ class Harness:
                 a = DS_BASE + 0x08C0
                 v = struct.unpack('<H', uc.mem_read(a, 2))[0]
                 uc.mem_write(a, struct.pack('<H', (v + 1) & 0xFFFF))
+            elif kind == 'bios':                    # the BIOS timer interrupt (bios.cpp bios_tick)
+                t = struct.unpack('<I', uc.mem_read(0x46C, 4))[0] + 1
+                if t >= 0x1800B0:
+                    t = 0
+                    uc.mem_write(0x470, b'')
+                uc.mem_write(0x46C, struct.pack('<I', t))
         for p in points:
             s, o = (int(x, 16) for x in p.split(':'))
             at = lin(seg_of(s), o)

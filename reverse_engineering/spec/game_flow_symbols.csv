@@ -59,3 +59,11 @@ global,DS:F394,joystick,u16,§2
 global,DS:F398,first_run,u8,§1
 global,DS:F39C,bios_video_mode,u16,§2
 global,DS:F626,name_input,char[20],§6.1
+global,DS:0072,disk_prompt,u8,§1 a disk prompt is up: input_read_key reads the real keyboard even in the demo
+global,DS:0080,e_toggle,u8,§3 toggled by the E key (input_read_key); the demo sets 1 (meaning not yet known)
+global,DS:08C2,title_delay,u16,§3 multiplier of the credits' waits; title_menu sets 1
+global,DS:0C68,demo_script_pos,u16,§3 offset of the next (count; key) pair in the demo script 08e1:0008 + pos
+global,DS:0C6A,demo_countdown,u8,§3 calls left before demo_next is returned
+global,DS:0C6B,demo_next,u8,§3 key of the loaded pair
+cglobal,08e1:0008,demo_script,u8[102],§3 (count; key) pairs of the demo; key >= E0h sets held_keys = key - E0h; 00 00 restarts at 08e1:0008
+func,00f2:103e,kbd_flush_key,far void(),§3 isr_key_code = 0

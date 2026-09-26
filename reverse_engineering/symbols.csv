@@ -29,6 +29,7 @@ func,00f2:0f16,pal_fade_out_vga,far void(),video,spec:video,§3
 func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),video,spec:video,§3 parked
 func,00f2:0f46,ega_pal_apply,far void(),video,spec:video,§3 parked
 func,00f2:0fea,ega_pal_init,,game_flow,td3-match,"TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
+func,00f2:103e,kbd_flush_key,far void(),game_flow,spec:game_flow,§3 isr_key_code = 0
 func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 VALKPC/VALK12/VALK3V
 func,00f2:119c,music_stop,far void(),game_flow,spec:game_flow,§3.1
 func,020d:0008,hq_quiz,far int(),game_flow,spec:game_flow,§4 copy protection (PORT: always right)
@@ -361,6 +362,7 @@ func,15d4:0007,bios_wait_ticks,,video,td3-match,"TD3 16ff:000b bios_wait_ticks, 
 func,15d7:000d,joystick_button,far u16(u16 stick),platform,spec:platform,§3
 func,15d9:0003,gfx_fill_rect_clipped,,video,td3-match,"TD3 192e:0005 gfx_fill_rect_clipped, score 1.00"
 func,15e2:0001,gfx_clear_page,,video,td3-match,"TD3 1937:0003 gfx_clear_page, score 0.82"
+func,15ea:0003,joystick_axis_y,far u16(u16 stick),platform,spec:platform,§3 port 201h: the stick's y count (as joystick_axis for x)
 func,15ee:0016,_astart,,runtime,td3-match,"TD3 1940:0018 _astart, score 1.00"
 func,15ee:00dc,_cinit,,runtime,td3-match,"TD3 1940:00de _cinit, score 1.00"
 func,15ee:01a0,exit,,runtime,td3-match,"TD3 1940:01a2 exit, score 1.00"
@@ -415,6 +417,7 @@ func,1af5:02b9,adlib_call,far void(u16 ...),sound,spec:sound,§4 INT 65h SI=15h
 func,1b37:0002,tandy_detect,far void(),sound,spec:sound,§3
 func,1b37:00c0,speaker_music_tick,far void(),sound,spec:sound,§4 PC speaker / Tandy music
 func,1b5f:000e,cms_detect,far u16(),sound,spec:sound,§3
+cglobal,08e1:0008,demo_script,u8[102],game_flow,spec:game_flow,§3 (count; key) pairs of the demo; key >= E0h sets held_keys = key - E0h; 00 00 restarts at 08e1:0008
 cglobal,0919:0270,panel_switch_table,u8[2][],simulation,spec:simulation,§3.3 switch number / indicator per entry
 cglobal,0919:0290,key_handlers,u16[127],simulation,spec:simulation,§3.2 codes 01h-7Fh
 cglobal,0919:0feb,message_table,u16[56],simulation,spec:simulation,§9.1 attribute byte + text ending with a byte >= 80h
@@ -438,24 +441,32 @@ cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:0a32,kbd_dir_or,u8[16],platform,spec:platform,§2 held_keys bits set by a make code (8) and kept by a break code (8)
 cglobal,121b:0a42,kbd_keypad_dir,u8[11],platform,spec:platform,§2 keypad 47h..51h -> direction index + 1Fh
+cglobal,121b:0c96,menu_timer_old_vector,u16[2],platform,spec:platform,§1 the INT 8 vector timer_install replaced (code-segment data)
 global,DS:0066,data_file_name,char[10],platform,spec:platform,"§4 ""dataa.dat""; archive_open writes the bank letter at +4"
 global,DS:006A,data_file_bank,u8,platform,spec:platform,§4 bank letter of data_file_name
 global,DS:0070,demo_mode,u16,simulation,spec:simulation+spec:game_flow,§3 simulation §3.1 | §3.1
+global,DS:0072,disk_prompt,u8,game_flow,spec:game_flow,§1 a disk prompt is up: input_read_key reads the real keyboard even in the demo
 global,DS:0074,view_page,u16,game_flow,spec:game_flow,§2 0 in VGA else 2
 global,DS:0076,cga_special,u16,game_flow,spec:game_flow,§2
 global,DS:0078,single_page_mode,u16,game_flow,spec:game_flow,§2 1 in VGA
 global,DS:007A,draw_page,u16,simulation,spec:simulation,graphics library page
 global,DS:007E,sound_muted,u16,sound,spec:simulation+spec:sound,§2 | §3.1
+global,DS:0080,e_toggle,u8,game_flow,spec:game_flow,§3 toggled by the E key (input_read_key); the demo sets 1 (meaning not yet known)
 global,DS:0082,phase,u16,game_flow,spec:game_flow,§1 FFh config 0 title 1 HQ 2 front end 3 mission
 global,DS:0084,front_end_state,u16,game_flow,spec:game_flow,§6
 global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 map; 6 chase; 7 damage report; 8 assignment; 9 quit | §2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
 global,DS:027C,archive_directory,u8[1190],game_flow,spec:game_flow,§1 DATAC.DAT
+global,DS:08BE,music_timer_on,u8,platform,spec:platform,§1 1 while the menu timer runs (music_start .. music_stop)
 global,DS:08C0,tick_counter,u16,simulation,spec:simulation+spec:platform,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
+global,DS:08C2,title_delay,u16,game_flow,spec:game_flow,§3 multiplier of the credits' waits; title_menu sets 1
 global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,§4 TACTCOLR.BIN | video §3
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
 global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation+spec:hud,§5 per station | §8.6 per station
+global,DS:0C68,demo_script_pos,u16,game_flow,spec:game_flow,§3 offset of the next (count; key) pair in the demo script 08e1:0008 + pos
+global,DS:0C6A,demo_countdown,u8,game_flow,spec:game_flow,§3 calls left before demo_next is returned
+global,DS:0C6B,demo_next,u8,game_flow,spec:game_flow,§3 key of the loaded pair
 global,DS:0C6C,lzw_src,u16[2],platform,spec:platform,§6 source far pointer
 global,DS:0C70,lzw_dst,u16[2],platform,spec:platform,§6 output far pointer
 global,DS:0C74,lzw_window,u8[1024],platform,spec:platform,§6 input window
@@ -763,7 +774,7 @@ global,DS:DCF5,gfx_colour,u8,video,spec:video,§2 colour used by the drawing rou
 global,DS:DCF6,gfx_colour_raw,u8,video,spec:video,§2
 global,DS:DCF7,gfx_copy_page,u8,video,spec:video,§1
 global,DS:DCF8,gfx_mode_x2,u16,video,spec:video,§1 library mode * 2 (dispatch index)
-global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
+global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
 global,DS:DCFD,gfx_visible_page,u8,video,spec:video,§1
 global,DS:DCFF,gfx_pen_x,u16,video,spec:video,§2
 global,DS:DD01,gfx_pen_y,u16,video,spec:video,§2
@@ -775,7 +786,10 @@ global,DS:DD0B,view_x_max,u16,video,spec:video,§1
 global,DS:DD0D,view_x_min,u16,video,spec:video,§1
 global,DS:DD0F,view_y_max,u16,video,spec:video,§1
 global,DS:DD11,view_y_min,u16,video,spec:video,§1
-global,DS:DD17,joystick_limits,u16[4],platform,spec:platform,§3
+global,DS:DD13,joy_y_high,u16[2],platform,spec:platform,§3 per stick: y above this = down
+global,DS:DD17,joy_x_low,u16[2],platform,spec:platform,§3 per stick: x below this = left; FFFFh = no stick | was joystick_limits | §3
+global,DS:DD1B,joy_x_high,u16[2],platform,spec:platform,§3 per stick: x above this = right
+global,DS:DD1F,joy_y_low,u16[2],platform,spec:platform,§3 per stick: y below this = up
 global,DS:DD23,fill_x1,u16,video,spec:video,§2 gfx_fill_rect arguments
 global,DS:DD27,fill_x0,u16,video,spec:video,§2
 global,DS:DD29,fill_y0,u16,video,spec:video,§2

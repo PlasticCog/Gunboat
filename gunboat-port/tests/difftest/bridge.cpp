@@ -73,7 +73,10 @@ GB_EXPORT int gb_call(const char *name, Regs *regs, const u16 *stack_args)
 namespace {
 void tick_counter() { ds_u16(0x08C0) = u16(ds_u16(0x08C0) + 1); }
 } // namespace
-GB_EXPORT void gb_set_tick(int kind) { host_set_timer(0, kind == 1 ? tick_counter : nullptr); }
+GB_EXPORT void gb_set_tick(int kind)
+{
+    host_set_timer(0, kind == 1 ? tick_counter : kind == 2 ? bios_tick : nullptr);
+}
 
 // The speaker calls (host_speaker) since the last clear: n pairs (divisor, on) into out[2n].
 GB_EXPORT void gb_speaker_clear() { host_stub_speaker_clear(); }

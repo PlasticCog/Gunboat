@@ -21,3 +21,6 @@
 __pycache__/
 *.pyc
 *.log
+
+# agent worktrees (Claude Code)
+/.claude/worktrees/

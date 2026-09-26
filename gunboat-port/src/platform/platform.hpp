@@ -66,6 +66,18 @@ void bios_dac_set_block(u16 first, u16 count, FarPtr table);  // INT 10h AX=1012
 u32 bios_ticks();                                        // INT 1Ah AH=00h
 void bios_tick();                                        // the BIOS timer interrupt's count
 
+// ---- timers and joystick (timer.cpp, joystick.cpp)
+u16 bios_wait_ticks(s16 n);                          // 15d4:0007  returns 0
+void timer_install();                                // 121b:0c9a
+void timer_restore();                                // 121b:0cc4
+void menu_timer_isr();                               // 121b:0ce2
+void timer_interrupt();                              // PORT: the host's timer interrupt
+void run_int8_handler(FarPtr vector);                // PORT: the INT 8 handler at `vector`
+u16 joystick_axis(u16 stick);                        // 146a:000b
+u16 joystick_axis_y(u16 stick);                      // 15ea:0003
+u16 joystick_button(u16 stick);                      // 15d7:000d
+void joystick_read(u16 stick, u8 *code, u8 *dir);    // 1473:0008
+
 // ---- keyboard (kbd.cpp), segment 121b
 void kbd_install();        // 121b:0a4d
 void kbd_restore();        // 121b:0a88
