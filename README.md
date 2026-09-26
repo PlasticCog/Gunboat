@@ -13,10 +13,10 @@ original function and check it against the original machine code.
 
 | Phase | State |
 | --- | --- |
-| Executable map | Done: 597 functions indexed, 409 named (`reverse_engineering/RE_GUIDE.md`) |
+| Executable map | Done: 597 functions indexed, 468 named (`reverse_engineering/RE_GUIDE.md`) |
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
 | Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
-| Porting | Started: 4 functions ported and verified. Next: start-up, title screen and menus |
+| Porting | Under way: 161 functions ported and verified. The start-up, the title sequence with its music and the main menu run natively and match the original (`gunboat-port/Run Port.cmd`). Next: the headquarters and the front end |
 | Playable build | `gunboat-port/legacy/`: an earlier *non-faithful* patrol mode on the original assets, kept as a reference until the port replaces it |
 
 ## Layout

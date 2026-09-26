@@ -224,9 +224,12 @@ bitmask** in `DS:DA43`:
 * writes the code to **DS:EE9C** (and to `*key`) for `key_dispatch`.
 
 In **demo mode** (`DS:0070 != 0`, set by the title sequence `00f2:000e`) the key comes from
-`demo_next_key` (`08e1:006e`) instead: a recorded script of (repeat count, key) byte pairs at
-`[DS:0C67] + 8`; keys ≥ E0h set the held bits `DA43 = key + 20h`. Any real key press ends the
-demo: `DS:0070 = 0`, station 9. Several station locks below are skipped in demo mode so that
+`demo_next_key` (`08e1:006e`) instead: a recorded script of (count, key) byte pairs in the code
+segment, at 08e1:0008 + `DS:0C68` (the title sets 0C68 = 8: the first pair is at 08e1:0010). A
+pair makes the next `count` calls return 0 and the call after them the key; keys ≥ E0h set the
+held bits instead, `DA43 = key − E0h`. The pair 00 00 restarts at 08e1:0008 (four pairs ending
+with 'D', then the script again). Any real key press ends the demo: `DS:0070 = 0`, the key
+consumed, station 9. Several station locks below are skipped in demo mode so that
 the scripted demo can visit every station.
 
 ### 3.2 `key_dispatch` (0919:038e) **verified**

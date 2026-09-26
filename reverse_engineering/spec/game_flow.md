@@ -40,11 +40,18 @@ campaign:
      phase = 3; station = 1; copy page 2; mission_run(); copy page 1
 ```
 
+`DS:0072` (disk_prompt) is 1 while a disk prompt waits; `input_read_key` then reads the keyboard
+even in the demo. The disk-2 prompt (`DS:7835`, colours 0Fh/4) does not clear; the disk-1 prompt
+(`DS:B4DC`) first clears pixel rows 0..0Bh with colour 0. They appear only when `fopen` fails;
+otherwise `wait_key(1)` returns at once (in the port the files are always there).
+
 `quit_to_dos` (`0000:021e`, Ctrl+Q, the vacation choice, the setup's "quit" option): music off,
-`mem_free_all`, free pages 1 and 2, restore the BIOS video mode `F39C`, clear the text screen,
-sound off, `kbd_restore`, `exit(0)`. `fatal_exit(code)` (`0000:0276`) does the same and prints
-message `code` first: 1 "Insufficient memory for GUNBOAT.", 2 "Important file open failed in
-GUNBOAT.", 3 "Roster update failed. Is your disk full?" (the others as TD3).
+`mem_free_all`, free pages 1 and 2 (2 only when `DS:0078` = 0), restore the BIOS video mode
+`F39C`, clear the text screen, sound off, `kbd_restore` unless in phase FFh, `exit(0)`.
+`fatal_exit(code)` (`0000:0276`) does the same, but frees the pages only when code != 1, calls
+`kbd_restore` unconditionally, and prints message `code` after the mode restore: 1
+"Insufficient memory for GUNBOAT.", 2 "Important file open failed in GUNBOAT.", 3 "Roster update
+failed. Is your disk full?".
 
 `archive_open` (`0000:0d74`): name hash (`name_hash`, ORIGINAL_WORLD_FORMAT.md) → DATAC record
 → opens `dataa.dat` / `datab.dat` (`DS:0066` with the bank letter), prompting "Insert Disk %c into
@@ -56,20 +63,25 @@ record offset. `file_load_near` / `file_load_far` read a whole entry.
 ```
 F39C = current BIOS video mode (1469:0008, for restoring on exit)
 default choice = DS:0092[gfx_detect()]; gfx_set_mode(F39C)
-if "GUNBOAT.CFG" opens: read 3 words: EED2 (video mode), F394 (joystick), DS:0078
+if "GUNBOAT.CFG" opens: fread 3 words: EED2 (video mode), F394 (joystick), DS:0078
 else (text mode, strings DS:012F..0219): list the modes, digits 1–6 choose (6 = quit_to_dos),
-     Enter accepts; "Do you want to use a joystick?" defaults to Y unless the joystick probe
-     (146a:000b, port 201h, 11 tries) times out; Y/N, Enter accepts → F394; EED2 = DS:008C[choice]
+     Enter accepts; "Do you want to use a joystick?" defaults to Y, and N if any of 11 probes of
+     axis 1 (146a:000b) returns FFFFh; Y/N, Enter accepts → F394; EED2 = DS:008C[choice]
      (the file is not written; SETUP.EXE writes it)
+     DS:008C = 13 0D 04 0C 09 00 (VGA, EGA, CGA, Hercules, Tandy, exit);
+     DS:0092[detect 0..13h] = 05 05 05 05 02 02 02 05 05 04 05 03 03 01 01 01 01 01 00 00
 if F394: joystick_calibrate (146e:000e)
-EED2 == 0Ch: DS:0076 = 1, CGA mode 4 with 121b:0902; else DS:0076 = 0, gfx_set_mode(EED2)
+EED2 == 0Ch (Hercules): DS:0076 = 1 (byte), EED2 = 4, CGA mode 4, hercules_setup (121b:0902,
+     the Hercules CRTC); else DS:0076 = 0, gfx_set_mode(EED2)
 page 1 allocated (failure → fatal 1); D9B8 = page 1 segment; D9B6 = page 0 segment
 VGA (13h): DS:0078 = 1, DS:0074 = 0 (the view page is 0); otherwise DS:0074 = 2 and page 2 is
      allocated (D9BA)
 ```
 
 The shipped `GUNBOAT.CFG` is `13 00 00 00 00 00`: VGA, no joystick. **PORT:** VGA only; the
-joystick maps to an SDL gamepad (platform spec).
+joystick maps to an SDL gamepad (platform spec); without the file the questions are answered with
+Enter (there is no text screen). `DS:F13A` (flow_scratch) is a scratch word: the default choice,
+then the page allocation result.
 
 ## 3. Title and main menu (`title_menu`, 00f2:000e) **verified** (flow), **likely** (menu keys)
 
@@ -78,36 +90,52 @@ with `08e1:01bd` into `DS:1094` and drawn with `1390:0000` (VGA `121b:08a8`); `0
 EGA palette entries (parked).
 
 ```
-F110 = 0 (practice mode); D9BC = 0
+engine_sound_on; pal_fade_out_vga; engine_sound_off; F110 = 0 (practice mode); D9BC = 0
 file_load_near("DAT6.DAT", DS:6E54)
-if demo mode or first run (F398):
+if demo (DS:0070 = 1) or first run (F398 = 1):                 the intro
     palette TITLCOLR.BIN (DS:08C4)
-    first run: COPY.LZ (the copyright/credits screen), wait_key(16Ch)
-    ACCO.LZ (Accolade logo), dissolve (screen_present)
-    VGA: TITLE1A/B/C and FOOTIT1E into far buffers; others: TITLE1A only
-TITLE3C/B/A; first run only:
-    three moving bitmaps animated for 118h steps of 3, one step per tick (random() called while
-    waiting), wait_key(40h); TITLE1 composed with TIT1COLR.BIN, dissolved in
-    music_start()                                        00f2:1044  (§3.1)
-    TITLE2A..D with TIT2COLR.BIN, wait_key(64h)
-credits text (00f2:0d3e, DS:6EB1: "Designed by Tom Loughry", graphics, producers, music,
-     "COPYRIGHT 1990 ACCOLADE, INC.")
-TITLE3A/B/C with TIT3COLR.BIN: the menu background; menu_cursor_init (020d:064a, PENCIL.MPP)
-menu loop (00f2:0a17..0d2d): input_read_key; arrows/keypad move between
-     "REPORT FOR DUTY" / "GUNNERY PRACTICE" / "GRENADE PRACTICE" / "PILOT PRACTICE" (DS:6FB1..);
-     the key table 00f2:0AF0 sets or combines the practice bits of F110 (0..3)
-     demo key: region 3, DS:0080 = 1, F110 = 1, mission 1, demo mode DS:0070 = 1, demo script
-          counter DS:0C68 = 8 (simulation §3.1)
-     practice: region 3, mission by F110
-music_stop() (00f2:119c); return the choice (0 = report for duty, 1..3 = practice)
+    first run: COPY.LZ (the copyright screen), faded in, wait_key(16Ch); demo: the screen black
+    a demo sets F398 = 1 here, so it replays the whole first-run sequence
+    ACCO.LZ (Accolade) on page 1, screen_present (the dissolve)
+    VGA: TITLE1A/B/C/D preloaded into four far buffers; other modes FOOTIT1E and FOOTIT1F
+else: TITLE3C/B/A preloaded, straight to the menu
+first run only:
+    one 16x4 sprite in three colour layers (0, 4, 0Ch in VGA), captured at (0, 41h) from the ACCO
+    screen and redrawn at x = 0, 3, ..., 117h (94 positions), one per DS:08C0 tick; while it waits
+    for a tick random() is called on every poll (00f2:0460 tests first, 03d0 calls random)
+    wait_key(40h); TITLE1 with TIT1COLR.BIN, faded in (VGA: picture_draw_vga of the four parts)
+    music_start (§3.1); DS:08C2 = 1; TITLE2A..D loaded, wait_key(64h), then drawn with
+    TIT2COLR.BIN and faded in; text colours (0Fh, 0); TITLE3C/B/A loaded
+    credits_text (00f2:0d3e, DS:6EB1): "Designed by Tom Loughry", graphics, producers, music,
+         "COPYRIGHT 1990 ACCOLADE, INC." on text row 24, one group per 45 BIOS ticks, a key ends it
+the menu: D9BC = 1 (transparent text); TITLE3 on page 1 with TIT3COLR.BIN (non-first runs start
+    the effects timer here and do not fade out first); the right half TITLE3C with picture_draw;
+    page 1 copied to the screen (gfx_copy_rect_from_copy_page); faded in; menu_cursor_init
+    (020d:064a, PENCIL.MPP captured as colour masks); E9E0 = the pencil colour; F134 = 0 (the
+    text colour; 2 in CGA)
+menu loop (00f2:0a6c): a 2x2 grid "REPORT FOR DUTY" / "GUNNERY PRACTICE" / "GRENADE PRACTICE" /
+    "PILOT PRACTICE" (DS:6FB1); bit 0 of F110 = column, bit 1 = row; the key table 00f2:0AF0 for
+    91h..99h (keypad and joystick: 7 = 0, 8 up, 9 = 1, 4 left, 6 right, 1 = 2, 2 down, 3 = 3); a
+    movement key is taken every second iteration (debounce); the selection blinks in 0Fh; one
+    bios_wait_ticks(2) per iteration; ECB0 counts idle iterations
+    Enter: B503 = 3; B505 = 1 gunnery, 2 grenade, else 0; B509 = 18h + B505; B804/B806/B807 = 0,
+         B805 = 1; B4FF = 3 for pilot practice else 1
+    'D', 'd', or 113h idle iterations (ECB0, ~30 s): the demo: as Enter plus DS:0080 = 1,
+         F110 = 1, B505 = 1, DS:0070 = 1, demo script DS:0C68 = 8, 0C6A = 0C6B = 0
+music_stop() if F398 = 1; engine_sound_off; D9BC = 0; return F110 & 7Fh (0 = report for duty,
+    1..3 = practice)
 ```
 
 ### 3.1 Music (`music_start` 00f2:1044, `music_stop` 00f2:119c) **verified** (calls)
 
-By the sound device: `VALKPC.MUS` (PC speaker), `VALK12.MUS`, `VALK3V.MUS` ("Ride of the
-Valkyries"), loaded through the AdLib/CMS driver interface (`1ace`, `1af5`), with
-`timer_install` (89.63 Hz, simulation §1.1). `music_stop` stops the CMS driver and restores the
-timer. Details: sound spec.
+By the sound device (`sound_detect(0Fh, ...)`): 0 speaker -> `VALKPC.MUS`, 1 Tandy and 2 CMS ->
+`VALK3V.MUS`, 4 AdLib and 8 MT-32 -> `VALK12.MUS` ("Ride of the Valkyries"). For AdLib, INT 65h
+function 15h sets the instruments of voices 4 (DS:088A), 5-7 (DS:0856) and 8 (DS:0822).
+`timer_install` (89.63 Hz) runs even when the sound is off (`DS:007E`), and `DS:08BE` = 1; the
+file (`{u16 count; bytes}`) goes into the far buffer `F5BE` and `music_play` starts it looping.
+`music_stop` acts only while `DS:08BE` = 1: `music_silence`, `timer_restore` (which also resets
+the speaker music), `DS:08BE` = 0, and `engine_sound_on` puts the effects timer back.
+Details: sound spec.
 
 ## 4. HQ and the copy-protection quiz (`hq_quiz`, 020d:0008) **verified**
 

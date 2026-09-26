@@ -17,7 +17,7 @@ Two different timer interrupt handlers are used, never at the same time:
 | Installed by | `timer_install` `121b:0c9a` (INT 8, PIT divisor 3400h) | `sfx_install` `12ed:08c0` (vector `DS:DA8F`, PIT divisor 13B1h) |
 | Rate | 89.63 Hz | 236.695 Hz |
 | Handler | `121b:0ce2` | `12ed:00a3` → `12ed:00b1` |
-| Work per interrupt | `DS:08C0++`; `DA44` counts 0..4; `music_tick` (`1af5:0006`); `speaker_music_tick` (`1b37:00c0`) | `DS:08C0++` on 4 of every 13 interrupts (**72.83 Hz**); `sfx_timer_tick` (`12ed:00eb`) |
+| Work per interrupt | `DS:08C0++`; `DA44` counts 1..5 (chain and reset at 5); `music_tick` (`1af5:0006`); `speaker_music_tick` (`1b37:00c0`) | `DS:08C0++` on 4 of every 13 interrupts (**72.83 Hz**); `sfx_timer_tick` (`12ed:00eb`) |
 | Chains to the BIOS | every 5th interrupt (17.93 Hz) | every 13th (18.21 Hz) |
 
 `timer_restore` (`121b:0cc4`, TD3) and `sfx_remove` (`12ed:08f3`) put back 18.2 Hz. `music_start`
