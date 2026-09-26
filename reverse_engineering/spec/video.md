@@ -75,9 +75,10 @@ it; missions copy directly (hud §1).
 
 Mode 13h only: a 320 × 200 byte frame in the emulated memory at A000:0000 plus the RAM pages,
 the DAC model and presentation from TD3's `platform/vga.c`. EGA, Tandy, CGA and CGA composite
-paths are not ported (`// PORT:` at each mode dispatch).
+paths are not ported (`// PORT:` at each mode dispatch). (The graphics library's own EGA, CGA and
+Tandy paths are ported since: §7; the Hercules picture: §6.)
 
-## Hercules: the picture of the game's CGA memory **verified** (card.cpp)
+## 6. Hercules: the picture of the game's CGA memory **verified** (card.cpp)
 
 The Hercules choice (video mode 0Ch in GUNBOAT.CFG) runs the game in CGA mode 4 (`main`, game_flow
 §2; `hercules_mode` DS:0076 = 1, which nothing reads) and `hercules_setup` (`121b:0902`) programs
@@ -92,3 +93,113 @@ monochrome pixels (colour 0: both dark, 1: the right one lit, 2: the left one, 3
 The start address is 0 unless the display offset (the screen shake, `gfx_set_display_offset` on the
 BIOS's CRTC port 0040:0063 = 3B4h) moves it.
 
+## 7. The library in the EGA, CGA and Tandy modes **ported**
+
+Every primitive jumps through a table in its own segment (`lea bx, [table]; add bx, [DCF8];
+jmp cs:[bx]`, one word per mode 0–13h). Ported (`src/platform/gfx.cpp`): the handlers of the modes
+Gunboat sets, **04h** CGA (the Hercules choice draws in it and `hercules_setup` shows B800h), **09h**
+Tandy, **0Dh** EGA (the same handlers serve 0Eh–12h: only the row bytes differ) and 13h, plus the
+text-mode handlers. Not ported (`// PORT:`, never set by Gunboat): mode 6 and the Hercules modes
+0Bh/0Ch; modes 8 and 0Ah draw nothing in the original either. Layouts: CGA 2 bits a pixel, row y at
+`2000h·(y & 1) + 80·(y >> 1)`; Tandy 4 bits (the left pixel in the high nibble), row y at
+`2000h·(y & 3) + 160·(y >> 2)`; EGA planar, 40 bytes a row, page p at `A000h + p·200h`. The
+addresses are computed as the code does (`XCHG AL, AH; SHR AX, 1; ADD BH, AL …`, `RCR` for the
+Tandy's bank bits), in 16 bits.
+
+### 7.1 Mode set, detection, pages
+
+* `gfx_set_mode`: the per-mode colour tables are copied into `gfx_dither` (DDC1, 64 bytes: per
+  colour 0–1Fh its fill on even and odd rows) and `gfx_colour_map` (DD41): 4/5 from DE41/DD81, 6/11h
+  from DE01/DD61, 8–0Ah and 0Dh–10h/12h from DE81/DDA1; INT 43h = F000:FA6E for 4–6 and 8–0Ah. EGA
+  0Dh–12h: graphics controller register 1 (enable set/reset) = 0Fh, so every EGA drawing writes the
+  set/reset colour that `gfx_set_colour` put in register 0. 11h: DAC 1 = white, attribute palette
+  (INT 10h AX=1002h) from DD61; 12h: DAC 0–15 from DEC1, palette from DDA1. Hercules 0Bh/0Ch: BIOS
+  data from E0F4, configuration 3BFh = 3, CRTC 3B4h from E112 (9 words), B000h–BFFFh cleared, mode
+  3B8h = 0Ah; no BIOS mode set.
+* `gfx_detect`: INT 10h AX=1A00h (a VGA BIOS: AL = 1Ah, BL = 8 → 12h; 0Ch → 13h; 0Bh/07h → 11h);
+  else INT 10h AH=12h BL=10h: an EGA (BL ≠ 10h) active per 0040:0087 bit 3 → 0Fh with a monochrome
+  display (bit 1), 10h with switches 9, else 0Dh; else the equipment word 0040:0010 bits 4–5 = 30h
+  (monochrome): bit 7 of 3BAh changing within 32768 reads → 0Bh Hercules, else 07h MDA; else
+  FC00:0000 = 21h → 09h Tandy, else 04h CGA. The BIOS model answers per machine (bios.cpp,
+  biosmodel.py): 1A00h only on the VGA; AH=12h BL=10h on the EGA (and VGA) from 0040:0087/0088,
+  which `bios_init` sets on the EGA machine to 60h / 08h (256 KB, active, colour, switches 1000:
+  detected as 0Dh); the Hercules machine's 3BAh toggles (card model), so it is detected as 0Bh.
+* `gfx_set_draw_page` / `gfx_set_copy_page` (page & 7): modes 4–0Ah, 7 and 13h take the page
+  table `gfx_page_seg`; the text modes (draw page only; the copy page does nothing in them) and EGA
+  0Dh–10h compute the page in the video memory (`video seg + (page·page bytes) >> 4`); Hercules:
+  pages 0–1 computed, 2–7 from the table; 11h/12h do nothing.
+* `gfx_set_visible_page`: nothing if already visible; 4–0Ah, 7, 13h exchange the two pages'
+  segments and contents (one screen); text modes: INT 10h AH=05h (modelled as the BIOS data
+  0040:0062/004E, `bios_set_active_page`); EGA: 0040:0062 = page, 0040:004E = page·page bytes, a wait
+  for the start and then the end of a vertical retrace (3DAh bit 3), CRTC 0Ch/0Dh = that offset,
+  `gfx_visible_seg` follows; Hercules: page & 1, the same BIOS data, 3B8h = 0Ah | page·80h; 11h/12h:
+  nothing (the page is not stored). Gunboat calls it once, with 0 after the mode set: a no-op.
+* `gfx_alloc_page`: RAM pages (DOS 48h, cleared) in 4–0Ah and 13h; Hercules only for DL > 1
+  (signed); the text and EGA modes return 1, so on the EGA Gunboat's pages 1 and 2 are the card's
+  (A200h, A400h: hud §1). `gfx_free_page`: 4–0Ch and 13h.
+* `gfx_clear_page`: text modes 0720h, the packed modes zeros; EGA: write mode 2, bit mask FFh, each
+  byte read (latches) and written 0, then write mode 0.
+
+### 7.2 Rectangles and pixels
+
+`gfx_fill_rect` (rows y1 up to y0; no clipping): per row a left byte through the mask of the pixels
+from x0, whole bytes, a right byte through the mask up to x1 (one byte: both masks ANDed; a span
+reversed by one inside a byte draws nothing, across a byte boundary a whole byte). CGA/Tandy
+(14cf:01a8): the colour repeated (c·55h, c·11h) through the masks; the row above: bank − 2000h, or
+from bank 0 `(off | interleave) − row bytes`. EGA: the masks go to the bit mask register and the
+byte is ANDed (read: latches; write: set/reset colour under the mask); the bit mask is left at the
+right byte's. `gfx_put_pixel` (clip box, signed): CGA/Tandy clear the pixel's bits and OR the colour
+in unmasked (a colour above the mode's bits spills into the next pixels); EGA: bit mask 80h >> (x & 7)
+(left set), AND. `gfx_line_to` and `gfx_fill_rect_clipped` have no mode code of their own.
+
+### 7.3 Rectangle copies
+
+`gfx_copy_rect_from_copy_page` / `gfx_copy_rect_to_copy_page`: in CGA and Tandy the screen side is
+**B800h itself**, not the draw page (`mov ax, 0B800h; mov es, ax`); whole bytes x0/4..x1/4 (x0/2..);
+rows by the interleave (6000h: four banks, else two). EGA: write mode 1 (the latches copy all four
+planes), draw page ↔ copy page, then write mode 0. `gfx_copy_rect`: CGA/Tandy/13h take the pages
+from the page table (interleave 2000h: `si − width`, `− row` unless in bank 1, `^ 2000h`; 6000h:
+`− width`, from bank 0 `| 8000h − row`, then `− 2000h`); EGA computes both pages as `video seg +
+page·(page bytes >> 4)`, write mode 1.
+
+### 7.4 Bitmaps
+
+`gfx_draw_bitmap`: each source byte, shifted to the pen's pixel within the byte (`SHL AX, CL` of
+the previous and current byte), becomes pixels: CGA a word of 2-bit pixels (bits doubled) masked
+into the memory with the colour pattern `gfx_bitmap_pattern` (E126, written by the routine: c·55h
+both bytes); Tandy two words of 4-bit pixels (c·11h); a row not starting on a byte gets one more
+word (pair) of the leftover bits. Quirk kept: the Tandy tests "no leftover" with `or cl, cl` while
+CL is 7 or 8, so the pair is always written (with CL = 8 unchanged). EGA: each byte through the bit
+mask register, the leftover byte when CL ≠ 8; the bit mask is left at the last byte's. Rows upward:
+CGA `^ 2000h` (− 80 from bank 0), Tandy − 2000h or `| 6000h − A0h`, EGA − row bytes.
+`gfx_read_bitmap`: CGA/Tandy read 3 bytes per result byte (a big-endian word and the next byte,
+shifted to the pen's pixel), XOR the pattern (re-read from E126 for each byte), NOT, and keep a bit
+per pixel whose bits all match; EGA: read mode 1 (colour compare against register 2, set by
+`gfx_set_colour`) with word reads (two bytes, low address first: the latches keep the second),
+then read mode 0.
+
+### 7.5 Pictures
+
+`picture_hline` (1390:006e, near: AX = x0, BX = x1, **ES = the draw page**, loaded by
+`picture_draw`) fills the pen row with the colour's row pattern `gfx_dither[(s8)(colour·2) + (y &
+1)]` (`SHL AL, 1; CBW`: colours from 40h index below the table). CGA/Tandy: masks as in
+`gfx_fill_rect`. EGA: the entries are colours; this row's goes to set/reset; if the other row's is
+the same, one pass (bit masks as in `gfx_fill_rect`), else the even pixels (bit mask 55h) in this
+row's colour and the odd ones (AAh) in the other's, set/reset left at the second. The text modes and
+8/0Ah jump into `picture_draw`'s exit (1390:005f), which would unwind the wrong stack (a crash; never
+reached: `// PORT:` draws nothing). `picture_draw` has no mode code of its own.
+
+### 7.6 Verification
+
+`tests/difftest/test_modes_lib.py`, each test on its machine (EGA, CGA, Tandy, Hercules), all memory
+and the whole card state (planes, latches, every register, and here also the status toggle of 3DAh
+/ 3BAh) compared: `gfx_set_mode` (every mode, from start-up and from a drawing state), `gfx_detect`
+(the BIOS bytes varied) and `gfx_saved_mode`, the page routines in every mode 0–13h, fills, pixels,
+lines and clears, the three rectangle copies, both bitmaps, `picture_hline` and `picture_draw`, with
+random coordinates at byte edges, one-byte and reversed spans, odd rows, random pages, colours above
+the mode's bits, random dither tables and (EGA) random graphics controller and map mask registers:
+26 tests, 6957 cases, 0 mismatches. Planted bugs (a missing bank bit, a wrong mask register, the
+retrace wait one read short, swapped dither masks, a missing latch read, the Tandy tail skipped …)
+are each reported. The Unicorn side needed one fix in `cardmodel.py`: Unicorn splits an unaligned
+word read of MMIO into two aligned word reads, which loaded the latches from a byte the CPU never
+reads; a memory hook now reads the CPU's bytes and the MMIO callbacks serve them.

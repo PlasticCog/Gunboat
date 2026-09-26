@@ -46,6 +46,13 @@ void bios_init()
         if (card_machine() == Machine::Hercules) mem_u16(BDA, 0x0063) = 0x03B4;
         mem_u8(0xFC00, 0) = card_machine() == Machine::Tandy ? 0x21 : 0x00;
     }
+    // The EGA BIOS's information bytes (INT 10h AH=12h BL=10h answers from them): 0087h = 60h (256
+    // KB, the EGA active, a colour display), 0088h = 08h (switches 1000: an enhanced colour display
+    // in its 200-line mode, as card.cpp shows the picture; features 0).
+    if (card_machine() == Machine::Ega) {
+        mem_u8(BDA, 0x87) = 0x60;
+        mem_u8(BDA, 0x88) = 0x08;
+    }
     // the BIOS timer and keyboard handlers (the IBM PC entry points)
     mem_u16(0, 8 * 4) = 0xFEA5;
     mem_u16(0, 8 * 4 + 2) = 0xF000;
@@ -93,8 +100,33 @@ u16 bios_get_mode(u8 *bh)
 // INT 10h AH=03h: DX = row << 8 | column of the page's cursor (the shape goes to CX, unused).
 u16 bios_get_cursor(u8 page) { return mem_u16(BDA, u16(BDA_CURSOR + 2 * (page & 7))); }
 
-// INT 10h AX=1A00h: the display combination: AL = 1Ah (supported), BX = 0008h (VGA colour).
-u16 bios_display_combination() { return 0x0008; }
+// INT 10h AX=1A00h: the display combination. A VGA BIOS answers AL = 1Ah (supported) and BX =
+// 0008h (VGA colour); the older cards' BIOSes do not know the function: AX (1A00h) and BX stay.
+u16 bios_display_combination(u16 *bx)
+{
+    if (card_machine() != Machine::Vga) return 0x1A00;
+    *bx = 0x0008;
+    return 0x1A1A;
+}
+
+// INT 10h AH=12h BL=10h: the EGA information, from the BIOS data area: BH = a monochrome display,
+// BL = the memory (0-3: 64-256 KB), CH = the feature bits, CL = the switch settings. The EGA and VGA
+// BIOSes know it; on a CGA, Tandy or Hercules machine BX and CX stay (BL 10h: no EGA).
+void bios_ega_info(u16 *bx, u16 *cx)
+{
+    if (card_machine() != Machine::Ega && card_machine() != Machine::Vga) return;
+    const u8 info = mem_u8(BDA, 0x87), switches = mem_u8(BDA, 0x88);
+    *bx = u16(((info >> 1) & 1) << 8 | ((info >> 5) & 3));
+    *cx = u16((switches >> 4) << 8 | (switches & 0x0F));
+}
+
+// INT 10h AH=05h: the active display page (text modes): its number and its offset in the video
+// memory in the BIOS data area. PORT: the CRTC start is not modelled (no text screen is shown).
+void bios_set_active_page(u8 page)
+{
+    mem_u8(BDA, BDA_PAGE) = page;
+    mem_u16(BDA, BDA_PAGE_START) = u16(page * mem_u16(BDA, BDA_PAGE_SIZE));
+}
 
 // INT 10h AH=0Bh: the CGA palette (BH 0: background and border BL, 1: palette BL).
 void bios_cga_palette(u8 bh, u8 bl) { card_bios_cga_palette(bh, bl); }

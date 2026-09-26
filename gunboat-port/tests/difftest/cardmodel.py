@@ -8,6 +8,8 @@ through Unicorn MMIO callbacks into the planes (as the CPU reaches an EGA's memo
 """
 import struct
 
+from unicorn import UC_HOOK_MEM_READ
+
 PLANES = 0x00000
 LATCH = 0x40000
 SEQ_INDEX, SEQ = 0x40004, 0x40005
@@ -54,6 +56,12 @@ class CardModel:
         orig.ins[0x3BA] = lambda uc: self.inp(0x3BA)
         if machine == 'ega':
             orig.map_ega(self._mmio_read, self._mmio_write)
+            # Unicorn splits an unaligned word read of MMIO into two aligned word reads (136Bh:
+            # 136Ah and 136Ch); the CPU reads the two bytes it asks for, low first (the latches keep
+            # the second). The memory hook sees the CPU's access first: its bytes are read there, and
+            # the MMIO callbacks serve them (a byte only Unicorn's split asks for is not read).
+            self.pending = None
+            orig.uc.hook_add(UC_HOOK_MEM_READ, self._hook_read, None, 0xA0000, 0xAFFFF)
 
     # ---- ports
     def out(self, port, value):
@@ -148,10 +156,23 @@ class CardModel:
                 d ^= latch
             s[PLANES + p * 0x10000 + off] = (d & mask) | (latch & ~mask & 0xFF)
 
+    def _hook_read(self, uc, access, address, size, value, _):
+        self.pending = {}
+        for k in range(size):
+            off = (address - 0xA0000 + k) & 0xFFFF
+            self.pending[off] = self.ega_read(off)
+
     def _mmio_read(self, uc, offset, size, _):
         v = 0
         for k in range(size):
-            v |= self.ega_read((offset + k) & 0xFFFF) << (8 * k)
+            off = (offset + k) & 0xFFFF
+            if self.pending is None:
+                b = self.ega_read(off)
+            else:
+                b = self.pending.pop(off, 0)
+            v |= b << (8 * k)
+        if self.pending is not None and not self.pending:
+            self.pending = None
         return v
 
     def _mmio_write(self, uc, offset, size, value, _):

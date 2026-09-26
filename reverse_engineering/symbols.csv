@@ -1112,6 +1112,15 @@ global,DS:DD2B,gfx_copy_seg,u16,video,spec:video,§1
 global,DS:DD2D,gfx_draw_seg,u16,video,spec:video,§1
 global,DS:DD2F,gfx_visible_seg,u16,video,spec:video,§1
 global,DS:DD31,gfx_page_seg,u16[8],video,spec:video,§1 page segments (mode 13h: 0 = A000h)
+global,DS:DD41,gfx_colour_map,u8[32],video,spec:video,§1 gfx_set_colour's map of colours 0-1Fh to the mode's (copied by gfx_set_mode from DD61 / DD81 / DDA1)
+global,DS:DD61,colour_map_2,u8[32],video,spec:video,§1 the map of the 2-colour modes (6; 0Bh / 0Ch; 11h): colour & 1
+global,DS:DD81,colour_map_4,u8[32],video,spec:video,§1 the map of the CGA 4-colour modes 4 / 5: colour & 3
+global,DS:DDA1,colour_map_16,u8[32],video,spec:video,§1 the map of the 16-colour modes (Tandy 8-0Ah; EGA 0Dh-10h / 12h): colour & 0Fh; also mode 12h's attribute palette (INT 10h AX=1002h)
+global,DS:DDC1,gfx_dither,u8[64],video,spec:video,§2 per colour 0-1Fh: its fill on even rows and on odd rows (CGA / Tandy: a byte of pixels; EGA: a colour each); picture_hline fills with it; copied by gfx_set_mode from DE01 / DE41 / DE81; ega_pal_set sets entries
+global,DS:DE01,dither_2,u8[64],video,spec:video,§2 gfx_dither of the 2-colour modes
+global,DS:DE41,dither_4,u8[64],video,spec:video,§2 gfx_dither of the CGA 4-colour modes (colour c: c * 55h)
+global,DS:DE81,dither_16,u8[64],video,spec:video,§2 gfx_dither of the 16-colour modes (Tandy: c * 11h; EGA: the colour)
+global,DS:DEC1,dac_16,u8[48],video,spec:video,§1 mode 12h's DAC colours 0-15 (INT 10h AX=1012h)
 global,DS:DEF1,mode_interleave,u16[21],video,spec:video,§1 [0] current; [1 + mode] per mode
 global,DS:DF1B,mode_page_bytes,u16[21],video,spec:video,§1 FA00h in mode 13h
 global,DS:DF45,mode_row_bytes,u16[21],video,spec:video,§1 140h in mode 13h
@@ -1125,7 +1134,10 @@ global,DS:E069,line_axis_x,u16,hud,spec:hud,video §2 x step when the error term
 global,DS:E06B,line_axis_y,u16,hud,spec:hud,video §2 y step when the error term is < 0 (0 on a flat line)
 global,DS:E06D,line_err_diag,u16,hud,spec:hud,video §2 2 * minor - 2 * major
 global,DS:E06F,line_err_axis,u16,hud,spec:hud,video §2 2 * minor
+global,DS:E0F4,herc_bda,u8[16],video,spec:video,§1 the BIOS data (0040:0049..0058) of the Hercules modes 0Bh / 0Ch
+global,DS:E112,herc_crtc,u16[9],video,spec:video,§1 the Hercules CRTC registers of modes 0Bh / 0Ch (index | value << 8)
 global,DS:E124,gfx_e124,u16,video,spec:video,§1 cleared by gfx_set_mode
+global,DS:E126,gfx_bitmap_pattern,u16,video,spec:video,§2 the colour's pixel pattern (both bytes) of the CGA / Tandy bitmap paths (gfx_draw_bitmap / gfx_read_bitmap)
 global,DS:E16F,mode_text_rows,u8,video,spec:video,§1 19h; 1Eh in modes 11h/12h
 global,DS:E21C,crt_ctype,u8[257],game_flow,spec:game_flow,MSC _ctype (index c + 1): 1 upper 2 lower 4 digit 8 space
 global,DS:E56E,cms_base_port,u16,sound,spec:sound,§3.3 220h

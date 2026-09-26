@@ -1,8 +1,8 @@
 #pragma once
 // The graphics library (video.md; the same library as Test Drive III's, an older build). Each
-// primitive dispatches on the library mode (gfx_mode_x2); the port implements the mode 13h paths
-// and, where the game needs them outside VGA (start-up and exit in text mode), those too. Routines
-// that always return 0 in the original are void here.
+// primitive dispatches on the library mode (gfx_mode_x2); the port implements the paths of the
+// modes Gunboat sets (CGA 04h, Tandy 09h, EGA 0Dh, VGA 13h) and of the text modes (video.md §7).
+// Routines that always return 0 in the original are void here.
 #include "types.hpp"
 
 namespace gb {
@@ -26,6 +26,7 @@ void gfx_draw_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows);      // 13e2:000
 void gfx_read_bitmap(u16 bits_ds, u16 bytes_per_row, u16 rows);      // 1432:000c
 void text_exit_clear();                                              // 14ff:0001
 void picture_draw(u16 src_ds, s16 runs, u16 width);                  // 1390:0000
+void picture_hline(u16 es, u16 x0, u16 x1);                          // 1390:006e  near: ES, AX = x0, BX = x1
 void gfx_copy_rect(u16 x0, u16 x1, u16 y0, u16 y1, u16 dx, u16 dy_bottom, u16 src_page, u16 dst_page);  // 15a4:0006
 void gfx_put_pixel(s16 x, s16 y);                                    // 14b5:000d
 void ega_pal_set(u16 index, u16 value);                              // 14ae:0005
