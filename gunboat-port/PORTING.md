@@ -7,7 +7,8 @@ the Test Drive III port's `td3port/PORTING.md`.
 ## Architecture
 
 ```text
-src/main.cpp            arguments, mem_load_exe, the machine set-up, then game_main (main 0000:0000)
+src/main.cpp            arguments, mem_load_exe, ADLIB.COM (--sound adlib), the machine set-up, then
+                        game_main (main 0000:0000)
 src/mem.hpp/.cpp        mem[]: GB.EXE at 1000:0000, DGROUP 2B73h, VGA A000h; accessors; exact division;
                         the EXEPACK loader
 src/host.hpp/.cpp       SDL3, the only file that includes it: window, PIT timer, retrace, XT keys,
@@ -21,7 +22,8 @@ src/game/               the game: flow_* (game_flow.md: main, files, keys, scree
                         flow_hq the headquarters (020d), flow_office and flow_front the front end
                         (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md);
                         pending.cpp: placeholders for calls not ported yet
-src/sound/              sound.md: effects and music
+src/sound/              sound.md: effects and music; adlib_driver.cpp: the resident Ad Lib driver
+                        ADLIB.COM (adlib_driver.md), not part of GB.EXE
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
 legacy/                 the Codex prototype (reference only)
@@ -40,6 +42,13 @@ is picked up automatically.
 | `mem_u8/.../u32(seg, off)` | any real-mode address: heap blocks, VGA, the BIOS data area |
 | `FarPtr`, `ds_far`, `ds_far_set`, `far_u8`, `far_add` | 16:16 pointers as stored (offset first); far, not huge, arithmetic |
 | `div32_16`, `idiv32_16`, `div16_8`, `idiv16_8` | every DIV/IDIV; a divide error ends with R6003 as the runtime does |
+
+Below GB.EXE, `mem[]` holds the resident Ad Lib driver when the machine has one (`--sound adlib`,
+the default when the game folder has `ADLIB.COM`): the user's ADLIB.COM with its PSP at
+`ADLIB_PSP` = 0B00h (CS; its data segment `ADLIB_DS` = 0D5Ch), where DOS could have loaded a TSR
+run before the game. `adlib_load` copies the file there (never shipped) and `adlib_install` leaves
+the state its installation leaves (spec `adlib_driver.md` §6–7): INT 65h and INT 8 hooked, the OPL2
+set up. Its routines are C++ functions `adl_*` on that memory, like GB.EXE's.
 
 All game state stays in `mem[]` at its original address. Names come from `symbols.hpp`
 (`DS_`, `CS_`/`CSSEG_`, `FN_`); an unnamed address is written raw with a comment, and gets a name
@@ -99,6 +108,13 @@ helper when the first such function is ported.
   question); `h.set_game_dirs(orig_dir, port_dir)` gives each side its own game folder, so a test
   that writes a file (`roster_save`) runs on temporary copies and compares the written files.
   **Tests never write the real game folder.**
+* **Code outside GB.EXE** (`test_adlib.py`): `h.add_function(name, cs, off, conv, ds, sp)` makes a
+  routine of another program in memory (ADLIB.COM) callable by `h.check(name, ...)`, with its own
+  DS = SS and SP; `h.ignore` lists linear ranges that are not compared (that program's stacks and
+  the SS:SP it saves), `h.sym.add_region` names its memory in reports.
+* **The OPL2 and INT 65h** (`soundmodel.py`): OUT 388h/389h are logged as (register, value) and
+  compared with the port's `host_opl_write` calls; IN 388h reads 06h; INT 65h goes through the
+  interrupt vector as on the CPU (to ADLIB.COM's handler when a test installed it).
 * **Program exit**: `h.check(..., exit_code=0)` expects both sides to end the program with
   `exit(0)` (`quit_to_dos`, e.g. the vacation choice) and compares the memory at that point.
 * **Snapshots of a running original**: `Original.stub(seg, off, fn)` returns its hook; a test can
@@ -112,7 +128,9 @@ helper when the first such function is ported.
   `bridge.hpp`); a test calls `h.check(name, m, regs=..., stack_args=[...], outputs=[...])`.
 * The tests were checked by planting bugs (a wrong clip limit, a missing sign flip, a wrong mask, a
   stray write, a short loop, a missing store, an unsigned character, a size off by one, a fade
-  rounding): each is reported. The fade rounding was only caught once DAC writes were logged.
+  rounding): each is reported. The fade rounding was only caught once DAC writes were logged. The
+  AdLib tests caught a wrong pitch limit, a division loop one step short, a missing counter wrap and
+  an ignored register input (through the OPL write log and all memory).
 
 ## Timing and host rules
 
@@ -123,6 +141,9 @@ helper when the first such function is ported.
 * Every busy-wait loop of the original calls `host_pump()` once per iteration, in the same place
   relative to its test as the original's poll (see the title sprite loop); port 3DAh polls become
   `host_wait_vretrace()`.
+* A timer vector may also point at the resident Ad Lib driver's INT 8 handler (the game's handlers
+  chain to it when it was installed): `run_int8_handler` runs `adl_clock_isr`, which chains to the
+  BIOS.
 * Keys arrive as the XT byte stream (`host_set_kbd_handler`); port 201h reads become
   `host_joy_read`; OPL and speaker writes go to `host_opl_write`/`host_speaker`.
 * In the test DLL, `host_pump()` runs the test's tick, `host_fatal()` and `host_exit()` return an

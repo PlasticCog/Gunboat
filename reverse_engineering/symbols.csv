@@ -447,13 +447,13 @@ func,1af5:0163,mt32_note_off,far void(u16 ch),sound,spec:sound,§4.5 parked
 func,1af5:0192,mpu_command,far u16(u16 cmd),sound,spec:sound,§3.1 ports 330h/331h; 0 = no acknowledge | §3 ports 330h/331h
 func,1af5:01be,mpu_reset,far u16(),sound,spec:sound,§3.1 MT-32 detection: FFh twice | §3 MT-32 detection
 func,1af5:01cf,mpu_write,near void(AL data),sound,spec:sound,§4.5 parked | §3
-func,1af5:01e5,adlib_note_on,far void(u16 ch u16 note u16 vel),sound,spec:sound,§4.5 parked: INT 65h SI=13h
-func,1af5:01fe,adlib_note_off,far void(u16 ch),sound,spec:sound,§4.5 parked: INT 65h SI=14h
-func,1af5:0213,adlib_program,far void(u16 ch u16 program),sound,spec:sound,§4.5 parked: adlib_call(ch; timbre)
+func,1af5:01e5,adlib_note_on,far void(u16 ch u16 note u16 vel),sound,spec:sound,§4.5 INT 65h SI=13h (NoteOn: ch; note-3Ch) | §4.5 parked: INT 65h SI=13h
+func,1af5:01fe,adlib_note_off,far void(u16 ch),sound,spec:sound,§4.5 INT 65h SI=14h (NoteOff) | §4.5 parked: INT 65h SI=14h
+func,1af5:0213,adlib_program,far void(u16 ch u16 program),sound,spec:sound,§4.5 adlib_call(ch; AX*34h; seg); AH is the caller's | §4.5 parked: adlib_call(ch; timbre)
 func,1af5:0238,adlib_load_bin,far u16(far timbres),sound,spec:sound,§3.2 ADLIB.BIN: 80h map bytes + 340h timbres; never closed
-func,1af5:0290,adlib_driver_present,far u16(),sound,spec:sound,§3.2 INT 65h signature | §3 INT 65h signature
-func,1af5:02b0,adlib_driver_init,far void(),sound,spec:sound,§3.2 parked: INT 65h SI=0 | §3 INT 65h function 0
-func,1af5:02b9,adlib_call,far void(u16 a u16 b u16 c),sound,spec:sound,§4.5 parked: INT 65h SI=15h | §4 INT 65h SI=15h
+func,1af5:0290,adlib_driver_present,far u16(),sound,spec:sound,§3.2 INT 65h signature; 0151h with ADLIB.COM V1.51 | §3.2 INT 65h signature | §3 INT 65h signature
+func,1af5:02b0,adlib_driver_init,far void(),sound,spec:sound,§3.2 INT 65h SI=0 (Init) | §3.2 parked: INT 65h SI=0 | §3 INT 65h function 0
+func,1af5:02b9,adlib_call,far void(u16 a u16 b u16 c),sound,spec:sound,§4.5 INT 65h SI=15h (SetVoiceTimbre: voice; timbre far) | §4.5 parked: INT 65h SI=15h | §4 INT 65h SI=15h
 func,1af5:02ce,cms_note_on,far void(u16 ch u16 note u16 vel),sound,spec:sound,§4.5 parked
 func,1af5:02f0,cms_note_off,far void(u16 ch),sound,spec:sound,§4.5 parked
 func,1af5:030c,cms_program,far void(),sound,spec:sound,§4.5 parked (does nothing)

@@ -1,11 +1,13 @@
 // The title music (sound.md §3, §4): device detection (1ace:00e8), the .MUS sequencer music_tick
-// (1af5:0006, from the menu timer) and its PC speaker back end (1af5:033f/0394/03b8, which start
-// scripts of the speaker music driver, speaker_music.cpp).
+// (1af5:0006, from the menu timer), its PC speaker back end (1af5:033f/0394/03b8, which start scripts
+// of the speaker music driver, speaker_music.cpp) and its AdLib back end (1af5:01e5..02b9, which call
+// the resident ADLIB.COM through INT 65h, adlib_driver.cpp).
 //
-// PORT: the MT-32 (MPU-401), AdLib (ADLIB.COM through INT 65h) and Game Blaster (CMS.DRV) back ends
-// are parked: the modelled machine has none of these devices (hw.cpp), so sound_detect picks the
-// speaker. Reaching one of their routines is fatal (sound_parked).
+// PORT: the MT-32 (MPU-401) and Game Blaster (CMS.DRV) back ends are parked: the modelled machine has
+// neither device (hw.cpp). Reaching one of their routines is fatal (sound_parked).
 #include "sound/sound.hpp"
+
+#include <initializer_list>
 
 #include "mem.hpp"
 #include "platform/platform.hpp"
@@ -25,6 +27,19 @@ void set_back_end(u16 note_on, u16 note_off, u16 control)
     ds_far_set(DS_music_control, {control, seg_of(MUSIC_SEG)});
 }
 
+// INT 65h with ES:BX = the caller's stacked arguments (SS:BP+6). PORT: the words are put in DGROUP's
+// stack area (StackLocal), where the driver reads them as it reads the original's stack.
+void int65_stacked(u16 si, std::initializer_list<u16> words)
+{
+    StackLocal args(u16(2 * words.size()));
+    u16 at = args.off();
+    for (const u16 w : words) {
+        ds_u16(at) = w;
+        at = u16(at + 2);
+    }
+    int65(si, args.far());
+}
+
 // CALL FAR [ptr] with up to three stacked words: the routine the far pointer designates.
 void call_back_end(u16 ptr_ds, u16 a0, u16 a1, u16 a2)
 {
@@ -37,9 +52,9 @@ void call_back_end(u16 ptr_ds, u16 a0, u16 a1, u16 a2)
         case 0x0125: sound_parked("mt32_program (1af5:0125)");
         case 0x013F: sound_parked("mt32_note_on (1af5:013f)");
         case 0x0163: sound_parked("mt32_note_off (1af5:0163)");
-        case 0x01E5: sound_parked("adlib_note_on (1af5:01e5)");
-        case 0x01FE: sound_parked("adlib_note_off (1af5:01fe)");
-        case 0x0213: sound_parked("adlib_program (1af5:0213)");
+        case 0x01E5: adlib_note_on(a0, a1, a2); return;
+        case 0x01FE: adlib_note_off(a0); return;
+        case 0x0213: adlib_program(a0, a1, u8(a0 >> 8)); return;  // AX = the channel (see adlib_program)
         case 0x02CE: sound_parked("cms_note_on (1af5:02ce)");
         case 0x02F0: sound_parked("cms_note_off (1af5:02f0)");
         case 0x030C: sound_parked("cms_program (1af5:030c)");
@@ -259,11 +274,32 @@ u16 adlib_driver_present()
     return ax;
 }
 
-// 1af5:02b0 adlib_driver_init: INT 65h with SI = 0. PORT: parked (no AdLib driver).
-void adlib_driver_init() { sound_parked("adlib_driver_init (INT 65h)"); }
+// 1af5:01e5 adlib_note_on (sound.md §4.5): the note - 3Ch goes into the stacked argument itself, then
+// INT 65h function 13h (NoteOn) with ES:BX = the stacked (ch, note - 3Ch, vel): the driver takes two
+// words (vel is ignored).
+void adlib_note_on(u16 ch, u16 note, u16 vel) { int65_stacked(0x13, {ch, u16(note - 0x3C), vel}); }
 
-// 1af5:02b9 adlib_call: INT 65h with SI = 15h, ES:BX = the three stacked words. PORT: parked.
-void adlib_call(u16, u16, u16) { sound_parked("adlib_call (INT 65h)"); }
+// 1af5:01fe adlib_note_off (sound.md §4.5): INT 65h function 14h (NoteOff) with ES:BX = the stacked ch.
+void adlib_note_off(u16 ch) { int65_stacked(0x14, {ch}); }
+
+// 1af5:0213 adlib_program (sound.md §4.5): the program's timbre number music_program_map[program]
+// (AL) times 34h (a 16-bit MUL of AX: AH is the caller's), and adlib_call(ch, that offset, the
+// segment of adlib_timbres). Quirks: the offset of adlib_timbres is not added (the buffer is at
+// offset 0 in the game); AH comes from the caller: music_tick calls with AX = the channel after CBW
+// (0..0Fh), so AH = 0 there.
+void adlib_program(u16 ch, u16 program, u8 ah)
+{
+    const u16 ax = u16(ah << 8 | ds_u8(u16(DS_music_program_map + program)));
+    adlib_call(ch, u16(ax * 0x34), ds_u16(u16(DS_adlib_timbres + 2)));
+}
+
+// 1af5:02b0 adlib_driver_init (sound.md §3.2): INT 65h function 0 (Init: no argument words; ES:BX
+// are the caller's, not read).
+void adlib_driver_init() { int65(0x00, {0, 0}); }
+
+// 1af5:02b9 adlib_call (sound.md §4.5): INT 65h function 15h (SetVoiceTimbre) with ES:BX = the three
+// stacked words (voice, timbre offset, segment).
+void adlib_call(u16 a, u16 b, u16 c) { int65_stacked(0x15, {a, b, c}); }
 
 // 1af5:0311 cms_driver_init: CMS.DRV functions 2, 5 (its tick routine to cms_driver_tick), 6, 9.
 // PORT: parked (no Game Blaster).

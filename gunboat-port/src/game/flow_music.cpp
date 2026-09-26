@@ -24,7 +24,7 @@ void music_start()
         const u16 device = ds_u16(DS_sound_device);
         if (device == 8 || device == 4) crt_strcpy(DS_name_buffer, S_VALK12);
         if (device == 1 || device == 2) crt_strcpy(DS_name_buffer, S_VALK3V);
-        if (device == 4) {  // AdLib: the instruments of voices 4..8 (INT 65h; parked, sound.md)
+        if (device == 4) {  // AdLib: the instruments of voices 4..8 (INT 65h function 15h, sound.md §4.5)
             adlib_call(4, TIMBRE_C, DGROUP);
             for (s16 v = 5; v < 8; v++) adlib_call(u16(v), TIMBRE_B, DGROUP);
             adlib_call(8, TIMBRE_A, DGROUP);

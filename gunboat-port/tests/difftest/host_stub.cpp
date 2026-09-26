@@ -80,7 +80,12 @@ bool host_joy_read(s16 *x, s16 *y, u8 *buttons)
     if (buttons) *buttons = joy_buttons;
     return true;
 }
-void host_opl_write(u8, u8) {}
+namespace {
+std::vector<OplWrite> opl_log;
+}
+void host_opl_write(u8 reg, u8 value) { opl_log.push_back({reg, value}); }
+const std::vector<OplWrite> &host_stub_opl_log() { return opl_log; }
+void host_stub_opl_clear() { opl_log.clear(); }
 namespace {
 u8 pit2_low;
 }

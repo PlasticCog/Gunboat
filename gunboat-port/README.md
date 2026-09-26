@@ -13,7 +13,7 @@ mission and outfit the boat; the game then stops with "not ported yet" at the mi
 | Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio, files |
 | Platform (`src/platform/`) | DOS files and memory, the C runtime models, the BIOS model, the graphics library (VGA), palette, LZW pictures, text, keyboard and timer interrupts, joystick (host gamepad) |
 | Game flow (`src/game/flow_*`) | main, config_load, the archive and far buffers, keys and the demo script, the title sequence, the credits, the menu, the headquarters quiz, the roster file, the whole front end (office, roster, personnel files, briefings, maps, spec sheets, outfitting, debrief) |
-| Sound (`src/sound/`) | the effects driver, the music sequencer and speaker music on the PC speaker, the device detection (AdLib, MT-32, CMS parked) |
+| Sound (`src/sound/`) | the effects driver, the music sequencer, the title music on the PC speaker or on an AdLib through the translated Ad Lib driver `ADLIB.COM` (`--sound adlib\|speaker`, default adlib when the game folder has it), the device detection (MT-32, CMS parked) |
 | Ported functions | 206 original functions, each matching the original on all memory |
 | Differential tests (`tests/difftest/`) | 64 tests, 46,845 cases, 0 mismatches: memory, DAC writes, speaker and timer events, open files, written files |
 | Scene checks (`tests/scenes/`) | the copyright screen and the title picture match DOSBox captures of the original on 100% of pixels |

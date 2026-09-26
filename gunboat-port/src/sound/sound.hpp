@@ -1,13 +1,18 @@
 #pragma once
 // Sound (sound.md): the effects driver (segment 12ed, PC speaker path; Tandy parked), the music
-// sequencer and its device back ends for the PC speaker (1ace, 1af5, 1b37), and the device detection
-// (1ace:00e8, 1af5, 1b5f). One function per original function. Assembly routines take the registers
-// they read as parameters (di = the voice offset 0, 2, 4, 6 of the effects driver) and return what
-// their callers use (a carry flag as bool).
+// sequencer and its device back ends for the PC speaker and the AdLib (1ace, 1af5, 1b37), the device
+// detection (1ace:00e8, 1af5, 1b5f), and the resident Ad Lib driver ADLIB.COM that the AdLib back end
+// calls through INT 65h (adlib_driver.cpp). One function per original function. Assembly routines
+// take the registers they read as parameters (di = the voice offset 0, 2, 4, 6 of the effects driver)
+// and return what their callers use (a carry flag as bool).
 //
 // Hardware (hw.cpp, PORT): the PC speaker (PIT channel 2, port 61h bits 0-1) becomes host_speaker();
-// the effects timer's PIT channel 0 becomes host_set_timer(); the modelled machine has no MPU-401, no
-// AdLib driver, no Game Blaster / Sound Blaster and no Tandy sound chip (sound.md §3.4).
+// the effects timer's PIT channel 0 becomes host_set_timer(); the AdLib's OPL2 (ports 388h/389h)
+// becomes host_opl_write(). The modelled machine has no MPU-401, no Game Blaster / Sound Blaster and
+// no Tandy sound chip; it has an AdLib driver only when ADLIB.COM was installed (--sound adlib,
+// sound.md §3.4).
+#include <string>
+
 #include "mem.hpp"
 #include "types.hpp"
 
@@ -50,10 +55,13 @@ void sound_detect(u16 mask, FarPtr cms_buf, FarPtr adlib_buf);  // 1ace:00e8  fa
 void music_tick();                          // 1af5:0006  far C (menu timer)
 u16 mpu_command(u16 cmd);                   // 1af5:0192  AX: 0 = no acknowledge
 u16 mpu_reset();                            // 1af5:01be  AX
+void adlib_note_on(u16 ch, u16 note, u16 vel);  // 1af5:01e5  far C: INT 65h function 13h
+void adlib_note_off(u16 ch);                    // 1af5:01fe  far C: INT 65h function 14h
+void adlib_program(u16 ch, u16 program, u8 ah); // 1af5:0213  far C; AH = the caller's (see music.cpp)
 u16 adlib_load_bin(FarPtr timbres);         // 1af5:0238  AX = the last read's result
 u16 adlib_driver_present();                 // 1af5:0290  AX: 0 = no driver
-void adlib_driver_init();                   // 1af5:02b0  parked (INT 65h)
-void adlib_call(u16 a, u16 b, u16 c);       // 1af5:02b9  parked (INT 65h)
+void adlib_driver_init();                   // 1af5:02b0  INT 65h function 0
+void adlib_call(u16 a, u16 b, u16 c);       // 1af5:02b9  INT 65h function 15h (voice, timbre far)
 void cms_driver_init();                     // 1af5:0311  parked (CMS.DRV)
 void speaker_note_on(u16 ch, u16 note, u16 vel);  // 1af5:033f  far C
 void speaker_note_off(u16 ch);                    // 1af5:0394  far C
@@ -86,6 +94,76 @@ void cms_opl_write(u16 ax);              // 1b5f:00d4  AL = register, AH = value
 void cms_opl_delay();                    // 1b5f:00e7
 bool cms_dsp_read(u8 &al);               // 1b5f:00f8  carry: time-out
 bool cms_dsp_write(u8 al);               // 1b5f:0116  carry: time-out
+
+// ---- the Ad Lib sound driver ADLIB.COM V1.51 (adlib_driver.cpp, spec adlib_driver.md). Not part of
+// GB.EXE: a TSR the player ran before the game. Its resident image lives in mem[] where DOS would
+// have loaded it: PSP (= CS) at ADLIB_PSP, data segment DS = SS = ES = ADLIB_DS (CS + 25Ch). Names:
+// adl_ + the driver routine (the Ad Lib toolkit's where the code is that routine), ADLIB.COM offset.
+constexpr u16 ADLIB_PSP = 0x0B00;
+constexpr u16 ADLIB_DS = ADLIB_PSP + 0x025C;
+constexpr u16 ADLIB_INT65_OFF = 0x02EF;      // the INT 65h handler (CS offset)
+constexpr u16 ADLIB_CLOCK_ISR_OFF = 0x0621;  // the INT 8 handler (CS offset)
+bool adlib_load(const std::string &path, std::string &err);  // DOS: PSP + ADLIB.COM at ADLIB_PSP:0100
+void adlib_install();          // ADLIB.COM's start-up and main without options: the resident state
+bool adlib_is_int65(FarPtr v);  // v is the resident driver's INT 65h handler
+bool adlib_is_clock_isr(FarPtr v);
+void int65(u16 si, FarPtr esbx);  // INT 65h (SI = function, ES:BX = the argument words)
+// The driver's routines. C functions take their stack words; a long is returned as AX:BX (u32).
+void adl_int65_handler(u16 si, FarPtr esbx);          // 02ef  INT 65h: dispatch on SI
+u16 adl_install_int65();                              // 0273  AX = 0 installed, else the version
+u16 adl_driver_installed();                           // 0298  AX: the version word, 0 = not found
+void adl_pit_set_ch0(u16 ax);                         // 0586  PIT channel 0 divisor = AX
+void adl_clock_install();                             // 05d4  INT 8 = clock_isr, PIT 18.2 Hz
+void adl_clock_isr();                                 // 0621  INT 8
+void adl_snd_output(u16 reg, u16 val);                // 06ce  OPL2 register write
+void adl_init_event_pool();                           // 070a
+void adl_clear_voice_flags();                         // 074e
+void adl_init_voice_state();                          // 0773
+void adl_clear_event_ptrs();                          // 079c
+void adl_set_tempo(u16 tempo);                        // 083e
+void adl_driver_setup(u16 buf, u16 size, u16 port, u16 w);  // 08aa
+void adl_fn_init();                                   // 08dc  function 0
+void adl_set_mode(u16 mode);                          // 0991  function 6
+void adl_set_fn0a_value(u16 v);                       // 0c23  function 0Ah
+u16 adl_seq_tick(u16 lo, u16 hi);                     // 0cf8  AX = ticks to the next call
+u16 adl_event_slot_a(u16 type, u16 voice);            // 1212  AX = a DS pointer (0 for some)
+u16 adl_event_slot_b(u16 type, u16 voice);            // 129e  AX = a DS pointer
+void adl_init_event_queue();                          // 1491
+void adl_set_pitch_range(u16 range);                  // 165a
+void adl_set_wave_sel(u16 state);                     // 167e
+u32 adl_calc_prem_fnum(u16 num, u16 den);             // 16b5  AX:BX
+void adl_set_fnum(u16 fvec, u16 num, u16 den);        // 1756
+void adl_init_fnums();                                // 17d6
+void adl_init_fnum_ptrs();                            // 186f
+void adl_init_slot_volume();                          // 198e
+void adl_set_perc_mode(u16 mode);                     // 19b9
+void adl_set_slot_prm(u16 slot, u16 prm, u16 val);    // 1b36
+void adl_snd_set_prm(u16 slot, u16 prm);              // 1b60
+void adl_snd_set_all_prm(u16 slot);                   // 1be2
+void adl_snd_s_ksl_level(u16 slot);                   // 1c1d
+void adl_snd_s_note_sel();                            // 1c9d
+void adl_snd_s_feed_fm(u16 slot);                     // 1cc0
+void adl_snd_s_att_decay(u16 slot);                   // 1d18
+void adl_snd_s_sus_release(u16 slot);                 // 1d59
+void adl_snd_s_avek(u16 slot);                        // 1d9a
+void adl_snd_s_am_vib_rhythm();                       // 1e4b
+void adl_snd_wave_select(u16 slot);                   // 1ea3
+void adl_note_on(u16 voice, u16 pitch);               // 1ee7  function 13h
+void adl_note_off(u16 voice);                         // 1fbf  function 14h
+void adl_set_freq(u16 voice, u16 pitch, u16 key_on);  // 2018
+void adl_sound_chut(u16 voice);                       // 20a6
+void adl_sound_cold_init(u16 port, u16 w);            // 20cf
+void adl_sound_warm_init();                           // 2100
+void adl_init_slot_params();                          // 21ba
+void adl_set_gparam(FarPtr params);                   // 2200
+void adl_set_voice_timbre(u16 voice, FarPtr params);  // 223a  function 15h
+void adl_set_slot_param(u16 slot, FarPtr params, u16 wave);  // 2319
+struct AdlLdiv {
+    u32 quot, rem;  // AX:BX, CX:DX
+};
+AdlLdiv adl_ldiv(u32 a, u32 b);                       // 23d9  AX:BX / CX:DX, signed
+u32 adl_lmul(u32 a, u32 b);                           // 2481  AX:BX * CX:DX
+u16 adl_inp(u16 port);                                // 24ae  AX = IN port
 
 // ---- the machine's sound hardware (hw.cpp). PORT: hardware state, not game state (sound.md §3.4).
 void spk_gate(bool on);          // in al,61h / and al,0FCh or or al,3 / out 61h,al

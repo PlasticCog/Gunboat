@@ -5,9 +5,11 @@ Confidence tags as in `simulation.md`. Unlike the platform and video code, Gunbo
 is **not** Test Drive III's: TD3 has its own AdLib driver, Gunboat drives Ad Lib Inc.'s resident
 driver and an MT-32.
 
-Port: `gunboat-port/src/sound/` (the effects driver, the music sequencer, the PC speaker back end
-and driver, the detection); tests `gunboat-port/tests/difftest/test_sound.py` with the hardware model
-`soundmodel.py` (§3.4). Notation: `w[X]` / `b[X]` = word / byte at DS:X; DI = a voice offset.
+Port: `gunboat-port/src/sound/` (the effects driver, the music sequencer, the PC speaker and AdLib
+back ends, the speaker driver, the detection, and the resident Ad Lib driver `ADLIB.COM` that the
+AdLib back end calls: spec `adlib_driver.md`); tests `gunboat-port/tests/difftest/test_sound.py` and
+`test_adlib.py` with the hardware model `soundmodel.py` (§3.4). Notation: `w[X]` / `b[X]` = word / byte
+at DS:X; DI = a voice offset.
 
 ## 1. Two systems
 
@@ -146,7 +148,8 @@ until bit 7 is clear; AX = xxFEh if 330h reads FEh (AH = the caller's), else 0 (
 
 `adlib_driver_present()`: the INT 65h vector v (DOS 3565h); AX = `w[v.seg : v.off − 18h]` if the 19
 bytes at `v.off − 16h` equal `"SOUND-DRIVER-AD-LIB"` (DS:E61A, REPE CMPSB), else 0 (so a driver whose
-word is 0 counts as absent). `adlib_load_bin(buf)`: `mus_open("adlib.bin")`; returns FFFFh only for
+word is 0 counts as absent). With ADLIB.COM V1.51 resident the word is its version, 0151h.
+`adlib_driver_init()` (`1af5:02b0`): INT 65h function 0, Init (adlib_driver.md §4.1). `adlib_load_bin(buf)`: `mus_open("adlib.bin")`; returns FFFFh only for
 handle 0 (quirk: an open error FFFFh goes on, the reads fail); 80h bytes to `DS:E59A`
 (`music_program_map`, program → timbre), 340h bytes (16 timbres of 34h) to buf (`far[E596]`); the
 file is never closed; AX = the last read's result.
@@ -162,11 +165,21 @@ timer 1 (`cms_opl_write` reg/value with 5-read delays, `cms_opl_wait` up to 40h 
 
 ### 3.4 The modelled machine **verified** (tests)
 
-The port models a PC with a PC speaker and nothing else (`sound/hw.cpp`, `soundmodel.py`): 330h/331h
-read FFh (the MPU waits time out: `mpu_reset` = 0 after 2 × 20000 reads), the INT 65h vector is
-0000:0000 (the signature at 0000:FFEA does not match), the Creative ports read FFh (`cms_detect` = 0),
-FC00:0000 = 0. So `sound_detect(0Fh)` gives device 0, one voice, the speaker back end, and
-`music_start` loads `VALKPC.MUS`. The absent devices' probes do not pump the host (bounded loops).
+The port models a PC with a PC speaker (`sound/hw.cpp`, `soundmodel.py`) and, with `--sound adlib`
+(the default when the game folder has `ADLIB.COM`), an AdLib whose driver the player installed before
+the game (adlib_driver.md): the OPL2 at 388h/389h (`host_opl_write`; status reads 06h) and ADLIB.COM
+resident at 0B00:0000 with INT 65h and INT 8 hooked. 330h/331h read FFh (the MPU waits time out:
+`mpu_reset` = 0 after 2 × 20000 reads), the Creative ports read FFh (`cms_detect` = 0), FC00:0000 = 0.
+
+* Speaker only (`--sound speaker`): the INT 65h vector is 0000:0000 (the signature at 0000:FFEA does
+  not match): `sound_detect(0Fh)` gives device 0, one voice, the speaker back end, and `music_start`
+  loads `VALKPC.MUS`.
+* AdLib: `adlib_driver_present` = 0151h: `sound_detect(0Fh)` runs the driver's Init, gives device 4,
+  nine voices, the AdLib back end, loads `ADLIB.BIN`; `music_start` sets the instruments of voices
+  4..8 and loads `VALK12.MUS`. The game's timer handlers chain to the driver's INT 8 handler, which
+  chains to the BIOS (adlib_driver.md §5).
+
+The absent devices' probes do not pump the host (bounded loops).
 
 ## 4. Music **verified**
 
@@ -255,18 +268,33 @@ The note script `11 dd dd 01 vv vv 75 72 E6 65 4E E6` sets the divisor and volum
 (`02 06 00` wait 6, `00`, `14 00 00` add 0, `02 06 00`, `00`, `03` return) and jumps back: a note
 sustains until the release script E67D (`03`: the voice ends).
 
-### 4.5 Parked back ends (not ported)
+### 4.5 AdLib back end (`1af5:01e5..02b9`) **verified** (ported: `sound/music.cpp`)
+
+The calls go to the resident `ADLIB.COM` through INT 65h with SI = the function and ES:BX = the
+caller's stacked arguments (SS:BP+6); the driver copies as many words as the function takes
+(adlib_driver.md §3).
+
+```c
+adlib_note_on(c, n, v)   1af5:01e5   the stacked n -= 3Ch; INT 65h 13h (NoteOn: c, n - 3Ch; v is not taken)
+adlib_note_off(c)        1af5:01fe   INT 65h 14h (NoteOff: c)
+adlib_program(c, p)      1af5:0213   AL = E59A[p] (music_program_map); adlib_call(c, AX × 34h, w[E598])
+adlib_driver_init()      1af5:02b0   INT 65h 0 (Init)
+adlib_call(a, b, s)      1af5:02b9   INT 65h 15h (SetVoiceTimbre: voice a, timbre s:b)
+```
+
+Quirks: `adlib_program` multiplies AX (a 16-bit MUL) but loads only AL: AH is the caller's
+(`music_tick`: the channel after CBW, so 0); the timbre buffer's offset `w[E596]` is not added (0 in
+the game). The timbres are 34h bytes (13 words per operator); the driver reads the wave selects from
+the 4 bytes after them (adlib_driver.md §4.4).
+
+### 4.6 Parked back ends (not ported)
 
 MT-32: `mt32_note_on` (`013f`: note kept in `E57C[c]`, 9c n v through `mpu_write` `01cf`, which waits
 for 331h bit 6 and writes 330h), `mt32_note_off` (`0163`: 8c n 0, Bc 7Bh 0), `mt32_program` (`0125`:
-Cc, `E59A[p−1]`). AdLib through INT 65h (`ES:BX` = the stacked arguments): `adlib_note_on` (`01e5`,
-SI = 13h, the note − 3Ch), `adlib_note_off` (`01fe`, SI = 14h), `adlib_program` (`0213`:
-`adlib_call(c, E59A[p] × 34h, seg of E596)` — quirk: the timbre buffer's offset is ignored),
-`adlib_driver_init` (`02b0`, SI = 0), `adlib_call` (`02b9`, SI = 15h). CMS through the loaded
-`CMS.DRV` at `far[F0E8]` (AH = function): `cms_note_on` (`02ce`: AH 8, AL 9c, DH n, DL v),
-`cms_note_off` (`02f0`: AH 8, AL 8c, DH `E57C[c]`), `cms_program` (`030c`: nothing),
-`cms_driver_init` (`0311`: function 2 with DX:CX = DS:F21A, 5 → `far[F5D8]` the driver's tick, 6
-with DS:E62D, 9).
+Cc, `E59A[p−1]`). CMS through the loaded `CMS.DRV` at `far[F0E8]` (AH = function): `cms_note_on`
+(`02ce`: AH 8, AL 9c, DH n, DL v), `cms_note_off` (`02f0`: AH 8, AL 8c, DH `E57C[c]`), `cms_program`
+(`030c`: nothing), `cms_driver_init` (`0311`: function 2 with DX:CX = DS:F21A, 5 → `far[F5D8]` the
+driver's tick, 6 with DS:E62D, 9).
 
 ## 5. PORT decisions
 
@@ -274,15 +302,16 @@ with DS:E62D, 9).
   `host_speaker(divisor, on)`: one call per completed PIT ch2 divisor and per change of port 61h
   bits 0-1 (on = both set). The PIT ch0 programming becomes `host_set_timer(13B1h, sfx_timer_isr)` and
   `host_set_timer(0, bios_tick)`; the chain to the saved vector supports the BIOS handler only.
-* The Tandy chip is parked (port writes dropped, memory effects ported). MT-32, AdLib and CMS paths
-  are unreachable on the modelled machine and fatal if reached (`sound_parked`).
-* AdLib music later: a translation of the INT 65h functions of `ADLIB.COM` (Ad Lib Inc. sound driver
-  V1.51) that the game calls (0, 13h, 14h, 15h) on Nuked-OPL3, with `VALK12.MUS`.
+* The Tandy chip is parked (port writes dropped, memory effects ported). MT-32 and CMS paths are
+  unreachable on the modelled machine and fatal if reached (`sound_parked`).
+* AdLib: `ADLIB.COM` (Ad Lib Inc. sound driver V1.51) is loaded from the game folder into mem[] and
+  installed as its own start-up would (`--sound adlib`, the default when the file is there); its INT
+  65h functions 0, 13h, 14h, 15h, its INT 8 handler and its installation are translated to C++
+  (adlib_driver.md, `sound/adlib_driver.cpp`); the OPL2 is Nuked-OPL3 (`host_opl_write`).
 * Timing: the host runs the handlers at the PIT rates from sample time (platform §1).
 
 ## 6. Open questions
 
-* The `ADLIB.COM` implementation of INT 65h functions 0, 13h, 14h, 15h.
 * The Tandy music output (`1b37:016f`: (divisor × 1800h × 2) >> 16 rounded, halved to ≤ 3FFh, out
   C0h/C1h, attenuation `vol ^ 0Fh`) and the Tandy effects' sound when that device is taken up.
 
@@ -298,3 +327,5 @@ with DS:E62D, 9).
   SI = 15h) with timbres from the EXE (DS:0822/0856/088A, game_flow); `ADLIB.BIN` is loaded by
   `sound_detect` (§3.2).
 * `VALKPC.MUS` is the speaker's, `VALK3V.MUS` the Tandy's and the CMS's (§4.1).
+* `adlib_program` has a hidden input, AH (§4.5); `adlib_driver_present` returns ADLIB.COM's version
+  word 0151h (§3.2). The ADLIB.COM functions are specified in adlib_driver.md.
