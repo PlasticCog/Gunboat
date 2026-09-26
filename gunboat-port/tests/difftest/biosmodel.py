@@ -5,6 +5,8 @@ ports the graphics library touches. Keep it in step with bios.cpp.
 """
 import struct
 
+import cardmodel
+
 from unicorn.x86_const import (UC_X86_REG_AX, UC_X86_REG_BX, UC_X86_REG_CX, UC_X86_REG_DX,
                                UC_X86_REG_ES)
 
@@ -97,6 +99,8 @@ class BiosModel:
                 uc.mem_write(0xA0000, bytes(0x10000))
         if self.machine != 'vga':
             self.card.bios_set_mode(mode, clear)
+            # the BIOS's copies of the CGA mode control and colour select registers (bios.cpp)
+            uc.mem_write(BDA + 0x65, bytes([self.card.s[cardmodel.CGA_MODE], self.card.s[cardmodel.CGA_COLOUR]]))
         if mode == 0x13:
             for i in range(256):
                 self.dac_write(i, 0, 0, 0)
@@ -128,7 +132,8 @@ class BiosModel:
             for k in range(cx):
                 self.dac_write((bx + k) & 0xFF, *table[3 * k:3 * k + 3])
         elif ah == 0x0B and self.machine != 'vga':
-            self.card.bios_cga_palette(bx >> 8, bx & 0xFF)
+            self.card.bios_cga_palette((bx >> 8) & 0xFF, bx & 0xFF)
+            uc.mem_write(BDA + 0x66, bytes([self.card.s[cardmodel.CGA_COLOUR]]))
         elif ax == 0x1000 and self.machine != 'vga':
             self.card.bios_palette_reg(bx & 0xFF, bx >> 8)
         elif ax == 0x1001 and self.machine != 'vga':

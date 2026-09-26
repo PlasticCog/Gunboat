@@ -97,22 +97,52 @@ void pal_fade_out_vga()
     if (ds_u16(DS_video_mode) == 0x13) pal_fade_out();
 }
 
-// 00f2:0f24 ega_pal_entry: a palette register through ega_pal_set (14ae:0005; the value's low byte
-// only in Tandy mode 9). In mode 13h ega_pal_set does nothing.
+// 00f2:0f24 ega_pal_entry (video.md §3): a colour pattern of the library through ega_pal_set
+// (14ae:0005; the value's low byte only in Tandy mode 9). In mode 13h ega_pal_set does nothing.
 void ega_pal_entry(u16 index, u16 value)
 {
     ega_pal_set(index, ds_u16(DS_video_mode) == 9 ? u8(value) : value);
 }
 
-// 00f2:0f46 ega_pal_apply: the 16 (EGA, Tandy) or 32 (CGA) palette registers from the tables
-// DS:0944 / DS:0964; nothing in other modes. PORT: those modes are not ported.
+// 00f2:0f46 ega_pal_apply (video.md §3): the colour patterns of the palette file into the library
+// (ega_pal_entry): CGA (4) patterns 0..1Fh from cga_patterns; Tandy (9) patterns 10h..1Fh from
+// ega_patterns, each colour & 0Fh doubled into both nibbles (* 11h); EGA (0Dh) patterns 10h..1Fh
+// from ega_patterns; nothing in other modes.
 void ega_pal_apply()
 {
-    const u16 mode = ds_u16(DS_video_mode);
-    if (mode != 4 && mode != 9 && mode != 0x0D) return;
+    switch (ds_u16(DS_video_mode)) {
+    case 4:
+        for (s16 i = 0; i < 0x20; i++) ega_pal_entry(u16(i), ds_u16(u16(DS_cga_patterns + 2 * i)));
+        break;
+    case 9:
+        for (s16 i = 0; i < 0x10; i++)
+            ega_pal_entry(u16(i + 0x10), u16((ds_u16(u16(DS_ega_patterns + 2 * i)) & 0x0F) * 0x11));
+        break;
+    case 0x0D:
+        for (s16 i = 0; i < 0x10; i++) ega_pal_entry(u16(i + 0x10), ds_u16(u16(DS_ega_patterns + 2 * i)));
+        break;
+    default:
+        break;
+    }
 }
 
-// 00f2:0fea ega_pal_init: Tandy and EGA palette set-up (PORT: not ported), then ega_pal_apply.
-void ega_pal_init() { ega_pal_apply(); }
+// 00f2:0fea ega_pal_init (video.md §3): the palette registers of the palette file: Tandy (9) first
+// converts ega_palette in place from the EGA's rgbRGB to its IRGB (bit 4, the 200-line intensity,
+// becomes bit 3; bits 0-2 stay; the high byte is cleared), so a second call on the same table
+// loses the intensity (kept); Tandy and EGA (0Dh) load the 16 registers (gfx_set_ega_palette);
+// then the colour patterns (ega_pal_apply).
+void ega_pal_init()
+{
+    const u16 mode = ds_u16(DS_video_mode);
+    if (mode == 9) {
+        s16 i = 0;
+        do {
+            const u16 si = u16(DS_ega_palette + 2 * i);
+            ds_u16(si) = u16((ds_u8(si) & 0x10) >> 1 | (ds_u16(si) & 7));
+        } while (++i < 0x10);
+    }
+    if (mode == 9 || mode == 0x0D) gfx_set_ega_palette(DS_ega_palette);
+    ega_pal_apply();
+}
 
 } // namespace gb

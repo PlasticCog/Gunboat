@@ -154,7 +154,7 @@ void config_load()
     } else {
         ds_u8(DS_hercules_mode) = 0;
         gfx_set_mode(s16(ds_u16(DS_video_mode)));
-        // PORT: mode 4: ega_pal_register(1, 0) (147c:000f), the CGA palette: not ported.
+        if (ds_u16(DS_video_mode) == 4) ega_pal_register(1, 0);  // CGA: the bright palette 1 on black
     }
     gfx_set_visible_page(0);
     ds_u16(DS_flow_scratch) = gfx_alloc_page(1);

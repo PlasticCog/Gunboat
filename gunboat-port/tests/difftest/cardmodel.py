@@ -106,9 +106,9 @@ class CardModel:
             s[ATTR_FLIP] = 0
             s[STATUS] ^= 1
             return 0x08 if s[STATUS] else 0x00
-        if port == 0x3BA:
+        if port == 0x3BA:   # bit 7 (vertical sync) and bit 3 (the video dots)
             s[STATUS] ^= 1
-            return 0x80 if s[STATUS] else 0x00
+            return 0x88 if s[STATUS] else 0x00
         return 0xFF
 
     # ---- EGA memory

@@ -161,9 +161,7 @@ void front_end()
     pal_fade_out_vga();
     engine_sound_off();
     const u16 mode = ds_u16(DS_video_mode);
-    if (mode == 9 || mode == 0x0D) {
-        // PORT: ega_pal_register(8, DS:0934) (147c:000f), EGA and Tandy only, is not ported.
-    }
+    if (mode == 9 || mode == 0x0D) ega_pal_register(8, ds_u16(u16(DS_ega_palette + 2 * 8)));  // the flash register back
     file_load_near(S_DAT5, DAT5);
     ds_u16(DS_office_face_hold) = 0;
     ds_u16(DS_front_end_running) = 1;
