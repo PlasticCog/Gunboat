@@ -1,9 +1,12 @@
 // Gunboat (Accolade, 1990): faithful C++/SDL3 port of GB.EXE. Entry point.
 //
-// usage: gunboat [--game-dir DIR] [--scale N] [--fullscreen] [--check] [--host-test]
+// usage: gunboat [--game-dir DIR] [--scale N] [--fullscreen] [--fps N] [--check] [--host-test]
 //   --game-dir   folder with the original game files (default: the current folder)
 //   --scale      initial window scale: 320x240 times N (default 3)
 //   --fullscreen start in full screen (Alt+Enter switches)
+//   --fps        frames per second of the 3D stations (default 15: the mission clock then runs in
+//                real time, 15 simulation passes per game second; 0 = as fast as possible, the
+//                original's rule; PORT, simulation.md §1.1)
 //   --check      load and verify GB.EXE, print a summary and exit (no window)
 //   --host-test  developer check of the SDL host: runs the three timer rates for a moment and
 //                compares the interrupts counted with the PIT rates (use SDL_VIDEO_DRIVER=dummy)
@@ -30,7 +33,7 @@ namespace {
 
 int usage(const char *prog)
 {
-    std::fprintf(stderr, "usage: %s [--game-dir DIR] [--scale N] [--fullscreen] [--check] [--host-test]\n", prog);
+    std::fprintf(stderr, "usage: %s [--game-dir DIR] [--scale N] [--fullscreen] [--fps N] [--check] [--host-test]\n", prog);
     return 2;
 }
 
@@ -84,6 +87,7 @@ int main(int argc, char **argv)
         if (!std::strcmp(a, "--game-dir") && v) { dir = v; i++; }
         else if (!std::strcmp(a, "--scale") && v) { scale = std::atoi(v); i++; }
         else if (!std::strcmp(a, "--fullscreen")) fullscreen = true;
+        else if (!std::strcmp(a, "--fps") && v) { host_set_frame_rate(std::atoi(v)); i++; }
         else if (!std::strcmp(a, "--check")) check = true;
         else if (!std::strcmp(a, "--host-test")) host_test = true;
         else return usage(argv[0]);

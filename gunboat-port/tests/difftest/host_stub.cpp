@@ -66,6 +66,8 @@ namespace {
 u8 pit2_low;
 }
 u8 host_pit2_low() { return pit2_low; }
+void host_set_frame_rate(int) {}
+void host_frame_pace() {}  // the tests' time is the tick model
 void host_stub_set_pit2(u8 v) { pit2_low = v; }
 namespace {
 std::vector<SpeakerEvent> speaker_log;

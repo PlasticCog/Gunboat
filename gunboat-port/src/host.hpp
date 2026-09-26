@@ -34,6 +34,13 @@ void host_set_frame_source(bool (*compose)(u32 *xrgb), int w, int h);
 // calls this once per iteration. Sleeps briefly when nothing was due.
 void host_pump();
 
+// Frame pacing of the 3D stations (PORT: simulation.md §1.1). The original simulates once per
+// drawn frame with no frame limiter, as fast as the PC could draw; the port waits (pumping) until
+// at least 1/fps s have passed since the previous call. fps = 0: no wait (the original's rule).
+// The mission loop calls it once per pass on the 3D stations; the test stub does nothing.
+void host_set_frame_rate(int fps);
+void host_frame_pace();
+
 // Waits for the start of the next vertical retrace of the emulated VGA (mode 13h: 70.086 Hz),
 // pumping meanwhile. Replaces the port 3DAh polls.
 void host_wait_vretrace();

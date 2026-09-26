@@ -422,6 +422,23 @@ void host_pump()
     }
 }
 
+namespace {
+Uint64 frame_period_ns = SDL_NS_PER_SECOND / 15;
+Uint64 last_frame_ns;
+} // namespace
+
+void host_set_frame_rate(int fps) { frame_period_ns = fps > 0 ? SDL_NS_PER_SECOND / Uint64(fps) : 0; }
+
+void host_frame_pace()
+{
+    if (frame_period_ns == 0) return;
+    const Uint64 due = last_frame_ns + frame_period_ns;
+    while (SDL_GetTicksNS() < due) host_pump();
+    const Uint64 now = SDL_GetTicksNS();
+    // keep the rhythm, but do not try to catch up after a stall (a full-screen station, a drag)
+    last_frame_ns = now - due < frame_period_ns ? due : now;
+}
+
 // VGA 320x200 (mode 13h) refresh: 25.175 MHz / (800 x 449) = 70.086 Hz.
 void host_wait_vretrace()
 {
