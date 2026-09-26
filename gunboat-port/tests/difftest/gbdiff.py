@@ -24,7 +24,9 @@ import shutil
 import struct
 import subprocess
 
-from unicorn import (Uc, UcError, UC_ARCH_X86, UC_MODE_16, UC_HOOK_INTR, UC_HOOK_INSN,
+import dosmodel
+
+from unicorn import (Uc, UcError, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE, UC_HOOK_INTR, UC_HOOK_INSN,
                      UC_HOOK_MEM_INVALID)
 from unicorn.x86_const import (UC_X86_REG_AX, UC_X86_REG_BX, UC_X86_REG_CX, UC_X86_REG_DX,
                                UC_X86_REG_SI, UC_X86_REG_DI, UC_X86_REG_BP, UC_X86_REG_SP,
@@ -92,18 +94,33 @@ def load_image():
     return _image
 
 
+def returns_far(file_seg, off, entry):
+    """True if the function returns with RETF. The index marks only far-call targets as far, but
+    MSC also calls far functions with PUSH CS / CALL near, so the code decides."""
+    from capstone import Cs, CS_ARCH_X86, CS_MODE_16
+    image = load_image()
+    start = lin(seg_of(file_seg), off)
+    md = Cs(CS_ARCH_X86, CS_MODE_16)
+    for insn in md.disasm(image[start:start + 0x2000], off):  # the index's end can be early
+        if insn.mnemonic in ('retf', 'lret'):
+            return True
+        if insn.mnemonic == 'ret':
+            return False
+    return entry['far'] if entry else True
+
+
 class Symbols:
     """symbols.csv names, the calling convention from the function index, names for DS offsets."""
 
     def __init__(self):
         self.funcs, self.ds = {}, []
-        far = {f['start']: f['far'] for f in json.loads((RE / 'map' / 'gb_functions.json').read_text())['functions']}
+        index = {f['start']: f for f in json.loads((RE / 'map' / 'gb_functions.json').read_text())['functions']}
         with open(RE / 'symbols.csv', newline='', encoding='utf-8') as fh:
             for r in csv.DictReader(fh):
                 a = r['address']
                 if r['kind'] == 'func':
                     s, o = (int(x, 16) for x in a.split(':'))
-                    self.funcs[r['name']] = (s, o, far.get(a.lower(), True))
+                    self.funcs[r['name']] = (s, o, returns_far(s, o, index.get(a.lower())))
                 elif r['kind'] == 'global' and a.upper().startswith('DS:'):
                     self.ds.append((int(a[3:], 16), r['name']))
         self.ds.sort()
@@ -145,10 +162,44 @@ class Original:
     def _where(self):
         return '%04X:%04X' % (self.uc.reg_read(UC_X86_REG_CS), self.uc.reg_read(UC_X86_REG_IP))
 
-    def _fail(self, msg):
+    def fail(self, msg):
+        """Stops the run; call() then raises Mismatch with msg."""
         if self.error is None:
             self.error = msg
         self.uc.emu_stop()
+
+    _fail = fail
+
+    def stub(self, file_seg, off, fn, near=False):
+        """Replaces the original function at file_seg:off by fn(args) -> None | (ax, dx or None):
+        args(i) is the i-th stack word after the return address. fn runs when the function is
+        entered; then the stub returns to the caller (retf, or ret for near). fn may raise
+        dosmodel.ProgramExit to end the run."""
+        at = lin(seg_of(file_seg), off)
+
+        def hook(uc, address, size, _):
+            ss, sp = uc.reg_read(UC_X86_REG_SS), uc.reg_read(UC_X86_REG_SP)
+
+            def word(k):
+                return struct.unpack('<H', uc.mem_read((ss << 4) + ((sp + k) & 0xFFFF), 2))[0]
+            first = 2 if near else 4
+            try:
+                result = fn(lambda i: word(first + 2 * i))
+            except dosmodel.ProgramExit as e:
+                self.exit_code = e.code
+                self.fail('exit(%d)' % e.code)
+                return
+            if result is not None:
+                ax, dx = result
+                uc.reg_write(UC_X86_REG_AX, ax & 0xFFFF)
+                if dx is not None:
+                    uc.reg_write(UC_X86_REG_DX, dx & 0xFFFF)
+            ip = word(0)
+            if not near:
+                uc.reg_write(UC_X86_REG_CS, word(2))
+            uc.reg_write(UC_X86_REG_SP, (sp + (2 if near else 4)) & 0xFFFF)
+            uc.reg_write(UC_X86_REG_IP, ip)
+        self.uc.hook_add(UC_HOOK_CODE, hook, None, at, at)
 
     def _on_int(self, uc, intno, _):
         if intno in self.ints:
@@ -293,15 +344,41 @@ class Harness:
         self.sym = Symbols()
         self.orig = Original()
         self.port = Port(dll)
+        self.dos = dosmodel.DosModel(self.orig, GAME_DIR)
+        self.port.dll.gb_set_game_dir(str(GAME_DIR).encode())
         self.cases = {}
 
     def fresh_memory(self):
-        """The memory right after loading GB.EXE: the image, BSS and everything else zero."""
-        return bytearray(load_image())
+        """The memory at start-up: the GB.EXE image, the DOS heap (one free block, as dos_heap_init
+        leaves it), BSS and everything else zero."""
+        m = bytearray(load_image())
+        dosmodel.heap_init(m)
+        return m
 
-    def check(self, name, m, regs=None, stack_args=(), outputs=(), label=''):
-        """Runs `name` on both sides from memory m and compares all memory and `outputs`."""
+    def reset_files(self):
+        """Closes every DOS file on both sides."""
+        self.dos.reset()
+        self.port.dll.gb_dos_reset()
+
+    def open_both(self, name):
+        """Opens a game file for reading on both sides; returns the (equal) handle."""
+        a = self.dos.open(name, 'rb')
+        b = self.port.dll.gb_dos_open(name.encode(), b'rb')
+        if a != b or a < 0:
+            raise Mismatch('open_both(%s): model %d, port %d' % (name, a, b))
+        return a
+
+    def files_state(self):
+        model = {fh: f.tell() for fh, f in self.dos.files.items()}
+        port = {fh: self.port.dll.gb_dos_tell(fh) for fh in range(dosmodel.FIRST_HANDLE, dosmodel.MAX_HANDLES)}
+        return model, {fh: pos for fh, pos in port.items() if pos >= 0}
+
+    def check(self, name, m, regs=None, stack_args=(), outputs=(), label='', keep_files=False):
+        """Runs `name` on both sides from memory m and compares all memory, `outputs` and the open
+        DOS files. Files are closed first unless keep_files (after open_both)."""
         regs = regs or {}
+        if not keep_files:
+            self.reset_files()
         if not self.port.has(name):
             raise Mismatch('%s is not in bridge.cpp' % name)
         file_seg, off, far = self.sym.func(name)
@@ -319,6 +396,9 @@ class Harness:
         for r in outputs:
             if want[r] != got[r]:
                 problems.append('%s: original %04X, port %04X' % (r.upper(), want[r], got[r]))
+        model_files, port_files = self.files_state()
+        if model_files != port_files:
+            problems.append('open files (handle: position): original %s, port %s' % (model_files, port_files))
         self.cases[name] = self.cases.get(name, 0) + 1
         if problems:
             inputs = ', '.join('%s=%04X' % (k, v) for k, v in regs.items())

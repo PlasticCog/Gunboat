@@ -62,6 +62,8 @@ void host_free(void *p);
 
 // Shows a message box, shuts down and exits with code 3.
 [[noreturn]] void host_fatal(const char *fmt, ...);
+// Shuts down and ends the program with this exit code (the runtime's exit()).
+[[noreturn]] void host_exit(int code);
 
 // Developer aids (environment variables):
 //   GB_SNAPSHOT_DIR=dir   every presented frame >= 2 s after the previous one is saved as

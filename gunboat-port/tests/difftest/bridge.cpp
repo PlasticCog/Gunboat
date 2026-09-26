@@ -1,14 +1,15 @@
 // Differential-test bridge: the port's core as a DLL (gb_difftest) that gbdiff.py drives next to
-// the original code in Unicorn. Every ported function with a test is listed in `functions`, under
-// its symbols.csv name, with the registers it takes and returns.
-#include "game/sim.hpp"
+// the original code in Unicorn. The ported functions register themselves in bridge_*.cpp
+// (bridge.hpp); this file holds the registry and the exports.
+#include "bridge.hpp"
+
+#include <map>
+#include <string>
+
 #include "host_stub.hpp"
 #include "mem.hpp"
 #include "platform/platform.hpp"
 #include "platform/vga.hpp"
-
-#include <map>
-#include <string>
 
 #if defined(_WIN32)
 #define GB_EXPORT extern "C" __declspec(dllexport)
@@ -18,26 +19,19 @@
 
 using namespace gb;
 
-// The register file a test passes in and reads back (same layout as gbdiff.Regs). A function reads
-// only its argument registers and writes only the ones it returns; the rest come back unchanged.
-struct Regs {
-    u16 ax, bx, cx, dx, si, di, bp, es;
-};
-
 namespace {
 
-using Call = void (*)(Regs &r, const u16 *stack_args);
-
-const std::map<std::string, Call> functions = {
-    {"random", [](Regs &r, const u16 *) { r.ax = random(); }},
-    {"vec_scale", [](Regs &r, const u16 *) { r.ax = vec_scale(u8(r.ax)); }},
-    {"heading_vector", [](Regs &r, const u16 *) { r.ax = heading_vector(u8(r.ax)); }},
-    {"boat_move", [](Regs &, const u16 *) { boat_move(); }},
-};
+std::map<std::string, BridgeCall> &registry()
+{
+    static std::map<std::string, BridgeCall> r;
+    return r;
+}
 
 std::string last_error;
 
 } // namespace
+
+gb::BridgeEntry::BridgeEntry(const char *name, BridgeCall call) { registry()[name] = call; }
 
 GB_EXPORT u8 *gb_mem() { return mem; }
 GB_EXPORT u32 gb_mem_size() { return MEM_SIZE; }
@@ -51,14 +45,14 @@ GB_EXPORT int gb_load_exe(const char *path)
     return mem_load_exe(path, info, last_error) ? 1 : 0;
 }
 
-GB_EXPORT int gb_has(const char *name) { return functions.count(name) ? 1 : 0; }
+GB_EXPORT int gb_has(const char *name) { return registry().count(name) ? 1 : 0; }
 
 // Runs one ported function on mem[]. Returns 1; 0 if the function is unknown or the port stopped
-// with a fatal error (a divide error, for instance), with the message in gb_error().
+// (a fatal error such as a divide error, or the program's exit), with the message in gb_error().
 GB_EXPORT int gb_call(const char *name, Regs *regs, const u16 *stack_args)
 {
-    const auto it = functions.find(name);
-    if (it == functions.end()) {
+    const auto it = registry().find(name);
+    if (it == registry().end()) {
         last_error = std::string("not ported: ") + name;
         return 0;
     }
@@ -67,9 +61,17 @@ GB_EXPORT int gb_call(const char *name, Regs *regs, const u16 *stack_args)
     } catch (const HostFatal &e) {
         last_error = e.what();
         return 0;
+    } catch (const HostExit &e) {
+        last_error = e.what();
+        return 0;
     }
     return 1;
 }
+
+// DOS files: close everything, open a game file, and the position of a handle (-1 = closed).
+GB_EXPORT void gb_dos_reset() { dos_close_all(); }
+GB_EXPORT int gb_dos_open(const char *name, const char *mode) { return dos_open_name(name, mode, false); }
+GB_EXPORT int gb_dos_tell(int fh) { return dos_tell(s16(fh)); }
 
 // The VGA DAC, 256 x RGB 6-bit, for tests of palette code.
 GB_EXPORT void gb_dac_read(u8 *rgb768)

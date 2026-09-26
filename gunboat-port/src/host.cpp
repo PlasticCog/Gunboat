@@ -481,4 +481,10 @@ void host_fatal(const char *fmt, ...)
     std::exit(3);
 }
 
+void host_exit(int code)
+{
+    host_shutdown();
+    std::exit(code);
+}
+
 } // namespace gb

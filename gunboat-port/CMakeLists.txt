@@ -41,7 +41,9 @@ endif()
 
 # Differential tests (tests/difftest): the core plus a stub host as a library that Python loads next
 # to the original code in Unicorn. Development only.
-add_library(gb_difftest SHARED tests/difftest/bridge.cpp tests/difftest/host_stub.cpp)
+file(GLOB GB_DIFFTEST_SOURCES CONFIGURE_DEPENDS tests/difftest/*.cpp)
+add_library(gb_difftest SHARED ${GB_DIFFTEST_SOURCES})
+target_include_directories(gb_difftest PRIVATE tests/difftest)
 target_link_libraries(gb_difftest PRIVATE gbcore)
 set_target_properties(gb_difftest PROPERTIES PREFIX "")
 if(NOT MSVC)

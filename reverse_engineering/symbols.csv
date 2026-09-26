@@ -427,6 +427,8 @@ cglobal,0919:83e4,neighbour_order,u8[4][9],render3d,spec:render3d,§2
 cglobal,121b:093e,scancode_e0_table,u8[20],simulation,spec:simulation,§3.1
 cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
+global,DS:0066,data_file_name,char[10],platform,spec:platform,"§4 ""dataa.dat""; archive_open writes the bank letter at +4"
+global,DS:006A,data_file_bank,u8,platform,spec:platform,§4 bank letter of data_file_name
 global,DS:0070,demo_mode,u16,simulation,spec:simulation+spec:game_flow,§3 simulation §3.1 | §3.1
 global,DS:0074,view_page,u16,game_flow,spec:game_flow,§2 0 in VGA else 2
 global,DS:0076,cga_special,u16,game_flow,spec:game_flow,§2
@@ -443,6 +445,7 @@ global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,§4 TACTCOLR.BI
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
 global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation+spec:hud,§5 per station | §8.6 per station
+global,DS:1078,lzw_dict_seg,u16,platform,spec:platform,§6 DOS block of the LZW dictionary (DOS error code if lzw_alloc failed)
 global,DS:1096,vertex_control,u8[1024],render3d,spec:render3d,§8
 global,DS:1496,vertex_height,u16[1024],render3d,spec:render3d,§8
 global,DS:1C96,vertex_x,u16[1024],render3d,spec:render3d,§8
@@ -727,6 +730,8 @@ global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
 global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
+global,DS:F0FC,bd1_far,u16[2],platform,spec:platform,§5 1784h bytes
+global,DS:F102,bd2_far,u16[2],platform,spec:platform,§5 0CC6h bytes
 global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
 global,DS:F13A,copy_counter,u16,world,spec:world,§3.3 shared with the front end
 global,DS:F26C,front_end_running,u16,game_flow,spec:game_flow,§6
@@ -742,6 +747,18 @@ global,DS:F394,joystick,u16,game_flow,spec:game_flow,§2
 global,DS:F396,world_b_size,u16,world,spec:world,§4
 global,DS:F398,first_run,u8,game_flow,spec:game_flow,§1
 global,DS:F39C,bios_video_mode,u16,game_flow,spec:game_flow,§2
+global,DS:F39E,archive_entry_size,u32,platform,spec:platform,§4 size of the last archive entry found; file_load_far stores the bytes read
+global,DS:F5BA,pictures_far,u16[2],platform,spec:platform,§5 244Ah bytes: LIGHTS; MAP; title pictures
+global,DS:F5BE,bow_art2_far,u16[2],platform,spec:platform,§5 21F2h bytes
+global,DS:F5C2,midship_art2_far,u16[2],platform,spec:platform,§5 2382h bytes
+global,DS:F5C6,bow_art1_far,u16[2],platform,spec:platform,§5 251Ch bytes
+global,DS:F5D0,stern_art2_far,u16[2],platform,spec:platform,§5 1AEAh bytes
 global,DS:F5D4,world_b_far,u16[2],world,spec:world,§4 far pointer to the B data copy
 global,DS:F5D8,music_stream,u16[2],sound,spec:sound,§4 far pointer
+global,DS:F5E4,clip_far,u16[2],platform,spec:platform,§5 2AD0h bytes
+global,DS:F612,clip_1838_far,u16[2],platform,spec:platform,§5 clip_far + 1838h
+global,DS:F616,clip_0c1c_far,u16[2],platform,spec:platform,§5 clip_far + 0C1Ch
+global,DS:F61A,map_sheet_b_far,u16[2],platform,spec:platform,§5 1310h bytes
+global,DS:F61E,bd5_far,u16[2],platform,spec:platform,§5 bd1_far + 0AD2h
+global,DS:F622,bd4_far,u16[2],platform,spec:platform,§5 0D0Ch bytes
 global,DS:F626,name_input,char[20],game_flow,spec:game_flow,§6.1

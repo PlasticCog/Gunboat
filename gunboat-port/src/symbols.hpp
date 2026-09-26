@@ -6,6 +6,8 @@
 namespace gb {
 
 // ---- DGROUP globals: offsets for ds_u8/ds_u16/...
+constexpr u16 DS_data_file_name                        = 0x0066;  // platform, char[10]
+constexpr u16 DS_data_file_bank                        = 0x006A;  // platform, u8
 constexpr u16 DS_demo_mode                             = 0x0070;  // simulation, u16
 constexpr u16 DS_view_page                             = 0x0074;  // game_flow, u16
 constexpr u16 DS_cga_special                           = 0x0076;  // game_flow, u16
@@ -22,6 +24,7 @@ constexpr u16 DS_palette_3d                            = 0x08C4;  // world, u8[2
 constexpr u16 DS_map_sheet_names                       = 0x0AC6;  // world, char[4][16]
 constexpr u16 DS_mission_record_names                  = 0x0B26;  // world, char[4][9]
 constexpr u16 DS_window_cracks                         = 0x0B49;  // simulation, u8[5]
+constexpr u16 DS_lzw_dict_seg                          = 0x1078;  // platform, u16
 constexpr u16 DS_vertex_control                        = 0x1096;  // render3d, u8[1024]
 constexpr u16 DS_vertex_height                         = 0x1496;  // render3d, u16[1024]
 constexpr u16 DS_vertex_x                              = 0x1C96;  // render3d, u16[1024]
@@ -306,6 +309,8 @@ constexpr u16 DS_key_code                              = 0xEE9C;  // simulation,
 constexpr u16 DS_video_mode                            = 0xEED2;  // render3d, u16
 constexpr u16 DS_sprite_cache_a_far                    = 0xF0DA;  // platform, u16[2]
 constexpr u16 DS_sprite_cache_b_far                    = 0xF0E0;  // platform, u16[2]
+constexpr u16 DS_bd1_far                               = 0xF0FC;  // platform, u16[2]
+constexpr u16 DS_bd2_far                               = 0xF102;  // platform, u16[2]
 constexpr u16 DS_practice_mode                         = 0xF110;  // simulation, u16
 constexpr u16 DS_copy_counter                          = 0xF13A;  // world, u16
 constexpr u16 DS_front_end_running                     = 0xF26C;  // game_flow, u16
@@ -321,8 +326,20 @@ constexpr u16 DS_joystick                              = 0xF394;  // game_flow, 
 constexpr u16 DS_world_b_size                          = 0xF396;  // world, u16
 constexpr u16 DS_first_run                             = 0xF398;  // game_flow, u8
 constexpr u16 DS_bios_video_mode                       = 0xF39C;  // game_flow, u16
+constexpr u16 DS_archive_entry_size                    = 0xF39E;  // platform, u32
+constexpr u16 DS_pictures_far                          = 0xF5BA;  // platform, u16[2]
+constexpr u16 DS_bow_art2_far                          = 0xF5BE;  // platform, u16[2]
+constexpr u16 DS_midship_art2_far                      = 0xF5C2;  // platform, u16[2]
+constexpr u16 DS_bow_art1_far                          = 0xF5C6;  // platform, u16[2]
+constexpr u16 DS_stern_art2_far                        = 0xF5D0;  // platform, u16[2]
 constexpr u16 DS_world_b_far                           = 0xF5D4;  // world, u16[2]
 constexpr u16 DS_music_stream                          = 0xF5D8;  // sound, u16[2]
+constexpr u16 DS_clip_far                              = 0xF5E4;  // platform, u16[2]
+constexpr u16 DS_clip_1838_far                         = 0xF612;  // platform, u16[2]
+constexpr u16 DS_clip_0c1c_far                         = 0xF616;  // platform, u16[2]
+constexpr u16 DS_map_sheet_b_far                       = 0xF61A;  // platform, u16[2]
+constexpr u16 DS_bd5_far                               = 0xF61E;  // platform, u16[2]
+constexpr u16 DS_bd4_far                               = 0xF622;  // platform, u16[2]
 constexpr u16 DS_name_input                            = 0xF626;  // game_flow, char[20]
 
 // ---- Code-segment globals: CS_x offset in file segment CSSEG_x

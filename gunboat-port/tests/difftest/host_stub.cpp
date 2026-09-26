@@ -76,4 +76,6 @@ void host_fatal(const char *fmt, ...)
     throw HostFatal(msg);
 }
 
+void host_exit(int code) { throw HostExit(code); }
+
 } // namespace gb

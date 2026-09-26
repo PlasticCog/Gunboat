@@ -31,3 +31,20 @@ global,DS:DCFC,gfx_saved_mode_byte,u8,§8
 global,DS:DD17,joystick_limits,u16[4],§3
 global,DS:F0DA,sprite_cache_a_far,u16[2],§5
 global,DS:F0E0,sprite_cache_b_far,u16[2],§5
+global,DS:0066,data_file_name,char[10],§4 "dataa.dat"; archive_open writes the bank letter at +4
+global,DS:006A,data_file_bank,u8,§4 bank letter of data_file_name
+global,DS:F39E,archive_entry_size,u32,§4 size of the last archive entry found; file_load_far stores the bytes read
+global,DS:1078,lzw_dict_seg,u16,§6 DOS block of the LZW dictionary (DOS error code if lzw_alloc failed)
+global,DS:F5BA,pictures_far,u16[2],§5 244Ah bytes: LIGHTS; MAP; title pictures
+global,DS:F5BE,bow_art2_far,u16[2],§5 21F2h bytes
+global,DS:F5C2,midship_art2_far,u16[2],§5 2382h bytes
+global,DS:F5C6,bow_art1_far,u16[2],§5 251Ch bytes
+global,DS:F5D0,stern_art2_far,u16[2],§5 1AEAh bytes
+global,DS:F5E4,clip_far,u16[2],§5 2AD0h bytes
+global,DS:F612,clip_1838_far,u16[2],§5 clip_far + 1838h
+global,DS:F616,clip_0c1c_far,u16[2],§5 clip_far + 0C1Ch
+global,DS:F61A,map_sheet_b_far,u16[2],§5 1310h bytes
+global,DS:F622,bd4_far,u16[2],§5 0D0Ch bytes
+global,DS:F0FC,bd1_far,u16[2],§5 1784h bytes
+global,DS:F61E,bd5_far,u16[2],§5 bd1_far + 0AD2h
+global,DS:F102,bd2_far,u16[2],§5 0CC6h bytes
