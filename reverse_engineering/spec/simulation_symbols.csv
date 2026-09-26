@@ -316,3 +316,39 @@ global,DS:B829,water_phase_fraction,u8,§5.1
 global,DS:D94D,water_phase,u8,§5.1; render3d §3.2 horizon row r shows mark ((D94D >> 2) + r) & 1Fh
 global,DS:D984,water_mark_x_fraction,u8[32],§5.1 fraction of water_mark_x D90D
 cglobal,0919:7dbf,water_shift_table,u8[16][10],§5.1 bits 2-7 fraction; bits 0-1 whole
+func,0919:0a5b,aim_stern_left,near void(BX rate),§3.4 heading_step_minus of the stern gun; refused in the arc ahead
+func,0919:0a83,aim_stern_right,near void(BX rate),§3.4
+func,0919:0ae4,aim_midship_left,near void(BX rate),§3.4
+func,0919:0b0c,aim_midship_right,near void(BX rate),§3.4
+func,0919:0b6d,aim_bow_left,near void(BX rate),§3.4 refused in the arc behind
+func,0919:0b95,aim_bow_right,near void(BX rate),§3.4
+func,0919:0cf4,fire_station4,near void(),§6.1 stern mount: weapon 2 (reload B830 == 8) or 1
+func,0919:0d45,fire_station3,near void(),§6.1 midship mount: weapon 3 (reload B831 == 30h) / 4 / 1
+func,0919:0dbd,fire_bow,near void(),§6.1 bow mount: weapon 4 (alternating barrels) or 5
+func,0919:0ee2,projectile_launch,near void(BX weapon CH heading CL fraction),§7.1 slot; elevation from the pitch and B7F8 clamped to the weapon's limit
+func,0919:1558,print_colon,near void(),§9.1 prints the character DS:D64E (':') at the text cursor (clock and heading readouts)
+func,0919:174e,print_bcd_2digits,near void(AL bcd),§9.1 BCD byte as binary; two digits (B7E3 = 1)
+func,0919:1769,print_3digits,near void(AL CF),§9.1 CF*256 + AL as three digits with leading blanks (B7E3 = 0)
+func,0919:176e,print_digits_hundreds,near void(AL CF),§9.1 hundreds digit into D64B (CF adds 256 without a second carry: quirk)
+func,0919:1799,print_digits_tens,near void(AL CL),§9.1 tens and units into D64C/D64D; prints D64B + B7E3 (3 - B7E3 characters)
+func,0919:29f9,accelerate_speed,near void(CH target),§4.3 one unit toward the target unless the boat is locked; pitch impulse -+5
+func,0919:31f1,spawn_enemy_wake,near (BX object SI entry*2)->BX,§8.3 wake 0A3Fh at the object; returns visible_object[SI]
+func,0919:37af,projectile_alloc,near ()->BX slot CX slot*8,§7.1 highest free slot; 0 when full
+func,0919:37c7,projectile_aim,near void(AL elevation AH weapon BX slot CX heading:fraction SI record),§7.1 flight time; impact point
+func,0919:3b3b,elevation_add_clamped,near (AL)->AL,§7.1 signed AL + shot_elevation B7F8 clamped to 0..FFh
+func,0919:80e0,camera_pitch_bob,near void(),§5.4 pitch impulse decay; wave bob; view pitch D193
+func,0919:81f8,muzzle_flash_tick,near void(),§6.1 flash counters B839..B83C down to 0
+cglobal,0919:583d,sprite_slots,u16[183],§7.2 sprite cache slot pointers (render3d §5.6; world §3.3); size bytes at +3 +4 +6 read by hit_test and line_of_sight
+global,DS:B7DC,scratch_b7dc,u16,§9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer
+global,DS:B7F5,scratch_b7f5,u8,§7.1 projectile_aim quadrant; §4.6 atan octant
+global,DS:D63E,weapon_elevation_limit,u8[6],§7.1 per weapon 1-5 (E9 E7 EB EB E9)
+global,DS:D645,readout_cache_spare,u16,§9.1 set to FFFFh with D647; never read
+global,DS:D647,readout_heading_cache,u16,§9.1 heading:fraction last drawn by message_line_draw; FFFFh forces a redraw
+global,DS:D64A,message_row,u8,§9.1 text y of the message line
+global,DS:D64B,digit_text,u8[3],§9.1 readout digits
+global,DS:D64E,readout_colon,u8,§9.1 ':'
+global,DS:D64F,compass_points,u8[16],§9.1 two letters per sixteenth of a turn
+global,DS:D65F,message_blank,u8[29],§9.1 28 spaces + AAh: clears the message line
+global,DS:D965,view_sky_top,u8,§3.4 first view row to redraw (render3d §3.1); the aiming routines clear it
+global,DS:D966,view_sky_top_prev,u8,§3.4 D965 of the last present (05bd:1fd4)
+global,DS:D97A,bob_masks,u16[],§5.4 wave bob random mask by sea state B4FF (no bound check)

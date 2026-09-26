@@ -156,3 +156,4 @@ global,DS:F29C,music_control,u16[2],§3 far pointer
 global,DS:F2A0,sound_device,u16,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
 global,DS:F2A2,music_loop,u16,§4.2 music_play's third argument
 global,DS:F5D8,cms_driver_tick,u16[2],§4.5 far pointer from CMS.DRV function 5
+global,DS:DB9F,engine_sfx_program,u8[21],§2.1 effect 6; engine_sound_update (0919:3cc9) rewrites the tempo DBA0; the loop count DBA2 (1 = stop) and the six note bytes DBA5..DBAF (odd)

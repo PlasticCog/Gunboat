@@ -6,7 +6,6 @@
 
 namespace gb {
 
-void show_message_far(u16 id) { host_fatal("not ported yet: show_message (0919:1589), message %02Xh", id); }
 void mission_run() { host_fatal("not ported yet: the mission (mission_run 05bd:000a)"); }
 
 } // namespace gb

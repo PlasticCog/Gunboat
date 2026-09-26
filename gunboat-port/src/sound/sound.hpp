@@ -42,6 +42,9 @@ void sfx_silence();                     // 12ed:089d
 void sfx_install();                     // 12ed:08c0
 void sfx_remove();                      // 12ed:08f3
 
+// ---- the engine noise (engine_sound.cpp), segment 0919
+void engine_sound_update();             // 0919:3cc9  rewrites effect 6 from the throttles
+
 // ---- music (music.cpp), segments 1ace and 1af5
 void music_play(FarPtr stream, u16 loop);   // 1ace:000e  far C
 void music_silence();                       // 1ace:005c  far C

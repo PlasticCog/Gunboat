@@ -30,6 +30,19 @@ Effect 6 (`DB9F`, the engine) loops forever with `7D 00` … `8D 14`; `engine_so
 (`0919:3cc9`) rewrites its bytes DBA0..DBAF (tempo, loop count 1 = stop, notes). Callers:
 simulation spec (weapons 1/2/3/8, hits 7/9/0Ah/0Bh, missile 4, sinking 7, …).
 
+`engine_sound_update` (`0919:3cc9`, from `game_frame` every frame; **verified**, port
+differential test, `src/sound/engine_sound.cpp`):
+
+```
+if word DS:0080 (the E key's toggle) != 0: DBA2 = 1; return          (engine noise off)
+n = (u8(B816 + B817) >> 2); if n == 0: DBA2 = 1; return              (throttles at 0..3)
+n >>= 1; DBA0 = 26h - n (tempo); DBA2 = 0 (loop forever)
+k = (n >= 8 ? n/2 + 4 : n) + 1
+notes (first byte of the pairs DBA7 DBAD DBA9 DBA5 DBAF DBAB): k, k+2, k+3, k+4, k+6, k+8 while
+    <= 0Ch; from the first one above 0Ch on: k+4, k+6, k+7, k+8, k+10, k+12 at those positions
+if DAF0 == 0 (no effect playing): sfx_play(6)
+```
+
 ### 2.2 Installation and API
 
 ```c

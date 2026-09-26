@@ -5,7 +5,6 @@
 
 namespace gb {
 
-void show_message_far(u16 id);       // 0919:1589  the cockpit messages (a mission only)
 void mission_run();                  // 05bd:000a
 
 } // namespace gb

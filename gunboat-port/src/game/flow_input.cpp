@@ -2,10 +2,10 @@
 // wait_key.
 #include "game/flow.hpp"
 
+#include "game/sim.hpp"
 #include "host.hpp"
 #include "mem.hpp"
 #include "platform/platform.hpp"
-#include "game/pending.hpp"
 #include "sound/sound.hpp"
 #include "symbols.hpp"
 

@@ -94,7 +94,8 @@ if not chase view: present (05bd:1fd4); draw page 0
 `F13A`; keep the side effect.
 
 `sprite_cache_invalidate` clears the first byte of each of the 183 sprite cache slots (pointers
-`CS:583D`, slots below 69h in segment `D883`, the rest in `D885`) and resets the slot bitmaps
+`CS:583D`; slots 6Ah–B7h in segment `D883`, slots 0–68h in `D885`; slot 69h is skipped. The
+readers `hit_test` and `line_of_sight` take `D883` for sprite indexes ≥ 69h, i.e. slots ≥ 68h) and resets the slot bitmaps
 (`0919:6f3d`), so all sprites are rebuilt after a full-screen station.
 
 ## 4. `mission_load` (05bd:14d6) **verified**
