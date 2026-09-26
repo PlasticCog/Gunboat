@@ -78,7 +78,8 @@ def main():
             env['GB_KEYS'] = a.keys
         exe = PORT / 'build' / 'gunboat.exe'
         try:
-            subprocess.run([str(exe), '--game-dir', str(ROOT / 'Original DOS version')], env=env, timeout=a.seconds)
+            subprocess.run([str(exe), '--game-dir', str(ROOT / 'Original DOS version'),
+                        '--no-launcher', '--original'], env=env, timeout=a.seconds)
         except subprocess.TimeoutExpired:
             pass
     shots = sorted(snaps.glob('snap*.bmp'))

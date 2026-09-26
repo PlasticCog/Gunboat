@@ -32,6 +32,11 @@ void (*tick_handler)();
 void (*kbd_handler)(u8);
 void (*focus_lost_handler)();
 bool (*frame_source)(u32 *);
+bool (*presenter)(const u32 *, bool);
+void (*frame_hook)();
+bool (*hotkey_handler)(int);
+bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
+bool redraw = true;                      // the window needs a new picture (resized, exposed)
 u32 frame[HOST_FRAME_MAX_W * HOST_FRAME_MAX_H];
 int frame_w = 320, frame_h = 200;
 int view_w(int w) { return w; }  // logical presentation: frame width x 3/4 of it (4:3)
@@ -263,16 +268,30 @@ void process_events()
             host_shutdown();
             std::exit(0);
         case SDL_EVENT_KEY_DOWN:
-            // Alt+Enter toggles fullscreen; everything else goes to the game, repeats included.
+            // Alt+Enter toggles fullscreen; the presentation layer's hotkeys; everything else goes to
+            // the game, repeats included.
             if (ev.key.key == SDLK_RETURN && (ev.key.mod & SDL_KMOD_ALT)) {
-                if (!ev.key.repeat)
-                    SDL_SetWindowFullscreen(window, !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN));
+                if (!ev.key.repeat) host_set_fullscreen(!host_fullscreen());
+                break;
+            }
+            if (ev.key.scancode < SDL_SCANCODE_COUNT && consumed_keys[ev.key.scancode]) break;  // its repeats
+            if (hotkey_handler && hotkey_handler(ev.key.scancode)) {
+                if (ev.key.scancode < SDL_SCANCODE_COUNT) consumed_keys[ev.key.scancode] = true;
+                redraw = true;
                 break;
             }
             key_event(ev.key.scancode, true);
             break;
         case SDL_EVENT_KEY_UP:
+            if (ev.key.scancode < SDL_SCANCODE_COUNT && consumed_keys[ev.key.scancode]) {
+                consumed_keys[ev.key.scancode] = false;
+                break;
+            }
             key_event(ev.key.scancode, false);
+            break;
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+        case SDL_EVENT_WINDOW_EXPOSED:
+            redraw = true;
             break;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
             if (focus_lost_handler) focus_lost_handler();
@@ -365,8 +384,11 @@ void host_set_frame_source(bool (*compose)(u32 *), int w, int h)
     frame_source = compose;
     frame_w = SDL_clamp(w, 1, HOST_FRAME_MAX_W);
     frame_h = SDL_clamp(h, 1, HOST_FRAME_MAX_H);
-    // The 200-line picture fills a 4:3 area, as it did on a VGA monitor.
-    SDL_SetRenderLogicalPresentation(renderer, view_w(frame_w), view_h(frame_w), SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    // The 200-line picture fills a 4:3 area, as it did on a VGA monitor (a presenter draws in window
+    // pixels instead).
+    if (presenter) SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+    else SDL_SetRenderLogicalPresentation(renderer, view_w(frame_w), view_h(frame_w), SDL_LOGICAL_PRESENTATION_LETTERBOX);
+    redraw = true;
     if (texture) SDL_DestroyTexture(texture);
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, frame_w, frame_h);
     SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
@@ -409,8 +431,16 @@ void host_pump()
 
     // Present at most once per ~8 ms; VSync paces it further.
     if (frame_source && now - last_present_ns >= 8 * SDL_NS_PER_MS) {
-        if (frame_source(frame)) {
+        const bool changed = frame_source(frame) || redraw;
+        bool shown = false;
+        if (presenter) {
+            shown = presenter(frame, changed);
+        } else if (changed) {
             present();
+            shown = true;
+        }
+        if (shown) {
+            redraw = false;
             last_present_ns = SDL_GetTicksNS();
             worked = true;
         }
@@ -431,6 +461,7 @@ void host_set_frame_rate(int fps) { frame_period_ns = fps > 0 ? SDL_NS_PER_SECON
 
 void host_frame_pace()
 {
+    if (frame_hook) frame_hook();
     if (frame_period_ns == 0) return;
     const Uint64 due = last_frame_ns + frame_period_ns;
     while (SDL_GetTicksNS() < due) host_pump();
@@ -450,6 +481,12 @@ void host_wait_vretrace()
 
 bool host_joy_read(s16 *x, s16 *y, u8 *buttons)
 {
+    if (!gamepad && SDL_HasGamepad()) {  // one connected before its event reached the host (the launcher)
+        int n = 0;
+        SDL_JoystickID *ids = SDL_GetGamepads(&n);
+        if (ids && n > 0) gamepad = SDL_OpenGamepad(ids[0]);
+        SDL_free(ids);
+    }
     if (!gamepad) return false;
     s16 ax = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
     s16 ay = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
@@ -492,6 +529,40 @@ char *host_game_path(const char *name, bool create)
 }
 
 void host_free(void *p) { SDL_free(p); }
+
+SDL_Window *host_window() { return window; }
+SDL_Renderer *host_renderer() { return renderer; }
+
+void host_set_game_dir(const char *dir)
+{
+    SDL_free(game_dir);
+    game_dir = SDL_strdup(dir);
+}
+
+void host_set_presenter(bool (*present)(const u32 *, bool))
+{
+    presenter = present;
+    host_set_frame_source(frame_source, frame_w, frame_h);  // the logical presentation for it
+}
+
+void host_set_frame_hook(void (*hook)()) { frame_hook = hook; }
+void host_set_hotkey_handler(bool (*handler)(int)) { hotkey_handler = handler; }
+
+void host_set_fullscreen(bool on)
+{
+    if (window) SDL_SetWindowFullscreen(window, on);
+    redraw = true;
+}
+
+bool host_fullscreen() { return window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN); }
+
+void host_reset_clock()
+{
+    init_ns = clock_base_ns = SDL_GetTicksNS();
+    ticks_run = 0;
+    last_frame_ns = 0;
+    redraw = true;
+}
 
 void host_fatal(const char *fmt, ...)
 {

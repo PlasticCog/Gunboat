@@ -16,7 +16,8 @@ original function and check it against the original machine code.
 | Executable map | Done: 597 functions indexed, 504 named (`reverse_engineering/RE_GUIDE.md`) |
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
 | Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
-| Porting | Done for VGA: the whole game runs natively and matches the original (433 functions of GB.EXE and the Ad Lib driver's 52, each verified; `gunboat-port/Run Port.cmd`). Next: enhancements in a separate layer |
+| Porting | Done for VGA: the whole game runs natively and matches the original (433 functions of GB.EXE and the Ad Lib driver's 52, each verified; `gunboat-port/Run Port.cmd`) |
+| Enhancements | Optional, chosen in the launcher: a high-resolution 3D view, smooth 60 fps motion, widescreen, picture aspect and scaling filters. "Original" shows the faithful picture; F11 switches in the game. The game itself is the same either way |
 
 ## Layout
 
@@ -31,6 +32,12 @@ original function and check it against the original machine code.
 MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1` builds
 and tests everything. `gunboat-port/Run Port.cmd` plays the game from `Original DOS version/` next to
 `gunboat-port/`, or run `gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE>`.
+
+The launcher opens first: choose the game folder, **Original** or **Enhanced** (or each enhancement
+on its own), the picture and the sound, then Play. The choices are saved. In the game, F11
+switches between the enhanced and the original picture and Alt+Enter toggles full screen.
+`gunboat.exe --help` lists the command-line options (`--no-launcher`, `--original`, `--enhanced`,
+...).
 
 ## Credits
 

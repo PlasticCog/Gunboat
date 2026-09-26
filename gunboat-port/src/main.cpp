@@ -1,10 +1,15 @@
 // Gunboat (Accolade, 1990): faithful C++/SDL3 port of GB.EXE. Entry point.
 //
-// usage: gunboat [--game-dir DIR] [--scale N] [--fullscreen] [--fps N] [--sound adlib|speaker]
-//                [--check] [--host-test]
-//   --game-dir   folder with the original game files (default: the current folder)
+// usage: gunboat [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window]
+//                [--fps N] [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]
+//                [--motion original|smooth] [--widescreen on|off] [--aspect 4:3|square]
+//                [--filter sharp|nearest|smooth|crt] [--check] [--host-test]
+//   The player's settings (gunboat.ini, src/enhanced/settings.hpp) give the defaults; the options
+//   override them for this run. The launcher (src/enhanced/launcher.cpp) shows first unless the
+//   settings say not to or --no-launcher is given; it saves the settings when the game starts.
+//   --game-dir   folder with the original game files
 //   --scale      initial window scale: 320x240 times N (default 3)
-//   --fullscreen start in full screen (Alt+Enter switches)
+//   --fullscreen start in full screen (Alt+Enter switches); --window: in a window
 //   --fps        frames per second of the 3D stations (default 15: the mission clock then runs in
 //                real time, 15 simulation passes per game second; 0 = as fast as possible, the
 //                original's rule; PORT, simulation.md §1.1)
@@ -14,12 +19,16 @@
 //                speaker: no AdLib driver: the music plays VALKPC.MUS on the PC speaker. Default:
 //                adlib when the game folder has ADLIB.COM, else speaker. (The effects use the
 //                speaker either way, as in the original.)
+//   --original   no enhancements: the picture exactly as the original drew it (F11 in the game
+//                switches); --enhanced: all of them. Or one by one: --view hires (the 3D view at the
+//                window's resolution), --motion smooth (60 fps, interpolated), --widescreen on (the
+//                world beside the picture in a wide window). --aspect and --filter: the picture.
 //   --check      load and verify GB.EXE, print a summary and exit (no window)
 //   --host-test  developer check of the SDL host: runs the three timer rates for a moment and
 //                compares the interrupts counted with the PIT rates (use SDL_VIDEO_DRIVER=dummy)
 //
-// Without --check / --host-test it runs the game: main (0000:0000, game_flow.md §1) as far as it
-// is ported (phase 4: the start-up, the title and the menu).
+// Without --check / --host-test it runs the game: main (0000:0000, game_flow.md §1).
+#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
@@ -28,6 +37,9 @@
 #include <filesystem>
 #include <string>
 
+#include "enhanced/launcher.hpp"
+#include "enhanced/present.hpp"
+#include "enhanced/settings.hpp"
 #include "game/flow.hpp"
 #include "host.hpp"
 #include "mem.hpp"
@@ -42,10 +54,23 @@ namespace {
 int usage(const char *prog)
 {
     std::fprintf(stderr,
-                 "usage: %s [--game-dir DIR] [--scale N] [--fullscreen] [--fps N] [--sound adlib|speaker] [--check]"
-                 " [--host-test]\n",
+                 "usage: %s [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window] [--fps N]\n"
+                 "          [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]\n"
+                 "          [--motion original|smooth] [--widescreen on|off] [--aspect 4:3|square]\n"
+                 "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test]\n",
                  prog);
     return 2;
+}
+
+// A fatal start-up error: printed, and shown in a message box once the window is open.
+int fail(bool window, const std::string &msg)
+{
+    std::fprintf(stderr, "%s\n", msg.c_str());
+    if (window) {
+        host_error_box(msg.c_str());
+        host_shutdown();
+    }
+    return 1;
 }
 
 // Case-insensitive lookup of a game file (the host does the same once it is running).
@@ -90,27 +115,58 @@ bool host_test_rate(const char *what, u16 divisor, double seconds)
 
 int main(int argc, char **argv)
 {
-    std::string dir = ".";
-    int scale = 3;
-    bool check = false, fullscreen = false, host_test = false;
-    const char *sound = nullptr;  // --sound adlib / speaker; null: the default
+    Settings st;
+    settings_load(st);
+    bool check = false, host_test = false, force_launcher = false, no_launcher = false;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : nullptr;
-        if (!std::strcmp(a, "--game-dir") && v) { dir = v; i++; }
-        else if (!std::strcmp(a, "--scale") && v) { scale = std::atoi(v); i++; }
-        else if (!std::strcmp(a, "--fullscreen")) fullscreen = true;
-        else if (!std::strcmp(a, "--fps") && v) { host_set_frame_rate(std::atoi(v)); i++; }
-        else if (!std::strcmp(a, "--sound") && v && (!std::strcmp(v, "adlib") || !std::strcmp(v, "speaker"))) {
-            sound = v;
+        auto is = [&](const char *opt) { return !std::strcmp(a, opt); };
+        auto val = [&](const char *opt, const char *x) {
+            if (!is(opt) || !v || std::strcmp(v, x)) return false;
             i++;
+            return true;
+        };
+        if (is("--game-dir") && v) { st.game_dir = v; i++; }
+        else if (is("--scale") && v) { st.window_scale = std::max(1, std::atoi(v)); i++; }
+        else if (is("--fullscreen")) st.fullscreen = true;
+        else if (is("--window")) st.fullscreen = false;
+        else if (is("--fps") && v) { st.fps = std::atoi(v); i++; }
+        else if (val("--sound", "adlib")) st.sound = Sound::Adlib;
+        else if (val("--sound", "speaker")) st.sound = Sound::Speaker;
+        else if (is("--original")) st.set_original();
+        else if (is("--enhanced")) st.set_enhanced();
+        else if (val("--view", "original")) st.hires_view = false;
+        else if (val("--view", "hires")) st.hires_view = true;
+        else if (val("--motion", "original")) st.smooth_motion = false;
+        else if (val("--motion", "smooth")) st.smooth_motion = true;
+        else if (val("--widescreen", "off")) st.widescreen = false;
+        else if (val("--widescreen", "on")) st.widescreen = true;
+        else if (val("--aspect", "4:3")) st.aspect = Aspect::Crt43;
+        else if (val("--aspect", "square")) st.aspect = Aspect::Square;
+        else if (val("--filter", "sharp")) st.filter = Filter::Sharp;
+        else if (val("--filter", "nearest")) st.filter = Filter::Nearest;
+        else if (val("--filter", "smooth")) st.filter = Filter::Smooth;
+        else if (val("--filter", "crt")) st.filter = Filter::Crt;
+        else if (is("--launcher")) force_launcher = true;
+        else if (is("--no-launcher")) no_launcher = true;
+        else if (is("--check")) check = true;
+        else if (is("--host-test")) host_test = true;
+        else if (is("--help") || is("-h")) {
+            usage(argv[0]);
+            return 0;
         }
-        else if (!std::strcmp(a, "--check")) check = true;
-        else if (!std::strcmp(a, "--host-test")) host_test = true;
         else return usage(argv[0]);
     }
+    if (st.game_dir.empty()) st.game_dir = ".";
+    {  // saved and shown as an absolute path
+        std::error_code ec;
+        const auto abs = std::filesystem::absolute(st.game_dir, ec);
+        if (!ec) st.game_dir = abs.lexically_normal().string();
+    }
+    host_set_frame_rate(st.fps);
 
     if (host_test) {
-        if (!host_init(dir.c_str(), scale, false)) return 1;
+        if (!host_init(st.game_dir.c_str(), st.window_scale, false)) return 1;
         vga_init();
         bool ok = host_test_rate("menus", PIT_DIV_MENU, 1.0);
         ok = host_test_rate("missions", PIT_DIV_MISSION, 0.5) && ok;
@@ -119,13 +175,23 @@ int main(int argc, char **argv)
         return ok ? 0 : 1;
     }
 
-    const std::string exe = find_game_file(dir, "GB.EXE");
+    // The launcher opens the window first; the settings it returns are saved.
+    bool window = false;
+    if (!check && (force_launcher || (st.launcher && !no_launcher))) {
+        if (!host_init(st.game_dir.c_str(), st.window_scale, st.fullscreen)) return 1;
+        window = true;
+        if (!launcher_run(st)) {
+            host_shutdown();
+            return 0;
+        }
+        settings_save(st);
+        host_set_frame_rate(st.fps);
+    }
+
+    const std::string exe = find_game_file(st.game_dir, "GB.EXE");
     ExeInfo info;
     std::string err;
-    if (!mem_load_exe(exe, info, err)) {
-        std::fprintf(stderr, "%s\n", err.c_str());
-        return 1;
-    }
+    if (!mem_load_exe(exe, info, err)) return fail(window, err);
     if (check) {
         std::printf("GB.EXE ok (%s): image %u bytes, %u relocations, at %04X:0000, DGROUP %04X\n",
                     info.packed ? "EXEPACK" : "unpacked", unsigned(info.image_size), unsigned(info.relocations),
@@ -133,21 +199,16 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    // --sound adlib: DOS loads ADLIB.COM below GB.EXE (checked before a window opens).
+    // AdLib: DOS loads ADLIB.COM below GB.EXE (checked before the game's window opens).
     bool adlib = false;
-    if (!sound || !std::strcmp(sound, "adlib")) {
-        const std::string com = find_game_file(dir, "ADLIB.COM");
+    if (st.sound != Sound::Speaker) {
+        const std::string com = find_game_file(st.game_dir, "ADLIB.COM");
         std::error_code ec;
         const bool found = std::filesystem::exists(com, ec);
-        if (sound && !found) {
-            std::fprintf(stderr, "--sound adlib: the game folder has no ADLIB.COM (the Ad Lib sound driver)\n");
-            return 1;
-        }
+        if (st.sound == Sound::Adlib && !found)
+            return fail(window, "--sound adlib: the game folder has no ADLIB.COM (the Ad Lib sound driver)");
         if (found) {
-            if (!adlib_load(com, err)) {
-                std::fprintf(stderr, "%s\n", err.c_str());
-                return 1;
-            }
+            if (!adlib_load(com, err)) return fail(window, err);
             adlib = true;
         }
     }
@@ -155,10 +216,13 @@ int main(int argc, char **argv)
     // The machine as DOS leaves it to GB.EXE, then the program (it ends through the runtime's exit).
     dos_heap_init();
     bios_init();
-    if (!host_init(dir.c_str(), scale, fullscreen)) return 1;
+    if (!window && !host_init(st.game_dir.c_str(), st.window_scale, st.fullscreen)) return 1;
+    host_set_game_dir(st.game_dir.c_str());
     vga_init();
+    enhanced_install(st);
     host_set_kbd_handler(kbd_byte);
     host_set_focus_lost_handler(kbd_focus_lost);
+    host_reset_clock();
     host_set_timer(PIT_DIV_BIOS, timer_interrupt);
     if (adlib) adlib_install();  // ADLIB.COM runs and stays resident: INT 65h, INT 8, the OPL2 set up
     game_main();

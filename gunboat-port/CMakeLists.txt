@@ -16,9 +16,11 @@ target_include_directories(nuked_opl3 PUBLIC vendor/nuked-opl3)
 set(GB_WARNINGS -Wall -Wextra -Wpedantic)
 
 # The faithful core: memory model, loader and every ported function. No SDL here: the executable
-# adds the SDL host (src/host.cpp), the differential tests a stub host.
+# adds the SDL host (src/host.cpp) and the presentation layer (src/enhanced/: the launcher and the
+# optional enhancements), the differential tests a stub host.
 file(GLOB_RECURSE GB_CORE_SOURCES CONFIGURE_DEPENDS src/*.cpp)
-list(FILTER GB_CORE_SOURCES EXCLUDE REGEX "/src/(main|host)\\.cpp$")
+list(FILTER GB_CORE_SOURCES EXCLUDE REGEX "/src/(main|host)\\.cpp$|/src/enhanced/")
+file(GLOB GB_ENHANCED_SOURCES CONFIGURE_DEPENDS src/enhanced/*.cpp)
 add_library(gbcore STATIC ${GB_CORE_SOURCES})
 target_include_directories(gbcore PUBLIC src)
 set_target_properties(gbcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -26,7 +28,7 @@ if(NOT MSVC)
   target_compile_options(gbcore PRIVATE ${GB_WARNINGS})
 endif()
 
-add_executable(gunboat src/main.cpp src/host.cpp)
+add_executable(gunboat src/main.cpp src/host.cpp ${GB_ENHANCED_SOURCES})
 target_link_libraries(gunboat PRIVATE gbcore SDL3::SDL3 nuked_opl3)
 if(NOT MSVC)
   target_compile_options(gunboat PRIVATE ${GB_WARNINGS})

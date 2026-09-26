@@ -1,11 +1,15 @@
 #pragma once
-// Host services: the only layer that talks to SDL3 (host.cpp). Window and presentation, the PIT
+// Host services: the layer between the game and SDL3 (host.cpp; the presentation layer in
+// src/enhanced/ uses SDL too, never the game). Window and presentation, the PIT
 // timer interrupt, VGA vertical retrace, keyboard (XT byte stream for the game's own INT 9
 // handler), joystick, audio (OPL2 through Nuked-OPL3, PC speaker), game files and fatal errors.
 // No game logic lives here. Converted to C++ from the Test Drive III port's host.h/host.c (MIT,
 // (c) 2026 Krzysztof Kania; THIRD_PARTY.md). The differential tests link a stub instead
 // (tests/difftest/host_stub.cpp).
 #include "types.hpp"
+
+struct SDL_Window;    // SDL3's opaque types, for the presentation layer (src/enhanced/)
+struct SDL_Renderer;
 
 namespace gb {
 
@@ -77,6 +81,26 @@ void host_free(void *p);
 // Shows a message (stderr and a message box) and returns: the text a DOS program prints on its way
 // out, which the port has no text screen for.
 void host_error_box(const char *text);
+
+// ---- The presentation layer (src/enhanced/: the launcher and the optional enhancements). It only
+// shows what the game drew; the game never calls it. Without it the host shows the 320x200 frame
+// in a 4:3 area as the VGA monitor did.
+SDL_Window *host_window();
+SDL_Renderer *host_renderer();
+void host_set_game_dir(const char *dir);
+// Replaces the host's own picture: at each present slot of host_pump (at most every 8 ms, VSync
+// pacing it further) the presenter gets the composed frame and whether it changed since the last
+// slot (or the window needs a redraw), draws with host_renderer() and returns true if it presented.
+void host_set_presenter(bool (*present)(const u32 *xrgb, bool changed));
+// Called by host_frame_pace on entry: a 3D station's frame is complete in memory.
+void host_set_frame_hook(void (*hook)());
+// Called for each key press (SDL scancode) before the game gets it; true = the key is the
+// presentation layer's (its press and release never reach the game).
+void host_set_hotkey_handler(bool (*handler)(int scancode));
+void host_set_fullscreen(bool on);
+bool host_fullscreen();
+// Restarts the timer clock from now (the game starts after the launcher, not at host_init).
+void host_reset_clock();
 
 // Developer aids (environment variables):
 //   GB_SNAPSHOT_DIR=dir   the screen is saved every 2 s as snapNNNN.bmp, changing or not (works

@@ -4,13 +4,30 @@ The faithful port of `GB.EXE`, rebuilt one original function at a time on the or
 layout (see `/CLAUDE.md` for the method and `PORTING.md` for how the code is organised).
 **The whole game runs natively** in VGA: the title and its music, the menu and the demo, the
 practice missions, the headquarters, the front end, every campaign mission with its stations, map
-and damage report, the debrief and the roster. `Run Port.cmd` starts it (`--fps N` sets the 3D
-stations' frame rate, default 15; `--sound adlib|speaker`).
+and damage report, the debrief and the roster. `Run Port.cmd` starts it; the launcher opens first.
+
+**Enhancements, all optional** (`src/enhanced/`; the launcher, the command line, F11 in the game):
+the 3D view drawn again at the window's resolution under the original cockpit, smooth 60 fps motion
+in the 3D view, the world continued beside the picture in a wide window, the picture's aspect (4:3
+like the VGA monitor, or square pixels) and scaling (sharp, nearest, smooth, CRT scanlines). With the
+**Original** preset the picture is the faithful one. The game is the same either way: the
+enhancements only read what it drew.
+
+```text
+gunboat.exe [--launcher | --no-launcher] [--game-dir DIR] [--original | --enhanced]
+            [--view original|hires] [--motion original|smooth] [--widescreen on|off]
+            [--aspect 4:3|square] [--filter sharp|nearest|smooth|crt] [--fullscreen | --window]
+            [--scale N] [--fps N] [--sound adlib|speaker] [--check] [--host-test]
+```
+
+The settings are saved in `%APPDATA%\Gunboat\gunboat.ini`; options given on the command line apply
+to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
 
 | Part | State |
 | --- | --- |
 | Memory model and loader (`src/mem.*`) | GB.EXE (EXEPACK) unpacked, relocated and checked in C++ |
-| Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio, files |
+| Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio, files; hooks for the presentation layer |
+| Presentation layer (`src/enhanced/`) | the launcher and settings; the frame capture, the enhanced 3D view (`view3d`) and the presenter: every enhancement optional |
 | Platform (`src/platform/`) | DOS files and memory, the C runtime models, the BIOS model, the graphics library (VGA), palette, LZW pictures, text, keyboard and timer interrupts, joystick (host gamepad) |
 | Game flow (`src/game/flow_*`) | main, config_load, the archive and far buffers, keys and the demo script, the title sequence, the credits, the menu, the headquarters quiz, the roster file, the whole front end (office, roster, personnel files, briefings, maps, spec sheets, outfitting, debrief) |
 | Simulation (`src/game/sim_*`) | game_frame, keys and controls, crew pilot and gunners, routes, engines and propulsion, motion, weapons and projectiles, enemies and incoming fire, damage, messages, the mission clock |
@@ -21,6 +38,7 @@ stations' frame rate, default 15; `--sound adlib|speaker`).
 | Ported functions | 433 GB.EXE functions and 52 ADLIB.COM routines, each matching the original on all memory (not ported by design: the EGA/CGA/Tandy/Hercules paths, MT-32/CMS, the text console) |
 | Differential tests (`tests/difftest/`) | 214 tests, 174,770 cases, 0 mismatches: memory, registers, DAC writes, speaker, timer and OPL events, open and written files; whole missions and front-end runs |
 | Scene checks (`tests/scenes/`) | the title screens match DOSBox captures on 100% of pixels, the pilot's cockpit on 99.47% and the map on 99.97% (`scene_mission.py`: the rest is the moment: water marks, clock, boat marker) |
+| Enhancement checks (`tests/scenes/scene_enhanced.py`) | the enhanced view drawn at 1x equals the original's view on 94.7% (pilot practice) and 97.0% (night gunnery) of its pixels; no capture changes the game's memory; 60 presents/s while the game runs at 15.0 frames/s |
 
 ## Build and test (Windows)
 
@@ -42,7 +60,8 @@ The tests: `load_exe` (`gunboat --check`), `host_timer` (`gunboat --host-test`, 
 `difftest` (`tests/difftest/run_all.py`, needs Python 3 with `unicorn` and `capstone` and
 `reverse_engineering/out/GB_unp.exe` from `unexepack.py`).
 `python gunboat-port/tests/scenes/scene_check.py` runs the port headless and compares its frames
-with the DOSBox captures in `reverse_engineering/out/dosbox_captures`.
+with the DOSBox captures in `reverse_engineering/out/dosbox_captures`;
+`scene_enhanced.py` checks the enhancements (see the table).
 `GB_GAME_DIR` points the tests at the original files (default `../Original DOS version`).
 
 `python gunboat-port/tests/difftest/run_all.py [--scale N] [--seed N] [-k name]` runs the

@@ -7,12 +7,15 @@ the Test Drive III port's `td3port/PORTING.md`.
 ## Architecture
 
 ```text
-src/main.cpp            arguments, mem_load_exe, ADLIB.COM (--sound adlib), the machine set-up, then
-                        game_main (main 0000:0000)
+src/main.cpp            the settings and arguments, the launcher, mem_load_exe, ADLIB.COM, the
+                        machine set-up, the presentation layer, then game_main (main 0000:0000)
 src/mem.hpp/.cpp        mem[]: GB.EXE at 1000:0000, DGROUP 2B73h, VGA A000h; accessors; exact division;
                         the EXEPACK loader
-src/host.hpp/.cpp       SDL3, the only file that includes it: window, PIT timer, retrace, XT keys,
-                        gamepad, OPL2 + speaker, game files, fatal errors
+src/host.hpp/.cpp       SDL3 (with src/enhanced/ the only code that includes it): window, PIT timer,
+                        retrace, XT keys, gamepad, OPL2 + speaker, game files, fatal errors; the
+                        hooks of the presentation layer (presenter, frame hook, hotkeys)
+src/enhanced/           the presentation layer: launcher, settings, frame capture, the enhanced 3D
+                        view, the presenter ("The enhancement layer" below)
 src/symbols.hpp         generated from reverse_engineering/symbols.csv (never edit)
 src/platform/           platform.md and video.md: dos (DOS memory, files, the C runtime models),
                         bios (INT 10h / 1Ah model), gfx (graphics library, pictures), pal (palette,
@@ -37,8 +40,8 @@ tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the mac
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
 ```
 
-CMake builds `gbcore` (everything in `src/` except `main.cpp` and `host.cpp`, no SDL), then
-`gunboat` (+ host + SDL3) and `gb_difftest` (+ bridge + stub host). A new `.cpp` under `src/`
+CMake builds `gbcore` (everything in `src/` except `main.cpp`, `host.cpp` and `enhanced/`, no SDL),
+then `gunboat` (+ host + presentation layer + SDL3) and `gb_difftest` (+ bridge + stub host). A new `.cpp` under `src/`
 is picked up automatically.
 
 ## Memory model (`src/mem.hpp`)
@@ -176,3 +179,37 @@ k-th `game_frame`; `test_sim2.run_mission` and `combat` deliver keys at the loop
 alerted and shooting); `test_render.capture` snapshots registers and memory where the original's
 frame enters any routine; `test_frame.loop_capture` does the same across whole `mission_run`
 runs. Night states come from the missions' start times, not from a flag.
+
+## The enhancement layer
+
+`src/enhanced/` is the presentation layer: it is linked into `gunboat.exe` only (not into `gbcore`
+or the differential tests), includes SDL like the host, and never changes the game. Every
+enhancement is a player option (`settings.hpp`); with all of them off the picture is the
+original's.
+
+* `settings.*`: the player's settings, `gunboat.ini` in `SDL_GetPrefPath`; the command line in
+  `main.cpp` overrides them for one run.
+* `launcher.*`: the settings screen in the game's window before the game (keyboard, mouse,
+  gamepad; SDL's debug font); it validates the game folder with `mem_load_exe`.
+* `capture.*`: the host calls the frame hook in `host_frame_pace`, once per pass of a 3D station,
+  when the frame is complete. `scene_capture` copies DGROUP and page 1's view window and derives, by
+  running ported routines on the game's memory and restoring every byte afterwards (a `Scratch`
+  holds the copy): the map of page 0 pixels to the view window (view_present, or the chase view's
+  rectangle copy, three times with the window filled with its column, its row and its column ^
+  80h), what view_present drew over the window (the gun sprites), and the drawn objects' sprites
+  at their natural size (`sprite_view_angle`, then `sprite_cache_build` at size 17h into a slot
+  moved to spare memory). No ported routine it runs may wait or pump the host (the timer would
+  change the memory being restored).
+* `view3d.*`: the view of a capture drawn again into palette indices at any scale, for a camera
+  between two captures: the original's steps and order (sky, horizon line and water from the
+  pitch, water marks, group B, group A and the sprites interleaved by the frame's own depths,
+  spotlights), its projection in floating point (bearing 128 units per column, rows from 7FFFh /
+  distance), its triangles grown as its row-inclusive spans grow them (so distant thin terrain
+  keeps its size), its sprite scale factors (the densities of the scale patterns).
+* `present.*`: the host's presenter: the 320x200 frame as a texture (the player's filter and
+  aspect), with holes where the frame still shows the captured view; the view drawn under it at the
+  window's resolution per rectangle of one offset, and beside the picture in a wider window; F11
+  switches enhanced/original. Developer aids: `GB_VIEW_CHECK=1` (the view drawn at 1x against the
+  original's pixels, and the memory compared around each capture; `GB_VIEW_CHECK_DIR` keeps
+  images), `GB_PRESENT_STATS=1` (presents, game frames and times per 5 s), `GB_SNAPSHOT_DIR` (also
+  `hdNNNN.bmp` of the presented window and `launcher.bmp`).

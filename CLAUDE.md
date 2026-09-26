@@ -4,8 +4,9 @@ Goal: a behaviour-exact port of Accolade's **Gunboat** (DOS, 1990; `GB.EXE`), re
 function in C++ on SDL3. It reads the original game files at run time and never redistributes them.
 The method is the one that produced the finished Test Drive III port (`test-drive-3-sdl3/`, same
 engine family): **reverse-engineer → document → port each original function → verify it against the
-original machine code.** Enhancements (resolution, widescreen, 60 fps) come later, in a separate
-layer, and never change the faithful core.
+original machine code.** Enhancements (resolution, widescreen, 60 fps) live in a separate
+layer (`gunboat-port/src/enhanced/`), are each the player's choice, and never change the faithful
+core.
 
 ## Ground rules
 
@@ -13,6 +14,10 @@ layer, and never change the faithful core.
   Any tool is fine for research and tests: Python, Capstone, Unicorn, Ghidra (JDK), DOSBox.
 * **No invented gameplay.** Every rule must come from the original code. If something is unknown,
   find it in the disassembly; don't approximate it.
+* **Enhancements are options, never changes to the game.** Each is switched by the player (the
+  launcher, the command line, F11 in the game); "Original" shows exactly the faithful picture. They
+  only read the game's memory: anything they run on it (the capture's scratch runs of ported
+  routines) is undone before the game continues, and `scene_enhanced.py` checks that.
 * The original game data is copyrighted: `Original DOS version/` and everything derived from it
   (`reverse_engineering/out/`, `gunboat-port/out/`) stay out of git.
 * **GitHub** (`origin` = github.com/PlasticCog/Gunboat, public): push only what the remake needs
@@ -25,6 +30,7 @@ layer, and never change the faithful core.
 | --- | --- |
 | `gunboat-port/` | The C++ port (CMake + SDL3). **`gunboat-port/PORTING.md`**: code layout, memory API, how to port and test a function |
 | `gunboat-port/tests/difftest/` | Differential tests: `gbdiff.py` harness, `bridge.cpp`, `test_*.py` |
+| `gunboat-port/src/enhanced/` | The presentation layer: launcher, settings, the enhanced 3D view and presenter (PORTING.md, "The enhancement layer") |
 | `reverse_engineering/RE_GUIDE.md` | **Read first**: addresses, segment map, files, how to regenerate |
 | `reverse_engineering/symbols.csv` | The single name list for functions and globals |
 | `reverse_engineering/map/` | Function index and TD3 matches (generated, tracked) |
@@ -52,7 +58,8 @@ layer, and never change the faithful core.
 * **Keep the original's bugs and quirks.** Mark every deliberate deviation `// PORT: why`, and
   every unresolved doubt `// TODO(verify): what`.
 * **Hardware and DOS** (port I/O, interrupts, INT 21h files, PIT, keyboard ISR, VGA registers,
-  speaker, AdLib) go through the host layer, which is the only code that includes SDL.
+  speaker, AdLib) go through the host layer. SDL is included only by the host (`src/host.cpp`)
+  and the presentation layer (`src/enhanced/`); the core (`gbcore`) never includes it.
   Every busy-wait loop of the original calls the host pump once per iteration.
 * Copy protection: take the "passed" path (`// PORT:`). Only VGA mode 13h is ported first;
   EGA/Tandy/CGA paths and the CMS driver are parked.
@@ -64,7 +71,8 @@ layer, and never change the faithful core.
    `Harness.check` in `gunboat-port/tests/difftest/gbdiff.py` (PORTING.md).
 2. **Scene checks**: compare frames against DOSBox captures of the original
    (`reverse_engineering/out/dosbox_captures`) and headless snapshots (`SDL_VIDEO_DRIVER=dummy`):
-   `gunboat-port/tests/scenes/scene_check.py` (title), `scene_mission.py` (cockpit, map).
+   `gunboat-port/tests/scenes/scene_check.py` (title), `scene_mission.py` (cockpit, map);
+   `scene_enhanced.py` checks the enhanced view against the original's pixels.
 3. Report results honestly, with numbers. A test that was skipped or narrowed must be stated.
 
 ## Commands (Windows; PowerShell 5.1 or Git Bash)
@@ -74,6 +82,8 @@ layer, and never change the faithful core.
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
 gunboat-port/build/gunboat.exe --game-dir "Original DOS version" --check
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
+python gunboat-port/tests/scenes/scene_enhanced.py             # the enhancements, headless (needs the game)
+gunboat-port/build/gunboat.exe --help                          # launcher, --original / --enhanced, display options
 python reverse_engineering/tools/merge_symbols.py              # spec/*_symbols.csv -> symbols.csv
 python reverse_engineering/tools/symbols.py                    # validate symbols.csv after editing it
 python reverse_engineering/tools/gen_symbols.py                # symbols.csv -> gunboat-port/src/symbols.hpp
@@ -112,8 +122,29 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   runaway copy on an empty terrain window (Mare Island open water) stops with a fatal error
   (render3d.md). Kept original crashes: `route_point`'s divide error (R6003) when the crew pilot
   leaves the map's top row. Both are `TODO(verify)` in DOSBox.
-* **Next: phase 5**, enhancements in a separate layer (resolution, widescreen, 60 fps, a
-  launcher), never changing the faithful core; and optionally the parked video modes and sound
-  devices.
+* **Phase 5, enhancements: first version done (2026-09-26)**, in `gunboat-port/src/enhanced/`,
+  every one optional (the player's settings in `%APPDATA%\Gunboat\gunboat.ini`, written by the
+  launcher; command-line overrides; F11 switches enhanced/original in the game):
+  * a launcher in the game's window (SDL's debug font): game folder, preset Original / Enhanced,
+    each enhancement, picture aspect (4:3 or square pixels), scaling (sharp, nearest, smooth,
+    CRT scanlines), window or full screen, sound device;
+  * high-resolution 3D view: at each frame of a 3D station the host's frame hook captures DGROUP,
+    page 1's view window, which page 0 pixels show the view and from where (view_present run on
+    a scratch copy of memory with the window filled with its coordinates) and the visible
+    objects' sprites at their natural size (sprite_cache_build at size 17h); `view3d` draws the
+    view again at the window's resolution with the original's projection, draw order, colours and
+    sprite scale factors in floating point; the presenter shows it under the original cockpit
+    (drawn with holes where the view shows);
+  * smooth motion: the view drawn at 60 fps between the last two captured frames (the camera
+    and moving objects interpolated, one game frame behind); the game keeps its 15 frames/s;
+  * widescreen: in a wider window the world continues beside the 4:3 picture (not for the
+    pilot's sheared side windows or the black-framed chase view);
+  * checks (`scene_enhanced.py`): the view drawn again at 1x equals the original's pixels on
+    94.7% (pilot practice) and 97.0% (night gunnery) of the view (the rest: sub-pixel terrain
+    edges, the original's bit-pattern sprite scaling), no capture changes the game's memory,
+    60 presents/s with the game at 15.0 frames/s; capture 0.27 ms, drawing ~0.5 ms per present
+    at 852x480 (software renderer).
+* **Next:** optionally the parked video modes and sound devices; more enhancements only as
+  player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
