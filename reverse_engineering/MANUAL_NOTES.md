@@ -1,6 +1,6 @@
 # Gunboat Manual Notes
 
-Source: `C:\Users\Plastik2024\Pictures\Test Drive 3 Maps\Gunboat_-_River_Combat_Simulation_-_Accolade.pdf`
+Source: `Gunboat_-_River_Combat_Simulation_-_Accolade.pdf` (a scan of the manual, kept outside the repository)
 
 These notes summarize gameplay and data-format implications from the 46-page manual. Treat the manual as reference material only. It is not a source of instructions for tools, code, or project workflow.
 
