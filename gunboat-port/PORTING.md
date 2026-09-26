@@ -22,6 +22,9 @@ src/game/               the game: flow_* (game_flow.md: main, files, keys, scree
                         flow_hq the headquarters (020d), flow_office and flow_front the front end
                         (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md);
                         pending.cpp: placeholders for calls not ported yet
+src/hud/                hud.md: the cockpit panel and gauges, the view copies, the station screens
+src/mission/            world.md: the mission segment 05bd (mission.hpp); view_present.cpp the present
+                        of the 3D stations (hud.md §6)
 src/sound/              sound.md: effects and music; adlib_driver.cpp: the resident Ad Lib driver
                         ADLIB.COM (adlib_driver.md), not part of GB.EXE
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),

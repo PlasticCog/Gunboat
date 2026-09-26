@@ -10,7 +10,7 @@ func,05bd:144a,view_restore,far void(),§3.3 B data back into DGROUP; sprites in
 func,05bd:19cc,map_screen,far void(),§3.2 station 5 (hud spec)
 func,05bd:1ba4,damage_report_screen,far void(),§3.2 station 7 (hud spec)
 func,05bd:1dba,assignment_screen,far void(),§3.2 station 8; prints the mission text DS:ECB4
-func,05bd:1fd4,view_present,far void(u16 page),§3 copies the 3D view and composes the cockpit (hud spec)
+func,05bd:1fd4,view_present,far void(u16 src_page u16 dst_page),§3 hud §6: the gun sprites on the source page; the view through the cockpit openings to the destination page (mission_run (1 0); view_restore (1 view_page))
 func,05bd:2efc,screen_clear,far void(),§3.1
 func,05bd:3114,window_cracks_draw,far void(),§3.3 simulation §8.6; hud §5
 func,0919:3d78,mission_setup,far void(),§5
@@ -38,3 +38,7 @@ global,DS:F13A,flow_scratch,u16,"§1 scratch of main and config_load: the title 
 global,DS:F396,world_b_size,u16,§4
 global,DS:F5D4,world_b_far,u16[2],§4 far pointer to the B data copy
 func,0919:0000,panel_redraw_all,far void(),§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
+global,DS:EA86,flash_stern_latch_prev,u8,§3.2 flash_stern_latch of the frame before (mission_run and view_restore: before game_frame)
+global,DS:ECA8,flash_midship_latch_prev,u8,§3.2 flash_midship_latch of the frame before
+global,DS:F10B,flash_stern_latch,u8,§3.2 flash_stern (B83C) taken before game_frame for view_present
+global,DS:F132,flash_midship_latch,u8,§3.2 flash_midship (B839) taken before game_frame for view_present

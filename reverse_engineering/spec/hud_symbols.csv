@@ -96,3 +96,41 @@ global,DS:E069,line_axis_x,u16,video §2 x step when the error term is < 0 (0 on
 global,DS:E06B,line_axis_y,u16,video §2 y step when the error term is < 0 (0 on a flat line)
 global,DS:E06D,line_err_diag,u16,video §2 2 * minor - 2 * major
 global,DS:E06F,line_err_axis,u16,video §2 2 * minor
+global,DS:ECAE,gun_dark_colour,u8,§6 the dark layer of the gun sprites (VGA 08h; EGA/Tandy 08h; CGA 02h)
+global,DS:ECAF,muzzle_flash_colour,u8,§6 the muzzle flash sprites with white 0Fh (VGA 0Ch; EGA/Tandy 0Ch; CGA 03h)
+global,DS:EEA1,midship_mount_colour,u8,§6 midship weapon 1: the piece at (B8h; 7Fh) (gun_shade_colour; 7 in EGA/Tandy: midship_screen)
+global,DS:F106,gun_light_colour,u8,§6 light grey of the gun sprites (VGA 14h)
+global,DS:F108,gun_shade_colour,u8,§6 mid grey of the gun sprites (VGA 16h)
+global,DS:E9E2,gun_sprite_e9e2,u8[72],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: sight post dark layer 16 x 25 (at (A0h; 79h)); bow weapon 0: left barrel 24 x 9 in gun_edge_colour (recoil frame gun_sprite_ea33); bow weapon 1: barrel cluster dark layer 32 x 18
+global,DS:E9FD,gun_sprite_e9fd,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left barrel 24 x 9 in gun_shade_colour (recoil frame gun_sprite_ea4e)
+global,DS:EA14,gun_sprite_ea14,u8[50],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: sight post 16 x 25 in gun_rail_colour
+global,DS:EA18,gun_sprite_ea18,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left barrel 24 x 9 dark layer (recoil frame gun_sprite_ea69)
+global,DS:EA2A,gun_sprite_ea2a,u8[72],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: barrel cluster 32 x 18 in gun_rail_colour
+global,DS:EA33,gun_sprite_ea33,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_e9e2
+global,DS:EA4E,gun_sprite_ea4e,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_e9fd
+global,DS:EA69,gun_sprite_ea69,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_ea18
+global,DS:F2A4,gun_sprite_f2a4,u8[28],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: muzzle flash 16 x 14 in muzzle_flash_colour; bow weapon 0: right barrel 24 x 9 in gun_edge_colour (recoil frame gun_sprite_f2f5)
+global,DS:F2BF,gun_sprite_f2bf,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right barrel 24 x 9 in gun_shade_colour (recoil frame gun_sprite_f310)
+global,DS:F2C0,gun_sprite_f2c0,u8[28],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship/stern: muzzle flash 16 x 14 in white
+global,DS:F2DA,gun_sprite_f2da,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right barrel 24 x 9 dark layer (recoil frame gun_sprite_f32b)
+global,DS:F2F5,gun_sprite_f2f5,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2a4
+global,DS:F310,gun_sprite_f310,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2bf
+global,DS:F32B,gun_sprite_f32b,u8[27],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: recoil frame of gun_sprite_f2da
+global,DS:F3A2,gun_sprite_f3a2,u8[6],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 2 and stern weapon 1: 16 x 3 in gun_shade_colour; midship weapon 0: 8 x 4 dark; midship weapon 1: 8 x 5 in midship_mount_colour; stern weapon 0: 8 x 1 dark
+global,DS:F3A6,gun_sprite_f3a6,u8[4],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 4 in gun_edge_colour
+global,DS:F3A8,gun_sprite_f3a8,u8[6],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 2 and stern weapon 1: 16 x 3 in gun_edge_colour
+global,DS:F5AE,gun_sprite_f5ae,u8[6],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 6 dark; midship weapon 1: 8 x 5 in gun_light_colour; stern weapon 0: 8 x 1 dark
+global,DS:F5B3,gun_sprite_f5b3,u8[5],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 1: 8 x 5 in gun_edge_colour
+global,DS:F5B4,gun_sprite_f5b4,u8[6],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); midship weapon 0: 8 x 6 in gun_edge_colour
+global,DS:EE94,gun_sprite_ee94,u8[5],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left mount edge 8 x 5 at (40h; 6Bh) in gun_edge_colour
+global,DS:ECA9,gun_sprite_eca9,u8[5],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right mount edge 8 x 5 at (108h; 6Bh)
+global,DS:F0F0,gun_sprite_f0f0,u8[4],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece left of the barrels (weapon 0: gun_edge_colour; weapon 1: dark)
+global,DS:F0F4,gun_sprite_f0f4,u8[4],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece (weapon 0: gun_shade_colour; weapon 1: colour 0)
+global,DS:F5DC,gun_sprite_f5dc,u8[4],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece right of the barrels in gun_edge_colour (weapon 0); 8 x 3 dark (weapon 1)
+global,DS:F5DF,gun_sprite_f5df,u8[3],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: 8 x 3 in colour 0
+global,DS:F5E0,gun_sprite_f5e0,u8[4],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: 8 x 4 piece in gun_shade_colour
+global,DS:F5E8,gun_sprite_f5e8,u8[21],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow muzzle flash in white: weapon 0 left barrel 24 x 7; weapon 1 16 x 10
+global,DS:F5FC,gun_sprite_f5fc,u8[20],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 1: muzzle flash 16 x 10 in muzzle_flash_colour
+global,DS:F5FD,gun_sprite_f5fd,u8[21],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left muzzle flash 24 x 7 in muzzle_flash_colour
+global,DS:EEA6,gun_sprite_eea6,u8[21],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right muzzle flash 24 x 7 in white
+global,DS:EEBB,gun_sprite_eebb,u8[21],§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right muzzle flash 24 x 7 in muzzle_flash_colour
