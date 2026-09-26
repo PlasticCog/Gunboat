@@ -96,7 +96,7 @@ void snapshot()
     static Uint64 last_ns;
     static int n;
     if (!checked) { dir = SDL_getenv("GB_SNAPSHOT_DIR"); checked = true; }
-    if (!dir) return;
+    if (!dir || !frame_source) return;
     const Uint64 now = SDL_GetTicksNS();
     if (n && now - last_ns < 2 * SDL_NS_PER_SECOND) return;
     last_ns = now;
@@ -110,7 +110,6 @@ void snapshot()
 
 void present()
 {
-    snapshot();
     if (!texture) return;
     SDL_UpdateTexture(texture, nullptr, frame, frame_w * 4);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -398,6 +397,8 @@ void host_pump()
     if (budget < 0) {  // fell too far behind: resynchronise the clock
         clock_base_ns = now - (tick_due_ns(ticks_run) - clock_base_ns);
     }
+
+    snapshot();  // the screen as shown now, also while it does not change
 
     // Present at most once per ~8 ms; VSync paces it further.
     if (frame_source && now - last_present_ns >= 8 * SDL_NS_PER_MS) {

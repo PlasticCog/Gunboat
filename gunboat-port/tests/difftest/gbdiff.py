@@ -420,7 +420,7 @@ class Harness:
         return model, {fh: pos for fh, pos in port.items() if pos >= 0}
 
     def check(self, name, m, regs=None, stack_args=(), outputs=(), label='', keep_files=False, dac=None,
-              tick=None):
+              tick=None, max_insns=5_000_000):
         """Runs `name` on both sides from memory m and compares all memory, `outputs`, the open DOS
         files and the VGA DAC. Files are closed first unless keep_files (after open_both). Both DACs
         start as `dac` (768 bytes, default black). `tick` = (list of file_seg:off poll points,
@@ -441,13 +441,14 @@ class Harness:
             raise Mismatch('%s is not in bridge.cpp' % name)
         file_seg, off, far = self.sym.func(name)
         self.orig.set_memory(m)
-        want = self.orig.call(file_seg, off, far, regs, stack_args)
+        want = self.orig.call(file_seg, off, far, regs, stack_args, max_insns=max_insns)
         mo = self.orig.memory()
         self.port.set_memory(m)
         got = self.port.call(name, regs, stack_args)
         mp = self.port.memory()
-        # The original's stack below the test SP differs by design (the port has no emulated stack).
-        lo, hi = DS_BASE + STACK_BOTTOM, DS_BASE + TEST_SP
+        # The stack segment differs by design: the original's frames, and the port's StackLocal
+        # slots (mem.hpp) at the top of it. It is not game state.
+        lo, hi = DS_BASE + STACK_BOTTOM, DS_BASE + STACK_TOP
         problems = []
         if mo[:lo] != mp[:lo] or mo[hi:] != mp[hi:]:
             problems.append(self._memory_diff(m, mo, mp, lo, hi))

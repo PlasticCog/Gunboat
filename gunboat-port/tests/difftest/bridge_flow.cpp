@@ -25,3 +25,4 @@ BRIDGE(music_stop) { music_stop(); }
 BRIDGE(menu_cursor_init) { menu_cursor_init(); }
 BRIDGE(title_menu) { r.ax = title_menu(); }
 BRIDGE(config_load) { config_load(); }
+BRIDGE(music_start) { music_start(); }

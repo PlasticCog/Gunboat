@@ -69,8 +69,8 @@ void host_free(void *p);
 void host_error_box(const char *text);
 
 // Developer aids (environment variables):
-//   GB_SNAPSHOT_DIR=dir   every presented frame >= 2 s after the previous one is saved as
-//                         snapNNNN.bmp (works with SDL_VIDEO_DRIVER=dummy)
+//   GB_SNAPSHOT_DIR=dir   the screen is saved every 2 s as snapNNNN.bmp, changing or not (works
+//                         with SDL_VIDEO_DRIVER=dummy)
 //   GB_KEYS="<seconds>:<xt>[+<xt>...],..."  presses (in order) and releases (in reverse) the XT
 //                         keys at that many seconds after start-up; "p" after the codes only
 //                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.

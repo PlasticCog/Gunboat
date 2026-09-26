@@ -6,6 +6,7 @@
 #include "mem.hpp"
 #include "platform/platform.hpp"
 #include "game/pending.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 namespace gb {

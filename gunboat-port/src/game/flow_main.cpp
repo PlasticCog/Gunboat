@@ -6,6 +6,7 @@
 #include "mem.hpp"
 #include "platform/gfx.hpp"
 #include "platform/platform.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 namespace gb {

@@ -143,6 +143,19 @@ bool mem_load_exe(const std::string &path, ExeInfo &info, std::string &err)
     return true;
 }
 
+namespace {
+u16 port_sp = DS_STACK_TOP;  // PORT: the emulated stack of StackLocal (host-side bookkeeping)
+}
+
+StackLocal::StackLocal(u16 bytes) : bytes_(u16((bytes + 1) & ~1))
+{
+    port_sp = u16(port_sp - bytes_);
+    if (port_sp < DS_STACK_BOTTOM) host_fatal("StackLocal: the emulated stack overflowed");
+    off_ = port_sp;
+}
+
+StackLocal::~StackLocal() { port_sp = u16(port_sp + bytes_); }
+
 void div_error()
 {
     // MSC 5.1 runtime INT 0 handler: prints R6003 (DS:E72E) and exits.

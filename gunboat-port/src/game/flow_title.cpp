@@ -1,11 +1,11 @@
 // The title sequence and the main menu (game_flow.md §3).
 #include "game/flow.hpp"
 
-#include "game/pending.hpp"
 #include "host.hpp"
 #include "mem.hpp"
 #include "platform/gfx.hpp"
 #include "platform/platform.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 namespace gb {
@@ -303,7 +303,7 @@ u16 title_menu()
     }
     picture_draw(PIC, 0x1ECB, 0xA0);
     set_draw_page(0);
-    gfx_copy_rect_to_copy_page(0, 0x13F, 0, 0xC7);
+    gfx_copy_rect_from_copy_page(0, 0x13F, 0, 0xC7);  // page 1 -> the screen (1502:0001)
     pal_fade_in_vga();
     ega_pal_apply();
     u16 debounce = 0, blink = 0;

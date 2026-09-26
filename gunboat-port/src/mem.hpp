@@ -94,6 +94,23 @@ inline u16_m &far_u16(FarPtr p, u16 i = 0) { return mem_u16(p.seg, u16(p.off + i
 inline u8 *far_mp(FarPtr p) { return mp(p.seg, p.off); }
 inline bool far_is_null(FarPtr p) { return p.off == 0 && p.seg == 0; }
 
+// A local variable of the original whose address is passed to another function (SS = DS in the
+// medium model, so such an address is a DGROUP offset): room for it in DGROUP's stack area, below
+// the port's own stack pointer. The original's stack is not game state (the tests do not compare
+// it), but a callee that writes through the address writes into mem[] as in the original.
+class StackLocal {
+public:
+    explicit StackLocal(u16 bytes);
+    ~StackLocal();
+    StackLocal(const StackLocal &) = delete;
+    StackLocal &operator=(const StackLocal &) = delete;
+    u16 off() const { return off_; }
+    FarPtr far() const { return {off_, DGROUP}; }
+
+private:
+    u16 off_, bytes_;
+};
+
 // Division as the CPU performs it. The MSC runtime hooks INT 0: a divide error (zero divisor or a
 // quotient that does not fit) prints "run-time error R6003 - integer divide by 0" and exits; the
 // port does the same through div_error(). A call site that must clamp instead says so (PORT).

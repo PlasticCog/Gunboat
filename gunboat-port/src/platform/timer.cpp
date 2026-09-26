@@ -2,9 +2,9 @@
 // interrupt dispatch, and the BIOS tick wait.
 #include "platform/platform.hpp"
 
-#include "game/pending.hpp"
 #include "host.hpp"
 #include "mem.hpp"
+#include "sound/sound.hpp"
 #include "symbols.hpp"
 
 namespace gb {
@@ -43,14 +43,14 @@ void timer_install()
 }
 
 // 121b:0cc4 timer_restore (platform.md §1): the PIT back to 18.2 Hz, INT 8 back to the saved
-// vector, then the speaker music reset (1b37:0002).
+// vector, then the speaker music reset (speaker_music_reset 1b37:0002).
 void timer_restore()
 {
     host_set_timer(PIT_DIV_BIOS, timer_interrupt);
     mem_far_set(0, 8 * 4,
                 {seg_u16(CSSEG_menu_timer_old_vector, CS_menu_timer_old_vector),
                  seg_u16(CSSEG_menu_timer_old_vector, u16(CS_menu_timer_old_vector + 2))});
-    speaker_reset();
+    speaker_music_reset();
 }
 
 // 121b:0ce2 menu_timer_isr (platform.md §1): the tick counter, the music, and every fifth

@@ -38,10 +38,19 @@ bool host_init(const char *dir, int, bool)
 void host_shutdown() {}
 namespace {
 u16 game_divisor;
+std::vector<u16> timer_log;
 }
-void host_set_timer(u16 divisor, void (*)()) { game_divisor = divisor; }
+// The game's timer programming is recorded (the divisor log is compared by the sound tests); the
+// handler is not run: host_pump() runs the test's tick.
+void host_set_timer(u16 divisor, void (*)())
+{
+    game_divisor = divisor;
+    timer_log.push_back(divisor);
+}
 void host_stub_set_test_tick(void (*tick)()) { tick_handler = tick; }
 u16 host_stub_timer_divisor() { return game_divisor; }
+const std::vector<u16> &host_stub_timer_log() { return timer_log; }
+void host_stub_timer_clear() { timer_log.clear(); }
 void host_set_frame_source(bool (*)(u32 *), int, int) {}
 void host_pump()
 {

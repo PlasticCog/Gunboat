@@ -2,8 +2,15 @@
 
 Runs gunboat.exe headless (SDL_VIDEO_DRIVER=dummy) with GB_SNAPSHOT_DIR, optionally scripted keys
 (GB_KEYS), for a number of seconds; then, for each DOSBox capture given, finds the port snapshot
-that matches it best and reports the share of identical pixels. DOSBox captures are 640x400 (each
-VGA pixel doubled); they are reduced to 320x200 by taking every other pixel.
+that matches it best. DOSBox captures are 640x400 (each VGA pixel doubled); they are reduced to
+320x200 by taking every other pixel.
+
+The DOSBox build that made the captures turns the 6-bit DAC values into 8-bit colours with its own,
+non-linear table (e.g. 20 -> 82, 30 -> 121), so the RGB values cannot be compared. The score is the
+share of pixels that agree under a one-to-one mapping of colours (the same picture drawn with the
+same palette indices): each capture colour is paired with the port colour it most often meets, and
+a pixel counts if its pair agrees and no two capture colours share a port colour. The largest
+channel distance between paired colours is reported as a check that the pairs are the same colours.
 
 usage: scene_check.py [--seconds N] [--keys SPEC] [--captures GLOB] [--no-run] [--out DIR]
   default captures: the title sequence, reverse_engineering/out/dosbox_captures/gb_00[0-3].png
@@ -32,9 +39,25 @@ def to_vga(path):
 
 
 def same_pixels(a, b):
+    """(share of pixels agreeing under a one-to-one colour mapping, largest channel distance)"""
     pa, pb = a.load(), b.load()
-    same = sum(1 for y in range(200) for x in range(320) if pa[x, y] == pb[x, y])
-    return same / 64000
+    pairs = {}
+    for y in range(200):
+        for x in range(320):
+            key = (pa[x, y], pb[x, y])
+            pairs[key] = pairs.get(key, 0) + 1
+    best = {}
+    for (ca, cb), n in pairs.items():
+        if n > best.get(ca, (None, 0))[1]:
+            best[ca] = (cb, n)
+    used, same, dist = {}, 0, 0
+    for ca, (cb, n) in sorted(best.items(), key=lambda t: -t[1][1]):
+        if cb in used:
+            continue  # not one-to-one: the smaller group does not count
+        used[cb] = ca
+        same += n
+        dist = max(dist, max(abs(u - v) for u, v in zip(ca, cb)))
+    return same / 64000, dist
 
 
 def main():
@@ -65,14 +88,15 @@ def main():
     worst = 1.0
     for cap in sorted(glob.glob(a.captures)):
         ref = to_vga(cap)
-        best = max(((same_pixels(ref, im), p, im) for p, im in port_frames), key=lambda t: t[0])
-        score, path, im = best
+        best = max(((same_pixels(ref, im), p, im) for p, im in port_frames), key=lambda t: t[0][0])
+        (score, dist), path, im = best
         worst = min(worst, score)
         side = Image.new('RGB', (640, 200))
         side.paste(ref, (0, 0))
         side.paste(im, (320, 0))
         side.save(out / ('%s_vs_port.png' % pathlib.Path(cap).stem))
-        print('%-12s best %-14s %6.2f%% identical pixels' % (pathlib.Path(cap).name, path.name, 100 * score))
+        print('%-12s best %-14s %6.2f%% of pixels agree (colours paired one-to-one, largest channel '
+              'difference %d)' % (pathlib.Path(cap).name, path.name, 100 * score, dist))
     return 0 if worst == 1.0 else 1
 
 
