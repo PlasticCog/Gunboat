@@ -40,7 +40,8 @@ drew it; "Enhanced" turns them all on. The game itself plays the same either way
 enhancements only change how its frames are shown.
 
   3D view        High resolution: the world outside drawn again at your screen's resolution from
-                 the game's own terrain and objects; the cockpit stays the original art.
+                 the game's own terrain and objects; the cockpit stays the original art. The
+                 enhanced view draws the horizon as a soft haze instead of the original grey line.
   Motion         Smooth: 60 frames per second in the 3D view, drawn between the game's own frames
                  (the view is one game frame behind).
   Draw distance  Extended: the terrain and objects beyond the 3 x 3 cells the game draws, out to

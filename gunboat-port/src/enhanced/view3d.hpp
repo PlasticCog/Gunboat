@@ -26,9 +26,16 @@ struct ViewTarget {
     bool far = true;  // draw the scene's far cells (the extended draw distance) when it has them
 };
 
+// Where the horizon line was drawn: its first page row (it is two rows of colour 8) and the sky and
+// water colours around it.
+struct ViewHorizon {
+    double y = 0;
+    u8 sky = 0, water = 0;
+};
+
 // Draws the view of `cur` (camera and objects interpolated from `prev` at t in 0..1 when prev is
 // given and compatible) into the target.
-void view3d_render(const Scene &cur, const Scene *prev, double t, const ViewTarget &target);
+ViewHorizon view3d_render(const Scene &cur, const Scene *prev, double t, const ViewTarget &target);
 
 // Whether two captures can be interpolated (same station, look direction and view, a small move).
 bool view3d_compatible(const Scene &a, const Scene &b);

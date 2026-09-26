@@ -149,6 +149,10 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     at its ends; at most 28 columns a side (16:9 with square pixels), a wider window draws the
     widened frame a little wider (the view too, so aiming stays exact); the widening is made again
     when the station's cockpit changes or a changing pixel lands on a repeated column;
+  * the horizon line as haze: in the enhanced view the original's two rows of colour 8 become a
+    band fading from the sky into a light (by day pale blue) haze and on into the water, reaching
+    3 rows up into the sky (present.cpp `Haze`, applied to the colour 8 and sky pixels of those
+    rows when the indices become colours); the Original preset keeps the grey line;
   * extended draw distance: the terrain cells 2..5 from the boat's (the game draws 3 x 3), loaded
     with `tile_load` on the scratch memory (with their structures and scenery) when the window's
     centre cell or the time-of-day colours change, drawn behind the game's terrain far to near

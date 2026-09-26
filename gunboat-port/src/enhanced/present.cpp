@@ -194,6 +194,59 @@ Layout layout(SDL_Renderer *r)
     return l;
 }
 
+// The horizon line of the enhanced view as haze: the original's two rows of colour 8 (grey, and the
+// explosion flash's colour) drawn as a band that fades from the sky into a light haze at its middle
+// and on into the water, the haze reaching a few rows up into the sky. The haze is between the
+// water and the sky, a little paler and bluer by day. (Only where the enhanced view is drawn; the
+// original picture keeps its line.)
+u32 mix(u32 a, u32 b, double t)
+{
+    t = std::clamp(t, 0.0, 1.0);
+    u32 out = 0xFF000000u;
+    for (int s = 0; s < 24; s += 8) {
+        const double x = double(a >> s & 0xFF) + (double(b >> s & 0xFF) - double(a >> s & 0xFF)) * t;
+        out |= u32(std::lround(x)) << s;
+    }
+    return out;
+}
+
+double smooth(double t)
+{
+    t = std::clamp(t, 0.0, 1.0);
+    return t * t * (3 - 2 * t);
+}
+
+class Haze {
+public:
+    static constexpr double ABOVE = 3.0;  // page rows of sky the haze reaches into
+
+    explicit Haze(const ViewHorizon &h) : y_(h.y), sky_(pal[h.sky]), water_(pal[h.water])
+    {
+        haze_ = mix(sky_, water_, 0.25);
+        const double light = (0.3 * double(sky_ >> 16 & 0xFF) + 0.59 * double(sky_ >> 8 & 0xFF) +
+                              0.11 * double(sky_ & 0xFF)) / 160.0;
+        haze_ = mix(haze_, 0xFFA0C8EBu, 0.45 * std::min(1.0, light));  // pale blue by day
+    }
+
+    // The colours of page row y: `band` for its colour 8 pixels, `above` for its sky pixels (0 for
+    // none); false when the row is outside the haze.
+    bool row(double y, u32 &band, u32 &above) const
+    {
+        band = above = 0;
+        if (y < y_ - ABOVE || y >= y_ + 2) return false;
+        const double mid = y_ + 1;
+        const u32 c = y < mid ? mix(sky_, haze_, smooth((y - (y_ - ABOVE)) / (ABOVE + 1)))
+                              : mix(haze_, water_, smooth(y - mid));
+        if (y >= y_) band = c;
+        else above = c;
+        return true;
+    }
+
+private:
+    double y_;
+    u32 sky_, water_, haze_;
+};
+
 // Renders the view rectangle of page coordinates (ox, oy, w x h page pixels) into vt at the scale.
 void render_region(ViewTex &vt, double ox, double oy, double pw, double ph, double sx, double sy, double t,
                    SDL_ScaleMode mode)
@@ -218,14 +271,24 @@ void render_region(ViewTex &vt, double ox, double oy, double pw, double ph, doub
     target.sx = sx;
     target.sy = sy;
     const bool interpolate = cfg.smooth_motion && prev && prev->valid;
-    view3d_render(*cur, interpolate ? prev : nullptr, t, target);
+    const ViewHorizon hz = view3d_render(*cur, interpolate ? prev : nullptr, t, target);
     void *pixels;
     int pitch;
     if (!SDL_LockTexture(vt.tex, nullptr, &pixels, &pitch)) return;
+    const Haze haze(hz);
     for (int y = 0; y < h; y++) {
         u32 *row = reinterpret_cast<u32 *>(static_cast<u8 *>(pixels) + size_t(y) * pitch);
         const u8 *src = vt.idx.data() + size_t(y) * w;
-        for (int x = 0; x < w; x++) row[x] = pal[src[x]];
+        u32 band = 0, above = 0;  // the haze colours of this row for colour 8 and for the sky
+        const bool hazy = haze.row(oy + (y + 0.5) / sy, band, above);
+        for (int x = 0; x < w; x++) {
+            const u8 c = src[x];
+            row[x] = pal[c];
+            if (hazy) {
+                if (c == 8 && band) row[x] = band;
+                else if (c == hz.sky && above) row[x] = above;
+            }
+        }
     }
     SDL_UnlockTexture(vt.tex);
 }

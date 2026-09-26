@@ -117,7 +117,7 @@ public:
         if (!scale_table.ready) scale_table.build();
     }
 
-    void run()
+    ViewHorizon run()
     {
         sky_and_water();
         water_marks();
@@ -126,6 +126,7 @@ public:
         group_b();
         group_a_and_sprites();
         spotlights();
+        return horizon();
     }
 
 private:
@@ -170,17 +171,27 @@ private:
 
     // ---- sky_water_vga (0919:74c0): sky above the horizon row, two rows of colour 8, water below;
     // the flash (DS:D9B5 counting down) turns the sky 0Fh then 0Eh and the water 0Eh.
-    void sky_and_water() const
+    ViewHorizon horizon() const
     {
         const u8 shake = sc_.u8_at(DS_screen_shake);
-        u8 sky = sc_.u8_at(DS_scene_colours), water = sc_.u8_at(u16(DS_scene_colours + 1));
+        ViewHorizon v;
+        v.y = VIEW_Y + cam_.horizon;
+        v.sky = sc_.u8_at(DS_scene_colours);
+        v.water = sc_.u8_at(u16(DS_scene_colours + 1));
         if (shake != 0) {
-            sky = 0x0F;
-            water = 0x0E;
+            v.sky = 0x0F;
+            v.water = 0x0E;
         } else if (prev_ && prev_->u8_at(DS_screen_shake) == 1) {
-            sky = 0x0E;
+            v.sky = 0x0E;
         }
-        const double h = VIEW_Y + cam_.horizon;
+        return v;
+    }
+
+    void sky_and_water() const
+    {
+        const ViewHorizon v = horizon();
+        const u8 sky = v.sky, water = v.water;
+        const double h = v.y;
         const double top = tg_.oy - 1, bottom = tg_.oy + tg_.h / tg_.sy + 1;
         const double left = tg_.ox - 1, right = tg_.ox + tg_.w / tg_.sx + 1;
         rect(left, top, right, h, sky);
@@ -584,11 +595,11 @@ bool view3d_compatible(const Scene &a, const Scene &b)
            std::fabs(wrap16(double(a.u16_at(DS_camera_qy)) - b.u16_at(DS_camera_qy))) < 0x800;
 }
 
-void view3d_render(const Scene &cur, const Scene *prev, double t, const ViewTarget &target)
+ViewHorizon view3d_render(const Scene &cur, const Scene *prev, double t, const ViewTarget &target)
 {
     if (prev && !view3d_compatible(*prev, cur)) prev = nullptr;
     Renderer r(cur, prev, std::clamp(t, 0.0, 1.0), target);
-    r.run();
+    return r.run();
 }
 
 } // namespace gb
