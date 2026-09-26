@@ -105,12 +105,14 @@ instead of its record at `D883:D000` (slot 69h is reserved anyway) and slot 6Ah 
 not cleared.
 The readers `hit_test` and `line_of_sight` (simulation §7) take `D883` for sprite indexes ≥ 69h.
 
-## 4. `mission_load` (05bd:14d6) **verified**
+## 4. `mission_load` (05bd:14d6) **verified** (port, differential test: every region, the practice modes, weapon fits, day and night)
 
 ```
 B839 = B83C = EA86 = ECA8 = F10B = F132 = 0; look F346 = 1 (ahead)
-file_load_near(F110 ? "DAT11.DAT" : "DAT10.DAT", DS:D502)            boat record, simulation §2.2
-file_load_near(region A file, DS:6E54)                                §6.3
+if F110 == 0: file_load_near("DAT10.DAT", DS:D502)                  boat record, simulation §2.2
+if F110 != 0: file_load_near("DAT11.DAT", DS:D502)                  (two tests: F110 read again)
+file_load_near(region A file, DS:6E54)                                §6.3; word B503: 0 DAT2A/B,
+                                                                      1 DAT3, 2 DAT4, any other DAT1
 file_load_far(region B file, F5D4:F5D6); F396 = size
 file_load_near("DATn.DAT" (DS:0B26 + 9·region), DS:B84C)              mission record §6.1
 far_to_near_copy(F5D4:F5D6 → DS:53A8, F396)                           B data into DGROUP
@@ -129,7 +131,9 @@ cockpit art (compressed pictures, decoded later by the station screens; hud spec
                 else: B61 → F5CC (0BEEh), B62 → F5C2 (2035h)
 12ed:0000; 00f2:0f16; 12ed:0063                                        (sound / palette fade)
 file_load_near("TACTCOLR.BIN", DS:08C4)                               palette, 225 bytes
-if night (B7FC == 0): palette bytes 15h..1Ah and 39h..47h −= 8; word DS:0951 = 200h
+if night (B7FC == 0): palette bytes 15h..1Ah and 39h..47h −= 8; word DS:0952 = 0200h
+    (palette byte 8Eh: colour 2Fh's green 0, blue 2; port-verified, not DS:0951). B7FC is
+    time_of_day's result in mission_setup (forced by B7FC = FFh), i.e. the mission type's start time
 ega_pal_init(); draw page 1
 LIGHTS.LZ → F5BA (F0DE = 2EB5h), decoded (08e1:01bd) into DS:1094 and drawn to page 1
    (VGA: 121b:08a8, else 1390:0000); in EGA modes 9/0Dh 00f2:0f24(14h, 277h) first
@@ -143,11 +147,11 @@ The sizes stored next to each far pointer are the decoded sizes the station scre
 decoder. `LIGHTS.LZ` is decoded straight into DGROUP at `DS:1094`, the terrain vertex arrays
 (render3d §8), before the terrain is built.
 
-## 5. `mission_setup` (0919:3d78) **verified**
+## 5. `mission_setup` (0919:3d78) **verified** (port, differential test)
 
 ```
 repeat r = random() until popcount(r) is 4..8; D8BD = r        far-object thinning (render3d §5.1)
-demo mode: boat X/Y = 0B00h / 0FF0h
+demo mode (byte DS:0070 != 0): boat X/Y = 0B00h / 0FF0h
 sprite segments D883 = F0DC + (F0DA >> 4) + 1; D885 = F0E2 + (F0E0 >> 4) + 1
 video_mode_setup()                                             0919:3fba (row tables, D8F8/D8FA)
 gunner sweep memories D67D/D67E/D67F = 1
@@ -156,13 +160,16 @@ headings: hull 0, bow 0, midship 80h, stern 80h (fractions 0); bob velocity 0
 crew pilot state 0; fire at will 0; visible count B83D = 0; D9B5 = 0; D70D = 0
 D649 = FFh; B7FC = FFh (forces time_of_day to update); B82D = 80h; B82C = 7Fh; jet 40h
 reloads B830 = 8, B831 = 30h; B7F3 −= 6; elevations B836/B837/B838 = C0h; D967 = D968 = 8
-crew throttle D680 = 8; practice (F110): engines running (B808/B809 = 1) at throttle
-    46h (F110 1), 37h (F110 2), 08h (F110 ≥ 3); D680 = that throttle
+crew throttle D680 = 8; practice (low byte of F110 != 0): engines running (B808/B809 = 1) at
+    throttle 46h (1), 37h (2), 08h (≥ 3); D680 = that throttle
 projectile timers D1BC[32] = 0; incoming timers D71F[0..7] = 0
 missile speed D6AD = DS:D6AE[region] (3, 7, 9, 7)
 crew pilot: D681 = 2 (search), D687 = D688 = 0, branch D685 = 1 in region 0 else 2, D684 = 1
-objective objects B841..B849 = mission table row (B909 + 10·mission)
-practice targets (B803): every authored object 36 .. B959−1 becomes kind 16h
+    (the region's low byte)
+objective objects B841..B849 = mission table row (B909 + 2·(5·mission in 8 bits))
+practice targets (B803): the object word of every authored object from B959−1 down to 36 becomes
+    0016h (kind 16h, flags cleared); the test (unsigned) follows the store, so one word is
+    written even when B959 < 37 (B959 = 0 would run through all of DGROUP)
     ("sleezy lawyer" in every region's kind list)
 throttle maximum B81C = B81D = 67h (103) with the upgraded engines B805, else 3Bh (59)
 start time and deadline from DS:B354 + 4·mission type: B54B hours, B54A minutes,
@@ -170,7 +177,8 @@ start time and deadline from DS:B354 + 4·mission type: B54B hours, B54A minutes
 time_of_day()                                                  simulation §9.2
 colour remap (0919:3f8d) of the A data range [6E56]..[6E58] and the B data range [53A8]..[53AA]
     for CGA (whole bytes through the table) and EGA/Tandy (bytes ≥ 10h through table + 10h);
-    VGA unchanged
+    VGA unchanged. Both ranges go through the table that follows the A range (SI = DS:6E54 +
+    [6E58] is not reloaded for the B data; port-verified, kept)
 ```
 
 Start times by mission type (hours BCD : minutes; deadline):
