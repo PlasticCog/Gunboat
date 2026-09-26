@@ -608,7 +608,7 @@ void blit_place(u16 es, u16 bx, u16 si)
     // TODO(verify): the dispatch of the other modes (render/modes.hpp).
     const u8 mode = u8(ds_u16(DS_video_mode));
     if (mode == 0x13) blit_rows_vga(row, si);
-    else if (mode == 0x0D) blit_rows_ega(row, si);
+    else if (mode == 0x0D) blit_rows_ega(row, si);  // (5e4d: BL == 0Dh; verified)
     else if (mode >= 9 && mode < 0x0D) blit_rows_tandy(row, si);
     else if (mode < 9) blit_rows_cga(row, si);
     else render_parked("the sprite row copier");

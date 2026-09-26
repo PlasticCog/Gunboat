@@ -7,6 +7,7 @@
 #include "host.hpp"
 #include "mem.hpp"
 #include "game/sim.hpp"
+#include "platform/card.hpp"
 #include "platform/gfx.hpp"
 #include "sound/sound.hpp"
 #include "symbols.hpp"
@@ -519,7 +520,12 @@ void object_frame()
     object_update();
     ds_u8(DS_scene_rebuild) = 0;
     sprite_lod_update();
-    if (u8(ds_u16(DS_video_mode)) == 0x0D) render_parked("object_frame: the EGA plane set-up");
+    if (u8(ds_u16(DS_video_mode)) == 0x0D) {  // EGA (6e77): as terrain_frame's
+        card_out16(0x3C4, 0x0F02);
+        card_out16(0x3CE, 0x0005);
+        card_out16(0x3CE, 0x0F01);
+        card_out16(0x3CE, 0x0003);
+    }
     u16 si = ds_u16(DS_group_a_count);
     if (si > 0x1FE) si = 0x1FE;
     u16 bx = ds_u16(DS_identify_first);

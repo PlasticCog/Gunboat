@@ -38,8 +38,63 @@ Routines that touch pixels dispatch on it (`> 0Dh` VGA, `== 0Dh` EGA, `== 9` Tan
 Per-mode helpers: sky/water fill (`74c0` VGA / `4ce2` EGA / `5529` Tandy / `4587` CGA),
 water shimmer (`7458` / `4d64` / `55da` / `4639`), spotlight beam (`7bbd` / `4c18` / `5494` /
 `44f0`), and the row-drawer pair `DS:D8F8`/`D8FA` set at `0919:3fc6..4036` (VGA `788e`/`7943`,
-RE_GUIDE). Only the VGA routines are specified in detail; EGA (plane set-up at `7268`, `6e77`),
-Tandy and CGA paths are parked.
+RE_GUIDE). The VGA routines are specified in the sections below, the EGA ones in §1.4; the Tandy
+and CGA paths are parked.
+
+### 1.4 EGA (mode 0Dh) **verified** (ported, differential test)
+
+In EGA the pages are the card's memory: `gfx_set_draw_page` gives page p the segment
+A000h + p·200h (2000h bytes a page), so page 1, the 3D view's, is A200h and page 2 A400h; each has
+40 bytes per row in each of the four planes. `video_mode_setup` fills `view_row_table` (D74D) with
+0A05h + 28h·row (row 64, column 40 of the page) and the span pointers with `4dfa`/`4eb6`. The EGA
+twins draw through the graphics controller: the colour goes to set/reset (index 0), the pixels to
+the bit mask (index 8), and each byte is written by a read-modify-write instruction (`OR/AND ES:[DI],
+AL`, AL = 8) whose read loads the latches, so the pixels outside the mask keep their colour.
+`terrain_frame` (7268) and `object_frame` (6e77) first set map mask 0Fh, write mode 0, set/reset on
+every plane and function replace; the twins rely on that. Tables (DGROUP data): `mask_low_bits`
+D7ED (the n low bits, n = 0..8), `mask_high_bits_ff` D7F6 and `mask_high_bits` D80E (the n high
+bits; FFh / 0 for n = 0), `pixel_bit` D7FE (80h >> n), `water_mark_shape` D816 (5 sizes x 5
+offsets of 320 per row).
+
+```
+sky_water_ega (4ce2; AH sky, BL horizon, CL first row): map mask 0Fh, mode 0, set/reset on all
+    planes, bit mask FFh; set/reset AH, rows CL..BL-1 from view_row_table[CL] by REP STOSB (32 bytes
+    a row); D953-- as VGA; colour 8 two rows; D950 (0Eh during a flash) down to row 63; returns DI
+    = the horizon row's address (row counts wrap in 8 bits as in VGA)
+water_marks_ega (4d64; AL colour, BX mark, CX rows, DI): set/reset AL (AH and DX unused), mode 0,
+    set/reset on all planes, map mask 0Fh; per row while DI < 13DDh: size 0, 1 (age >= 0Bh and
+    CL <= 16h), 2/3/4 (CL <= 0Eh and age >= 11h/17h/1Bh); five pixels x + shape[size][k]: byte
+    DI + sar(sum, 3), bit pixel_bit[sum & 7] (BH as the caller left it, shifted: 0), OR; next row
+    DI + 28h, mark + 1 & 1Fh, CL - 1 (LOOP)
+span_ega_a (4dfa, [D8F8]): set/reset D954; D8FC -= 40h; per row: row = D8FC; if bit 6 of the row
+    is set skip it, else DI = view_row_table[(2 * row) & FFh] (rows C0h-FFh of D8FC before the
+    40h land on view rows 0-3Fh); columns and clip of span_vga_a (a start >= 100h below 180h is
+    off, 180h and up wraps); draw(DI, x, width); D8FC++; D956 -= D95A; D958 -= D95C; B7E2 rows
+    (the rows past the view are no end, unlike VGA)
+span_ega_b (4eb6, [D8FA]): as span_vga_b (edge D956 + 40h to the next row's), a zero width becomes
+    1; rows as span_ega_a; D95A = +-80h for the last row
+draw(DI, x, width): DI += x >> 3; width = 100h - x if x + width > FFh; if x & 7: n = 8 - (x & 7),
+    mask = mask_low_bits[n], width -= n: 0 -> that byte only; negative -> mask ^=
+    mask_low_bits[-width], that byte only; else that byte and on; bit mask FFh, width >> 3 bytes by
+    REP STOSB; the last width & 7 pixels with mask_high_bits
+spotlight_beam_ega (4c18; BX widths, DX column): map mask 8, mode 0, set/reset on all planes,
+    set/reset 8 (bit 3 set, whatever bit 4: VGA sets it only where bit 4 is clear); rows B7E2 < 40h,
+    B7E3 of them: DI = view_row_table[row] - 4, width and clip as spotlight_beam_vga, x += 20h;
+    n = 8 - (x & 7); nothing if width <= n (a beam inside one byte is not drawn); first byte by
+    mask_low_bits[n], whole bytes, the last by mask_high_bits_ff; map mask 0Fh at the end
+blit_rows_ega (48da; AL row, SI source): row AL + 30h (B7E2); DI = row * 28h + column / 8, the
+    column 2 * B7F7 + D873 (28h when clipped, SI += D875), the bit 80h >> (column & 7) (B7E3);
+    nothing from screen row 80h; per row: D862 pixels (LOOP: 0 = 65536) from D887:SI, each nonzero
+    one alone (set/reset = pixel, bit mask = bit, AND ES:[DI], 8), the bit rotating right (DI + 1
+    after bit 0); the row repeat D86F / D87B / B7F8 as blit_rows_vga; ends at screen row 80h or
+    after B7F9 rows
+```
+
+Ported in `gunboat-port/src/render/mode_ega.cpp` and the plane set-ups in `terrain_frame.cpp` /
+`objects.cpp`; `tests/difftest/test_modes_ega.py` on the EGA machine checks each routine where the
+original's frames reach it (the original run in EGA from main into missions) and on random inputs,
+planes, latches and graphics controller registers, and `terrain_frame` / `object_frame` whole
+(every instruction of 0919:48da-4f96 executed by the tests).
 
 ### 1.3 The scene rebuild flag `D8BC` **verified**
 
@@ -113,7 +168,7 @@ draw:
   if D8BC: order_reset()                                   0919:72a9   §3.5
   order_sort()                                             0919:72c0   §3.5
   EGA (byte EED2 == 0Dh): map mask 0Fh, graphics mode 0, enable set/reset 0Fh, rotate 0
-     (OUT 3C4h/3CEh at 7268; parked in the port)
+     (OUT 3C4h/3CEh at 7268; §1.4)
   draw_group_b()                                           0919:763f   §3.4
 ```
 
@@ -477,6 +532,12 @@ modes and modes 8/0Ah only return 0.
 | Address | Name | § |
 |---|---|---|
 | 0919:2c35 | palette_flash | 7.1 |
+| 0919:48da | blit_rows_ega | 1.4 |
+| 0919:4c18 | spotlight_beam_ega | 1.4 |
+| 0919:4ce2 | sky_water_ega | 1.4 |
+| 0919:4d64 | water_marks_ega | 1.4 |
+| 0919:4dfa | span_ega_a | 1.4 |
+| 0919:4eb6 | span_ega_b | 1.4 |
 | 0919:2e57 | screen_shake_step | 7.2 |
 | 0919:3712 | atan (simulation) | 5.2 |
 | 0919:3f8d | colour_remap (world) | world §5 |

@@ -446,7 +446,7 @@ void terrain_setup()
     // TODO(verify): the dispatch of the other modes (render/modes.hpp).
     u16 di;
     if (mode > 0x0D) di = sky_water_vga(es, u16(sky << 8 | sky), bl, cl);
-    else if (mode == 0x0D) di = sky_water_ega(es, u16(sky << 8 | sky), bl, cl);
+    else if (mode == 0x0D) di = sky_water_ega(es, u16(sky << 8 | sky), bl, cl);  // (73cc: DL == 0Dh; verified)
     else if (mode >= 9) di = sky_water_tandy(es, u16(sky << 8 | sky), bl, cl);
     else di = sky_water_cga(es, u16(sky << 8 | sky), bl, cl);
 
@@ -472,7 +472,7 @@ void terrain_setup()
     // TODO(verify): the dispatch of the other modes' marks (render/modes.hpp).
     const u16 marks = u16(water << 8 | u8(water | 7));
     if (mode > 0x0D) water_marks_vga(es, marks, first, 0x20, mode, di);
-    else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);
+    else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);  // (7445: DL == 0Dh; verified)
     else if (mode >= 9) water_marks_tandy(es, marks, first, 0x20, mode, di);
     else water_marks_cga(es, marks, first, 0x20, mode, di);
 }

@@ -354,7 +354,7 @@ void spotlight_beam(u16 ax, u8 bl)
     // TODO(verify): the dispatch of the other modes (render/modes.hpp).
     const u8 mode = u8(ds_u16(DS_video_mode));
     if (mode > 0x0D) spotlight_beam_vga(es, table, dx);
-    else if (mode == 0x0D) spotlight_beam_ega(es, table, dx);
+    else if (mode == 0x0D) spotlight_beam_ega(es, table, dx);  // (7bab: AL == 0Dh; verified)
     else if (mode >= 9) spotlight_beam_tandy(es, table, dx);
     else spotlight_beam_cga(es, table, dx);
 }

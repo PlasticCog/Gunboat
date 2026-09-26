@@ -58,6 +58,7 @@ u16 view_copy_5_ega(u16 es, u16 ds);
 u16 view_copy_6_ega(u16 es, u16 ds);
 u16 view_copy_7_ega(u16 es, u16 ds);
 u16 view_copy_8_ega(u16 es, u16 ds);
+DiSi view_copy_head_ega(u16 es, u16 ds);       // 0919:4bf7  returns DI, SI (CX = 0)
 u16 view_copy_1_tandy(u16 es, u16 ds);
 u16 view_copy_2_tandy(u16 es, u16 ds);
 u16 view_copy_3_tandy(u16 es, u16 ds);
