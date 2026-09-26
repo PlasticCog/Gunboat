@@ -37,6 +37,13 @@ struct SpeakerEvent {
 const std::vector<SpeakerEvent> &host_stub_speaker_log();
 void host_stub_speaker_clear();
 
+// Every host_opl_write() since the last clear: (register, value) in order.
+struct OplWrite {
+    u8 reg, value;
+};
+const std::vector<OplWrite> &host_stub_opl_log();
+void host_stub_opl_clear();
+
 // Every host_set_timer() divisor since the last clear, in order.
 const std::vector<u16> &host_stub_timer_log();
 void host_stub_timer_clear();

@@ -8,9 +8,12 @@
 // bits set. The game always writes the control word B6h before a divisor and both divisor bytes in
 // a row, so a divisor load is one call here.
 //
-// Absent devices: no MPU-401 (ports 330h/331h), no Game Blaster / Sound Blaster (220h..22Fh), no AdLib
-// driver (the INT 65h vector is 0000:0000), no Tandy sound chip (C0h/C1h, parked): reads give FFh,
-// writes do nothing.
+// AdLib: only with ADLIB.COM installed (--sound adlib): its OPL2 at 388h/389h is the host's
+// (host_opl_write, from the driver's SndOutput in adlib_driver.cpp); without it the INT 65h vector is
+// 0000:0000 and the game finds no AdLib driver.
+//
+// Absent devices: no MPU-401 (ports 330h/331h), no Game Blaster / Sound Blaster (220h..22Fh), no Tandy
+// sound chip (C0h/C1h, parked): reads give FFh, writes do nothing.
 #include "sound/sound.hpp"
 
 #include "host.hpp"

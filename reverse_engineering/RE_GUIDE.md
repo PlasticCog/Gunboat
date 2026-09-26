@@ -17,6 +17,7 @@ format, LZW decompressor, graphics library and Microsoft C 5.1 runtime.
 | `out/decomp/gb_ds.c` | Ghidra decompilation of every indexed function, names applied, DGROUP globals renamed `DS_xxxx` |
 | `out/decomp/gb_globals_xref.txt` | For each DS global: the functions that use it |
 | `tools/x86dis.py out/GB_unp.exe dis SSSS:OOOO LEN` | Ground-truth disassembly when the decompiler looks wrong |
+| `tools/adlib_dis.py [--fn OOOO ...] [--data]` | Disassembly of the user's `ADLIB.COM` (the Ad Lib driver GB.EXE calls through INT 65h; spec `spec/adlib_driver.md`) |
 | `/gunboat-port/tests/difftest/` | Differential tests: original x86 in Unicorn against the port's C++, all memory compared (`gunboat-port/PORTING.md`) |
 | `/gunboat-port/legacy/tests/verify_*.py` | The Codex-era Unicorn tests (hand-picked bytes) |
 | `ORIGINAL_WORLD_FORMAT.md`, `OBJECT_FORMAT.md` | Decoded world, tile and object formats |
@@ -149,6 +150,7 @@ names; `-r SSSS:OOOO LEN` for any range), `tools/calltree.py NAME [depth]`,
 | `render3d` | `0919` drawing tree: camera, projection, terrain, sprites, sky, effects |
 | `hud` | Cockpit instruments, station views, messages, tactical map |
 | `sound` | `12ed` effects, `1af5` AdLib music (`VALK*.MUS`), `1ace` CMS (identify only) |
+| `adlib_driver` | Not GB.EXE: the resident `ADLIB.COM` V1.51 (INT 65h functions 0, 13h–15h, its INT 8 handler, its installation) |
 
 ## Regenerating
 

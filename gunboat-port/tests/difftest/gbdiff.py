@@ -129,6 +129,11 @@ class Symbols:
                     self.ds.append((int(a[3:], 16), r['name']))
         self.ds.sort()
         self._ds_keys = [o for o, _ in self.ds]
+        self.regions = []           # (lo, hi, label, base): other programs' memory (add_region)
+
+    def add_region(self, lo, hi, label, base):
+        """Names linear lo..hi-1 as label:offset (offset from base), e.g. ADLIB.COM's segments."""
+        self.regions.append((lo, hi, label, base))
 
     def func(self, name):
         return self.funcs[name]
@@ -144,6 +149,9 @@ class Symbols:
             return 'DS:%04X%s' % (off, name)
         if lin(LOAD_SEG, 0) <= linear < lin(LOAD_SEG, 0) + IMAGE_SIZE:
             return 'image %05X' % (linear - lin(LOAD_SEG, 0))
+        for lo, hi, label, base in self.regions:
+            if lo <= linear < hi:
+                return '%s:%04X' % (label, linear - base)
         return 'linear %06X' % linear
 
 
@@ -233,9 +241,11 @@ class Original:
     def memory(self):
         return bytes(self.uc.mem_read(0, MEM_SIZE))
 
-    def call(self, file_seg, off, far, regs, stack_args=(), max_insns=5_000_000):
+    def call(self, file_seg, off, far, regs, stack_args=(), max_insns=5_000_000, cs=None, ds=DGROUP, sp=TEST_SP):
         """Calls file_seg:off like the game does (a C function: stack_args pushed right to left;
-        an assembly routine: register arguments) and runs until it returns to the caller.
+        an assembly routine: register arguments) and runs until it returns to the caller. Code
+        outside GB.EXE (another program in memory) is called with its runtime segment cs; ds is
+        then its DS = SS and sp its stack pointer (default: GB.EXE's DGROUP and TEST_SP).
 
         The return address is a sentinel: far calls return to FFFF:0010 (outside the image). Near
         calls must return into their own segment, so they return to offset FFFF there; if the code
@@ -243,13 +253,12 @@ class Original:
         goes on. Returns the register file after the return."""
         uc = self.uc
         self.error = None
-        cs = seg_of(file_seg)
+        cs = seg_of(file_seg) if cs is None else cs
         for r in REGS:
             uc.reg_write(UC_REGS[r], regs.get(r, DGROUP if r == 'es' else 0))
-        uc.reg_write(UC_X86_REG_DS, DGROUP)
-        uc.reg_write(UC_X86_REG_SS, DGROUP)
+        uc.reg_write(UC_X86_REG_DS, ds)
+        uc.reg_write(UC_X86_REG_SS, ds)
         uc.reg_write(UC_X86_REG_EFLAGS, 0x0002)
-        sp = TEST_SP
         words = list(reversed(stack_args))
         if far == 'iret':                        # an interrupt: FLAGS, then CS:IP
             words += [0x0202, FAR_RET[0], FAR_RET[1]]
@@ -262,7 +271,7 @@ class Original:
             ret = lin(cs, NEAR_RET_IP)
         for w in words:
             sp -= 2
-            uc.mem_write(DS_BASE + sp, struct.pack('<H', w & 0xFFFF))
+            uc.mem_write((ds << 4) + sp, struct.pack('<H', w & 0xFFFF))
         entry_sp = sp
         uc.reg_write(UC_X86_REG_SP, sp)
         uc.reg_write(UC_X86_REG_CS, cs)
@@ -359,6 +368,15 @@ class Harness:
         self.extensions = []
         self.port.dll.gb_set_game_dir(str(GAME_DIR).encode())
         self.cases = {}
+        # Code of another program in memory (ADLIB.COM): name -> (cs, off, far, ds, sp), see
+        # add_function. Linear ranges not compared (another program's stack): ignore.
+        self.extra_funcs = {}
+        self.ignore = []
+
+    def add_function(self, name, cs, off, far, ds=DGROUP, sp=TEST_SP):
+        """A function outside GB.EXE that check() can call by name: code at cs:off (runtime
+        segment), far True / False / 'iret', called with DS = SS = ds and SP = sp."""
+        self.extra_funcs[name] = (cs, off, far, ds, sp)
 
     def fresh_memory(self):
         """The memory at start-up: the GB.EXE image, the DOS heap (one free block, as dos_heap_init
@@ -451,11 +469,17 @@ class Harness:
             ext.before(self)
         if not self.port.has(name):
             raise Mismatch('%s is not in bridge.cpp' % name)
-        file_seg, off, far = self.sym.func(name)
+        if name in self.extra_funcs:
+            cs, off, far, ds, sp = self.extra_funcs[name]
+            where = dict(cs=cs, ds=ds, sp=sp)
+            file_seg = None
+        else:
+            file_seg, off, far = self.sym.func(name)
+            where = {}
         self.orig.set_memory(m)
         ended = 'exit(%d)' % exit_code if exit_code is not None else None
         try:
-            want = self.orig.call(file_seg, off, far, regs, stack_args, max_insns=max_insns)
+            want = self.orig.call(file_seg, off, far, regs, stack_args, max_insns=max_insns, **where)
             if ended:
                 raise Mismatch('original returned instead of %s' % ended)
         except Mismatch as e:
@@ -475,10 +499,10 @@ class Harness:
         mp = self.port.memory()
         # The stack segment differs by design: the original's frames, and the port's StackLocal
         # slots (mem.hpp) at the top of it. It is not game state.
-        lo, hi = DS_BASE + STACK_BOTTOM, DS_BASE + STACK_TOP
+        skips = sorted([(DS_BASE + STACK_BOTTOM, DS_BASE + STACK_TOP)] + list(self.ignore))
         problems = []
-        if mo[:lo] != mp[:lo] or mo[hi:] != mp[hi:]:
-            problems.append(self._memory_diff(m, mo, mp, lo, hi))
+        if self._differs(mo, mp, skips):
+            problems.append(self._memory_diff(m, mo, mp, skips))
         for r in outputs:
             if want[r] != got[r]:
                 problems.append('%s: original %04X, port %04X' % (r.upper(), want[r], got[r]))
@@ -508,8 +532,18 @@ class Harness:
                                                '\n'.join(problems)))
         return want
 
-    def _memory_diff(self, before, mo, mp, skip_lo, skip_hi, limit=12):
-        diffs = [i for i in range(MEM_SIZE) if mo[i] != mp[i] and not skip_lo <= i < skip_hi]
+    @staticmethod
+    def _differs(mo, mp, skips):
+        """True if mo and mp differ outside the sorted (lo, hi) ranges skips."""
+        pos = 0
+        for lo, hi in skips:
+            if lo > pos and mo[pos:lo] != mp[pos:lo]:
+                return True
+            pos = max(pos, hi)
+        return mo[pos:] != mp[pos:]
+
+    def _memory_diff(self, before, mo, mp, skips, limit=12):
+        diffs = [i for i in range(MEM_SIZE) if mo[i] != mp[i] and not any(lo <= i < hi for lo, hi in skips)]
         lines = ['%d byte(s) differ:' % len(diffs)]
         runs = []
         for i in diffs:
