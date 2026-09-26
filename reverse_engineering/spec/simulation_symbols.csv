@@ -1,5 +1,5 @@
 kind,address,name,type,notes
-func,0000:07a8,input_read_key,far void(u16 *key),§3.1 key code -> DS:EE9C; keypad reader; pause; S mute; Ctrl+Q
+func,0000:07a8,input_read_key,far void(u16 *key),§3.1 key code -> DS:EE9C; joystick; pause; S mute; Ctrl+Q
 func,08e1:006e,demo_next_key,far void(u8 *key),§3.1 recorded demo keys; any real key ends the demo
 func,05bd:000a,mission_run,far void(),§1.1 mission loop (world spec for the screens)
 func,05bd:14d6,mission_load,far void(),§2.1 loads DAT10/11 DATn DATnA/B TILE.BIN cockpit art palettes
@@ -145,7 +145,7 @@ global,DS:B548,deadline_hours,u8,§9.2
 global,DS:B549,clock_seconds,u8,§9.2
 global,DS:B54A,clock_minutes,u8,§9.2
 global,DS:B54B,clock_hours,u8,§9.2 BCD
-global,DS:B7F0,keypad_bits,u8,§3.1
+global,DS:B7F0,joystick_bits,u8,§3.1
 global,DS:B7F1,time_compression,u8,§1.2
 global,DS:B7F8,shot_elevation,u8,§6.1
 global,DS:B7FC,daylight,u8,§9.2

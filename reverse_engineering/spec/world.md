@@ -205,10 +205,11 @@ objects.
 
 ### 6.2 Mission text block (480 bytes → DS:ECB4) **likely**
 
-Copied by `mission_run` from the world A data. Printed by `print_records` on the assignment
-screen (station 8, `05bd:1dba`). The bytes are small values (13h–17h in the region 0 blocks), so
-the text is in the game's own record encoding (platform spec, `print_records`); decode it there.
-Missions 1 and 5 share a block in regions 0–2.
+Copied by `mission_run` from the world A data and printed with `print_records` (`{col, row,
+text}` records, game_flow) on the assignment screen (station 8, `05bd:1dba`). In the region 0
+blocks the first record starts at column 20, row 20 and the "text" is font glyphs 13h–17h: most
+likely a small picture (the mission-area map) drawn with special glyphs. Missions 1 and 5 share a
+block in regions 0–2.
 
 ### 6.3 World B data (`DATnB.DAT` → far buffer, copied to DS:53A8) **verified**
 

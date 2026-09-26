@@ -211,10 +211,11 @@ bitmask** in `DS:DA43`:
 `input_read_key` (`0000:07a8`, `far void(u16 *key)`) runs once per mission-loop pass
 (twice with time compression, §1.1). It:
 
-* takes the code from `DS:DA42` and clears it; with no code and the BIOS keypad reader
-  enabled (`DS:F394`), reads the keypad through `1473:0008` and converts it: keypad scancodes
-  47h–51h become codes 91h–99h and direction bits in **DS:B7F0** (1 up, 2 down, 4 left, 8 right,
-  +10h for Enter);
+* takes the code from `DS:DA42` and clears it; with no code and the **joystick** enabled
+  (`DS:F394`, from `GUNBOAT.CFG`, game_flow §2), reads it through `joystick_read` (`1473:0008`,
+  port 201h with calibration limits at `DS:DD17`): its direction becomes a code 91h–99h (the
+  keypad codes) and direction bits in **DS:B7F0** (1 up, 2 down, 4 left, 8 right), and the button
+  gives Enter (0Dh, +10h in `B7F0`);
 * Ctrl+Q (`DS:DA3A` set): `0000:021e` (quit to DOS, game_flow spec);
 * `E`: toggles DS:0080; `S`: plays effect 12 and toggles sound mute **DS:007E**;
 * Esc (80h) **pauses**: message 33h "Raid suspended." (via `0919:1589`, only in a 3D station
@@ -281,7 +282,7 @@ redraw it. The table at `CS:0270` gives, per entry, the switch number and the in
 
 ```
 controls_poll()
-  bits = DS:DA43 | DS:B7F0                 (held keys | keypad reader)
+  bits = DS:DA43 | DS:B7F0                 (held keys | joystick)
   if station >= 5 or (bits & 1Fh) == 0: return
   if chase view (D96B): up/down: view distance D96D -= 8 (min 28h) / += 8 (not past 0);
                         left/right: D96C += 4 / -= 4; return

@@ -1,23 +1,52 @@
 kind,address,name,type,owner,source,notes
-func,0000:0000,main,,game_flow,index,called only by _astart; opens DATAA/B/C.DAT
+func,0000:0000,main,far void(),game_flow,index+spec:game_flow,§1 phases DS:0082 | called only by _astart; opens DATAA/B/C.DAT
+func,0000:021e,quit_to_dos,far void(),game_flow,spec:game_flow,§1
+func,0000:0276,fatal_exit,far void(int code),game_flow,spec:game_flow,§1
+func,0000:02fe,config_load,far void(),game_flow,spec:game_flow,§2 GUNBOAT.CFG or text-mode questions
 func,0000:0648,file_load_near,,game_flow,td3-match,"TD3 0000:0e74 file_load_near, score 1.00"
 func,0000:06b4,file_load_far,,game_flow,td3-match,"TD3 0000:0ee0 file_load_far, score 1.00"
 func,0000:072c,far_to_near_copy,far void(u8 far *src u8 *dst u16 count),world,spec:world,§3.3 loop counter is the global DS:F13A
 func,0000:0756,near_to_far_copy,far void(u8 *src u8 far *dst u16 count),world,spec:world,§4 loop counter DS:F13A
 func,0000:0780,random,,game_flow,td3-match,"TD3 0000:0f58 random, score 1.00 | ORIGINAL_PHYSICS.md: state = state*41C64E6Dh+3039h at DS:0088"
-func,0000:07a8,input_read_key,far void(u16 *key),simulation,spec:simulation,§3.1 key code -> DS:EE9C; keypad reader; pause; S mute; Ctrl+Q
+func,0000:07a8,input_read_key,far void(u16 *key),simulation,spec:simulation,§3.1 key code -> DS:EE9C; joystick; pause; S mute; Ctrl+Q | §3.1 key code -> DS:EE9C; keypad reader; pause; S mute; Ctrl+Q
 func,0000:0a4e,mem_alloc_all,,game_flow,td3-match,"TD3 0000:11d2 mem_alloc_all, score 0.55; low score: confirm in the spec"
 func,0000:0c7a,mem_free_all,,game_flow,td3-match,"TD3 0000:1442 mem_free_all, score 1.00"
+func,0000:0d74,archive_open,far int(char *name),game_flow,spec:game_flow,§1 disk prompt on failure (PORT: none)
 func,0000:0e62,name_hash_h1,,game_flow,td3-match,"TD3 0000:16d0 name_hash_h1, score 1.00"
 func,0000:0eac,name_hash_h2,,game_flow,td3-match,"TD3 0000:171a name_hash_h2, score 1.00"
 func,0000:0ef2,name_hash,,game_flow,td3-match,"TD3 0000:1760 name_hash, score 0.70; low score: confirm in the spec"
+func,00f2:000e,title_menu,far int(),game_flow,spec:game_flow,§3 returns 0 report for duty / 1-3 practice
+func,00f2:0d3e,credits_text,far void(u16 records),game_flow,spec:game_flow,§3
 func,00f2:0dbc,print_records,,game_flow,td3-match,"TD3 01f4:1a82 print_records, score 1.00"
 func,00f2:0e10,print_text,,game_flow,td3-match,"TD3 01f4:1ad6 print_text, score 1.00"
 func,00f2:0e44,print_chars,,game_flow,td3-match,"TD3 01f4:1b58 print_chars, score 1.00"
 func,00f2:0e7a,wait_key,,game_flow,td3-match,"TD3 01f4:1b8e wait_key, score 1.00"
 func,00f2:0ece,screen_present,,game_flow,td3-match,"TD3 01f4:1be2 screen_present, score 1.00"
 func,00f2:0fea,ega_pal_init,,game_flow,td3-match,"TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
-func,020d:0bdc,hi_write,,game_flow,td3-match,"TD3 01f4:2e66 hi_write, score 0.50; low score: confirm in the spec"
+func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 VALKPC/VALK12/VALK3V
+func,00f2:119c,music_stop,far void(),game_flow,spec:game_flow,§3.1
+func,020d:0008,hq_quiz,far int(),game_flow,spec:game_flow,§4 copy protection (PORT: always right)
+func,020d:064a,menu_cursor_init,far void(),game_flow,spec:game_flow,§3 PENCIL.MPP
+func,020d:0824,choice_menu,far int(...),game_flow,spec:game_flow,"§6.1 ""# a # b"" menus"
+func,020d:0b28,roster_load,far void(),game_flow,spec:game_flow,§5 703 bytes + check byte
+func,020d:0bdc,roster_save,far void(),game_flow,td3-match+spec:game_flow,"§5 TD3 match name hi_write | was hi_write | TD3 01f4:2e66 hi_write, score 0.50; low score: confirm in the spec"
+func,02d2:0008,front_end,far void(),game_flow,spec:game_flow,§6 state machine DS:0084
+func,02d2:0bd8,name_entry,far int(),game_flow,spec:game_flow,§6.1 TJL easter egg
+func,02d2:106c,roster_edit,far void(),game_flow,spec:game_flow,§6 ADD REPLACE REDO
+func,02d2:123e,roster_new_record,far void(),game_flow,spec:game_flow,§6
+func,02d2:1306,personnel_files,far void(int),game_flow,spec:game_flow,§6
+func,02d2:13cc,personnel_file_show,far void(int slot),game_flow,spec:game_flow,§6
+func,02d2:1712,pbr_specs,far void(int return_state),game_flow,spec:game_flow,§6
+func,02d2:1b6e,mission_select,far void(),game_flow,spec:game_flow,§6.3 type = 8*region + mission
+func,02d2:1d04,mission_folder_draw,far void(),game_flow,spec:game_flow,§6.3
+func,02d2:1ec2,assignment_map,far void(int return_state),game_flow,spec:game_flow,§6
+func,02d2:22aa,outfitting,far void(),game_flow,spec:game_flow,§6.4 B804-B807
+func,02d2:24ac,outfitting_draw,far int(),game_flow,spec:game_flow,§6.4
+func,02d2:273e,debrief,far void(),game_flow,spec:game_flow,§6.5 promotion and medals
+func,02d2:2a6c,roster_update,far void(),game_flow,spec:game_flow,§6.5
+func,02d2:2b4a,bcd_inc,far u16(u16),game_flow,spec:game_flow,§6.5
+func,02d2:2b72,bcd_add,far u16(u16 u16),game_flow,spec:game_flow,§6.5
+func,02d2:2c9e,office_draw,far void(),game_flow,spec:game_flow,§6 GENA.LZ
 func,05bd:000a,mission_run,far void(),simulation,spec:simulation,§1.1 mission loop (world spec for the screens)
 func,05bd:048c,pilot_screen,far void(),world,spec:world,§3.2 station 1 screen (hud spec)
 func,05bd:07da,chase_view_screen,far void(),world,spec:world,§3.2 chase view screen (hud spec)
@@ -322,11 +351,17 @@ cglobal,0919:83e4,neighbour_order,u8[4][9],render3d,spec:render3d,§2
 cglobal,121b:093e,scancode_e0_table,u8[20],simulation,spec:simulation,§3.1
 cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
-global,DS:0070,demo_mode,u16,simulation,spec:simulation,§3.1
+global,DS:0070,demo_mode,u16,simulation,spec:simulation+spec:game_flow,§3 simulation §3.1 | §3.1
+global,DS:0074,view_page,u16,game_flow,spec:game_flow,§2 0 in VGA else 2
+global,DS:0076,cga_special,u16,game_flow,spec:game_flow,§2
+global,DS:0078,single_page_mode,u16,game_flow,spec:game_flow,§2 1 in VGA
 global,DS:007A,draw_page,u16,simulation,spec:simulation,graphics library page
 global,DS:007E,sound_muted,u16,simulation,spec:simulation,§3.1
+global,DS:0082,phase,u16,game_flow,spec:game_flow,§1 FFh config 0 title 1 HQ 2 front end 3 mission
+global,DS:0084,front_end_state,u16,game_flow,spec:game_flow,§6
 global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 map; 6 chase; 7 damage report; 8 assignment; 9 quit | §2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
+global,DS:027C,archive_directory,u8[1190],game_flow,spec:game_flow,§1 DATAC.DAT
 global,DS:08C0,tick_counter,u16,simulation,spec:simulation,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
 global,DS:08C4,palette_3d,u8[225],world,spec:world,§4 TACTCOLR.BIN
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
@@ -357,6 +392,8 @@ global,DS:541A,object_behaviour,u8[2][],simulation,spec:simulation,§8.1 per kin
 global,DS:541B,object_class,u8[2][],simulation,spec:simulation,§8.1 per kind
 global,DS:547A,object_name_offset,u16[],simulation,spec:simulation,§9.1 per kind; text at DS:6E54 + offset
 global,DS:6E54,world_a_data,u8[],simulation,spec:simulation,DATnA.DAT
+global,DS:B293,medal_by_type,u16[26],game_flow,spec:game_flow,§7.4
+global,DS:B2C3,promotion_rank_by_type,u8[26],game_flow,spec:game_flow,§7.3
 global,DS:B2DB,mission_text_offsets,u16[4][8],world,spec:world,§7 relative to DS:6E54
 global,DS:B354,mission_times,u8[16][4],world,spec:world,§5 start hours minutes deadline hours minutes
 global,DS:B3C0,map_objective_arrow,u8[24][2],world,spec:world,§3.2
@@ -366,9 +403,21 @@ global,DS:B3FC,enemy_velocity,s8[16][2],simulation,spec:simulation,§8.3
 global,DS:B41C,region_max_range,u8[4],simulation,spec:simulation,§8.3
 global,DS:B420,scene_colour_table,u8[],simulation,spec:simulation,§9.2
 global,DS:B444,map_sheet_sizes,u16[4][2],world,spec:world,§4
+global,DS:B472,result_texts,u16[6],game_flow,spec:game_flow,§6.5
+global,DS:B4A0,sea_state_texts,u16[4],game_flow,spec:game_flow,§6.2
+global,DS:B4DA,outfit_item,u8,game_flow,spec:game_flow,§6.4
+global,DS:B4DB,outfit_visited,u8,game_flow,spec:game_flow,§6.4
+global,DS:B4F9,commander,u8[50],game_flow,spec:game_flow,§5 working copy of the roster record
+global,DS:B4FF,sea_state,u16,game_flow,spec:game_flow,§6.2
+global,DS:B501,missions_offered,u16,game_flow,spec:game_flow,§6.2
 global,DS:B503,region,u16,simulation,spec:simulation,§2.3
 global,DS:B505,mission_number,u16,simulation,spec:simulation,§2.3
 global,DS:B509,mission_type,u16,simulation,spec:simulation,§5.2
+global,DS:B50C,mission_chosen,u8,game_flow,spec:game_flow,§6.3
+global,DS:B50D,rank,u8,game_flow,spec:game_flow,§5
+global,DS:B50E,medals,u16,game_flow,spec:game_flow,§5
+global,DS:B510,missions_completed,u16,game_flow,spec:game_flow,§5 BCD
+global,DS:B512,career_stats,u16[12],game_flow,spec:game_flow,§8 BCD
 global,DS:B516,easter_egg_counter,u16,simulation,spec:simulation,§9.2 likely
 global,DS:B52A,score_words,u16[12],simulation,spec:simulation,§9.3 BCD
 global,DS:B544,objective_progress,u8,simulation,spec:simulation,§9.3
@@ -379,7 +428,9 @@ global,DS:B548,deadline_hours,u8,simulation,spec:simulation,§9.2
 global,DS:B549,clock_seconds,u8,simulation,spec:simulation,§9.2
 global,DS:B54A,clock_minutes,u8,simulation,spec:simulation,§9.2
 global,DS:B54B,clock_hours,u8,simulation,spec:simulation,§9.2 BCD
-global,DS:B7F0,keypad_bits,u8,simulation,spec:simulation,§3.1
+global,DS:B54C,commander_slot,u16,game_flow,spec:game_flow,§5
+global,DS:B54E,roster,u8[703],game_flow,spec:game_flow,§5 GBROSTER.DAT image
+global,DS:B7F0,joystick_bits,u8,simulation,spec:simulation,was keypad_bits | §3.1
 global,DS:B7F1,time_compression,u8,simulation,spec:simulation,§1.2
 global,DS:B7F8,shot_elevation,u8,simulation,spec:simulation,§6.1
 global,DS:B7FC,daylight,u8,simulation,spec:simulation,§9.2
@@ -568,10 +619,15 @@ global,DS:DA43,held_keys,u8,simulation,spec:simulation,§3.1
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
-global,DS:F110,practice_mode,u16,simulation,spec:simulation,§3.3 0 mission; 1-3 practice types
+global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
 global,DS:F13A,copy_counter,u16,world,spec:world,§3.3 shared with the front end
+global,DS:F26C,front_end_running,u16,game_flow,spec:game_flow,§6
 global,DS:F280,tile_bin_offset,u16,render3d,spec:render3d,§2 far pointer offset of TILE.BIN
 global,DS:F282,tile_bin_segment,u16,render3d,spec:render3d,§2
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2
+global,DS:F394,joystick,u16,game_flow,spec:game_flow,§2
 global,DS:F396,world_b_size,u16,world,spec:world,§4
+global,DS:F398,first_run,u8,game_flow,spec:game_flow,§1
+global,DS:F39C,bios_video_mode,u16,game_flow,spec:game_flow,§2
 global,DS:F5D4,world_b_far,u16[2],world,spec:world,§4 far pointer to the B data copy
+global,DS:F626,name_input,char[20],game_flow,spec:game_flow,§6.1
