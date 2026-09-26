@@ -441,12 +441,12 @@ crew_pilot()                                          0919:1ac0
   pilot_throttle_controls(bits = D682, rate = D683)   (same routine as the player, §4.1)
 ```
 
-`crew_pilot_decide` (`0919:1b2d`):
+`crew_pilot_decide` (`0919:1b2d`) **verified** (port, differential test and route walks):
 
 * Throttle: compares `min(B816, B817) & FCh` with `D680 & FCh`: above → "down" (2); below →
   "up" (1) if `D680 > 8`, else nothing. Stored in `D682`.
 * State `D681`: 0 = idle (throttle only), 1 = following a waypoint, 2 = search
-  (`route_find`, §4.6; no steering on that pass).
+  (`route_find`, §4.6; no steering on that pass); above 2: nothing.
 * Following: `bearing = atan(D68B − X, D68D − Y)` (`0919:3712`), `rel = bearing − B81E + 80h`.
   `rel ≤ 48h` → jet left (4), rate index `D683 = 0`; `rel ≥ B8h` → jet right (8), `D683 = 0`;
   otherwise `D683 = 1`, or 2 when `rel` is within 70h–90h, and the target jet angle
@@ -461,33 +461,70 @@ Crew pilot state: `D680` throttle target, `D681` state, `D682` key bits, `D683` 
 `D686` waypoint index, `D687` previous index, `D688` link byte, `D689` grid cell, `D68B/D68D`
 waypoint X/Y.
 
-### 4.6 River route network **verified** (data layout), **likely** (link bit meanings)
+### 4.6 River route network **verified** (data layout; port, differential test), **likely** (link meanings)
 
 The TILE.BIN entries that ORIGINAL_WORLD_FORMAT.md calls "collision entries" (three bytes, count
 in header byte 3) are **route waypoints**: `link, x, y` in tile-local coordinates.
 
 * `route_point(cl = index, bx = cell)` (`0919:8754`): cell = `row*17 + col`; origin
   `D9A9 = col*400h`, `D9AB = (28h − 4*row) << 8`; tile = `DS:B84E[bx] & 3Fh`, rotation =
-  bits 6–7 (`B7E2`). If `index >= waypoint count` → `DH = FFh`. Otherwise `link` is rotated
+  bits 6–7 (`B7E2`). If `index >= waypoint count` → `DH = FFh` (AX = 2·tile, CX unchanged).
+  Otherwise `link` is rotated
   when it is a positive direction value: `((link − 1 + rotation) & FBh) + 1`; the local point
   is rotated by `0919:8711` (the tile rotation of ORIGINAL_WORLD_FORMAT.md) and returned as
-  `AX = x*8 + D9A9`, `CX = y*8 + D9AB`, `DH = link`.
+  `AX = x*8 + D9A9`, `CX = y*8 + D9AB`, `DH = link` (BX and ES kept; DL = 28h − 4·row, SI
+  changed). The record: the three counts of header bytes 0–2 summed in 8 bits, times 4 bytes,
+  come before the waypoints. The row and column come from `DIV` by 17: a cell of 4352 or more
+  (a negative cell) is a divide error, R6003 (see the north edge below).
+  The shipped TILE.BIN has waypoints with link FFh (e.g. four in tile 17, open water); they read
+  as "no waypoint" (DH = FFh) everywhere.
 * `atan` (`0919:3712`, CX = dx, DX = dy) → AL = bearing (256 per turn), via an octant fold, a
   ratio `(small << 8) / large` and the table `CS:3606`; side results in `B7E2`/`B7E3`/`D730`.
-* `route_find` (`0919:1c00`, state 2): cell from the boat position, `row = 10 − (Y >> 10)`,
-  `col = X >> 10`. Scans the cell's waypoints for those within ±28h of the hull heading, picks the
-  nearest by `|dx| + |dy|`, and sets the direction `D684` from the scan order (only in real
-  missions, `F110 == 0`). No waypoint in the cell: stays in state 2.
-* `route_advance` (`0919:87e8`, DH = link, CL = index): no route (`DH == FFh`): answer 22h
-  "-I don't know where to go!", `B801 = 0Ch`, state 2. Links ≥ C0h and ordinary links step to
-  index ± 1 (direction `D684`). Negative links (80h+) are **forks**, resolved by the branch
-  command `D685` and by `D688`. Links 1–3Fh leave the tile through edge `(link − 1) & 3`: the
-  cell moves by the word `DS:D68F[edge]`, and the new tile's waypoints are searched for the
-  one whose X (or Y) matches the expected entry coordinate `DS:D697[edge]`.
+* `route_find` (`0919:1c00`, state 2): cell `D689` from the boat position, `row = 10 − (Y >> 10)`
+  (8 bits, times 17), `col = X >> 10`. No waypoint 0 (DH = FFh): `D683 = 0`, stays in state 2.
+  Else it scans the waypoints from index 0 until the first DH = FFh (the end, or a waypoint with
+  link FFh): a waypoint whose bearing (atan) is within ±28h of the hull heading
+  (`(bearing − B81E + 28h) & FFh ≤ 50h`) is a candidate; the nearest by `|dx| + |dy|` (16 bits)
+  wins (`B7DC`, `B7EA`). In real missions (`F110 == 0`) every candidate sets the direction
+  `D684`: 0 when it is not nearer than the best so far, 1 when it is nearer than an earlier
+  candidate (the first one leaves it). `B7ED` counts the candidates after the first, from FFh:
+  with exactly two candidates (`B7ED == 0`) the direction is then set from the winner's link:
+  1, or 0 when its bit 6 is set (in practice too). No candidate: `D683 = 0`, state 2. Else the
+  winner is the waypoint (`D686`, `D68B/D68D`, `D688 = 0`), state 1.
+* `route_advance` (`0919:87e8`, DH = link, CL = index, BX = cell; returns DH, which F4 tests):
+  no route (`DH == FFh`): unless the mission is ending (`B800 == 2`) the answer 22h "-I don't
+  know where to go!" (`B800 = 1`, `B802 = 22h`, `B801 = 0Ch`); state 2. Otherwise the step
+  (added to the index in 8 bits):
+
+  | link | forward (`D684 == 0`) | backward (`D684 != 0`) |
+  |---|---|---|
+  | 0 | +1 | −1 |
+  | 1–3Fh | leave the tile | −1 |
+  | 40h–7Fh | +1 | leave the tile |
+  | 80h–BFh (fork) | `link & 3Fh` if `D685 == 1`, else +1 | after a fork (`D688 ≥ F0h`): +1 and `D684 = 0`, or −1 (`D684` stays 1) if `D685 == 2`; else −1, or `link & 3Fh` and `D684 = 0` if `D685 == 2` |
+  | C0h–FEh | +1 | the link as a negative number |
+
+  The new index goes to `D686` (the old one to `D687`), the link to `D688`, the cell to `D689`,
+  the point (`route_point`, which may say FFh at the end of a route: then `D68B` = 2·tile and
+  `D68D` = CX with CL the index) to `D68B/D68D`; state 1.
+  Leaving the tile through edge `(link − 1) & 3`: `D688 = 0`, the cell moves by the word
+  `DS:D68F[edge]` (+1, +17, −1, −17), and the new tile's waypoints are searched from index 0
+  for the one whose `(X >> 3) & 7Fh` equals the entry `DS:D697[edge]` low byte (4, 0, 7Ch, 0),
+  or, when that is 0, whose `(Y >> 3) & 7Fh` equals its high byte (7Ch or 4). Found: it becomes
+  the waypoint in the new cell with the direction 1 when its link is below 40h, else 0. None:
+  `D684 ^= 1` (the boat turns round) and `route_advance` runs again (recursively) on the current
+  waypoint `route_point(D686, D689)`. With `D684` 0 or 1 (all its writers) and the callers
+  passing the current waypoint's link, the recursion ends at the next level (with another `D684`
+  value `^= 1` never clears it and the recursion does not end).
   F4 "reverse course" toggles `D684` and re-runs this logic.
 
-The exact fork rules (`0919:8809..8875`) are to be transcribed into the port from the
-disassembly; the differential test covers them.
+**Quirk (port-verified, kept): the north edge.** Leaving a tile of row 0 northward (edge 3,
+−17) gives a negative cell, and `route_point`'s `DIV` by 17 overflows: R6003, the game ends. The
+shipped Mare Island world has such an exit (cell 1, waypoint 0, link 44h: the practice world's
+river leaves the map at the top); the route walks of the differential test reach it when the
+captain follows that river backward. To confirm in DOSBox. Leaving cell 0 westward (−1) fails
+the same way; the other west and east exits wrap to the neighbouring row, and the south exits
+of row 10 read the bytes after the grid as tiles (no error).
 
 ## 5. Motion, mission stops and camera
 
@@ -1165,7 +1202,7 @@ world spec).
 
 The debrief and roster that read these are in the game_flow spec.
 
-## 10. Shore contact **verified** (Codex kernels + this frame integration)
+## 10. Shore contact **verified** (Codex kernels + this frame integration; port, differential test)
 
 Shore contact comes from the terrain projection (`0919:7158`, render3d), not from a collision
 map:
@@ -1180,13 +1217,15 @@ terrain_frame()                                     0919:7158 (simulation-releva
   if chase view: skip the test
   shore_contact_test(D901); if no contact: shore_contact_test(D903)       0919:79e1
   if contact colour D8FF != 0 and != previous:
-     speed = −16 (moving forward) or +16 (reversing)                     (Codex: shoreline_response)
+     speed = −16 (speed ≥ 0, also when stopped) or +16 (reversing)       (Codex: shoreline_response)
      colour c = D8FE & 3Fh
-     pilot practice at Mare Island (station 1, region 3) and c == 6: D8FD = 1 (boat lost next frame)
-     elif (DS:0088 & 0Eh) == 0 and mission B505 > 1:
+     pilot practice at Mare Island (station 1, region 3: low bytes) and c == 6: D8FD = 1 (boat lost
+        next frame)
+     elif (DS:0088 & 0Eh) == 0 and mission B505 > 1 (word):
         c == 0Eh: waterjet r = DS:0088 & 1 (D50A + r), message 17h/18h "Damage to port/stbd waterjet."
         c == 6:   hull D510, message 1 "Damage to the hull."
-        condition 3 → 1, 0/1 → 2 (no change and no message if already 2)
+        condition (low 2 bits) 3 → 1, 0/1 → 2, the whole byte replaced (no change and no message if
+        already 2); the message through show_message_page0 (0919:1565, on page 0)
 ```
 
 The candidates depend on the exact vertex order the renderer uses, so shore contact is only

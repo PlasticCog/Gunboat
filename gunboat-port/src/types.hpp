@@ -12,4 +12,9 @@ using s16 = std::int16_t;
 using u32 = std::uint32_t;
 using s32 = std::int32_t;
 
+// Register pairs returned by assembly routines (render.hpp, sim.hpp).
+struct CxDx {
+    u16 cx, dx;
+};
+
 } // namespace gb

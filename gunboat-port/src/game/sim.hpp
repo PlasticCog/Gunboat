@@ -129,9 +129,6 @@ void reload_tick();               // 0919:1cf9
 void mission_clock_tick();        // 0919:1d30
 
 // ---- engines and propulsion (sim_engines.cpp)
-struct CxDx {
-    u16 cx, dx;
-};
 void propulsion();                // 0919:2273
 CxDx engine_thrust(u16 si);       // 0919:2529  SI = engine; CX = forward thrust, DX = turning
 
@@ -155,5 +152,16 @@ void projectile_impact(u16 bx, u16 si);        // 0919:38ed  BX = slot
 void mark_near_objects(u16 si);                // 0919:3948
 void hit_objects();                            // 0919:3977
 u8 mission_target_check(u16 si);               // 0919:3b51  SI = object offset; returns AL = message
+
+// ---- the crew pilot and the river routes (sim_routes.cpp)
+struct RoutePoint {
+    u16 ax, cx;  // the waypoint (world X, Y), or AX = 2 * tile and CX unchanged when there is none
+    u16 dx;      // DH = its link (rotated with the tile), FFh when there is none; DL = 28h - 4 * row
+    u16 si;      // where the record read stopped (unused by the callers)
+};
+RoutePoint route_point(u16 cx, u16 bx);     // 0919:8754  CL = index, BX = grid cell
+u16 route_advance(u16 dx, u16 cx, u16 bx);  // 0919:87e8  DH = link, CL = index, BX = cell; returns DX
+void route_find();                          // 0919:1c00
+void crew_pilot_decide();                   // 0919:1b2d
 
 } // namespace gb

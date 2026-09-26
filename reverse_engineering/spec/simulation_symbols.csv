@@ -95,8 +95,8 @@ func,0919:7ebb,boat_motion,near void(),§5.1
 func,0919:8229,camera_position,near ()->CX DX,§5.3
 func,0919:82de,chase_view_collision,near void(),§5.3
 func,0919:8711,route_rotate,near (AL x CL y)->AX CX,§4.6
-func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,§4.6
-func,0919:87e8,route_advance,near void(DH link CL index),§4.6
+func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,§4.6 DIV by 17: a cell of 4352 or more is R6003
+func,0919:87e8,route_advance,near (DH link CL index BX cell)->DH,§4.6 recursive when a tile crossing finds no entry
 cglobal,0919:0270,panel_switch_table,u8[2][],§3.3 switch number / indicator per entry
 cglobal,0919:0290,key_handlers,u16[127],§3.2 codes 01h-7Fh
 cglobal,0919:0feb,message_table,u16[56],§9.1 attribute byte + text ending with a byte >= 80h

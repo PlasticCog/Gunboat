@@ -42,3 +42,11 @@ global,DS:EA86,flash_stern_latch_prev,u8,§3.2 flash_stern_latch of the frame be
 global,DS:ECA8,flash_midship_latch_prev,u8,§3.2 flash_midship_latch of the frame before
 global,DS:F10B,flash_stern_latch,u8,§3.2 flash_stern (B83C) taken before game_frame for view_present
 global,DS:F132,flash_midship_latch,u8,§3.2 flash_midship (B839) taken before game_frame for view_present
+global,DS:EE9A,stern_art1_runs,u16,§4 run count of B61.LZ / BGR1.LZ (the stern gun art at DS:F616)
+global,DS:EE9E,bow_art2_runs,u16,§4 run count of BG2.LZ / BF2.LZ
+global,DS:EED4,midship_art2_runs,u16,§4 run count of BM2.LZ / BR2.LZ / B62.LZ
+global,DS:EED8,stern_art2_runs,u16,§4 run count of B62.LZ / BGR2.LZ
+global,DS:F0F8,bd5_runs,u16,§4 run count of BD5.LZ
+global,DS:F136,bd1_runs,u16,§4 run count of BD1.LZ
+global,DS:F138,bd2_runs,u16,§4 run count of BD2.LZ
+global,DS:F142,tile_bin_size,u16,§4 size of TILE.BIN (low word of the archive entry size)

@@ -17,9 +17,6 @@ struct AtanOut {
     u16 cx;  // min(|dx|, |dy|)
     u16 dx;  // max(|dx|, |dy|)
 };
-struct CxDx {
-    u16 cx, dx;
-};
 struct AxCx {
     u16 ax, cx;
 };
@@ -49,6 +46,9 @@ void shore_contact_test(u16 si);                            // 0919:79e1  SI = c
 void shore_edge_test(u16 cx, u16 dx);                       // 0919:7a3e
 void colour_remap(u16 es, u16 di, u16 dx, u16 si);          // 0919:3f8d  [DI, DX) through SI
 void video_mode_setup();                                    // 0919:3fba
+
+// ---- the terrain pass of the frame (terrain_frame.cpp)
+void terrain_frame();                                       // 0919:7158
 
 // ---- primitives, spotlights, flash and shake (draw.cpp)
 void draw_group_b();                                  // 0919:763f

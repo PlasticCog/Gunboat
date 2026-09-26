@@ -301,8 +301,8 @@ func,0919:8408,terrain_cells_update,near void(),render3d,spec:render3d,§2
 func,0919:858f,tile_load,near void(AL cell byte),render3d,spec:render3d,§2
 func,0919:8665,vertex_load,near void(BX count ptr DI base CX count),render3d,spec:render3d,§2 Codex verified
 func,0919:8711,route_rotate,near (AL x CL y)->AX CX,simulation,spec:simulation,§4.6
-func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,simulation,spec:simulation,§4.6
-func,0919:87e8,route_advance,near void(DH link CL index),simulation,spec:simulation,§4.6
+func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,simulation,spec:simulation,§4.6 DIV by 17: a cell of 4352 or more is R6003 | §4.6
+func,0919:87e8,route_advance,near (DH link CL index BX cell)->DH,simulation,spec:simulation,§4.6 recursive when a tile crossing finds no entry | §4.6
 func,0919:8930,game_frame,,engine,codex,"ORIGINAL_PHYSICS.md 11AC0: main update; simulation iteration loop at +AF (11B6F), outer loop at +ED (11BAD); motion before propulsion"
 func,0919:8a32,view_copy_1,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8a72
 func,0919:8a72,view_copy_1_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 8 rows in two runs narrowing by 8 words; then 64 source rows of 80 bytes as 5 pieces of 16 stepping up a row | §6 window trapezoid + 5x magnified strip
@@ -1115,7 +1115,9 @@ global,DS:ECAF,muzzle_flash_colour,u8,hud,spec:hud,§6 the muzzle flash sprites 
 global,DS:ECB0,menu_idle,u16,game_flow,spec:game_flow,§3 menu loop iterations without a key; 113h starts the demo
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE94,gun_sprite_ee94,u8[5],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: left mount edge 8 x 5 at (40h; 6Bh) in gun_edge_colour
+global,DS:EE9A,stern_art1_runs,u16,world,spec:world,§4 run count of B61.LZ / BGR1.LZ (the stern gun art at DS:F616)
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
+global,DS:EE9E,bow_art2_runs,u16,world,spec:world,§4 run count of BG2.LZ / BF2.LZ
 global,DS:EEA0,gun_edge_mask_colour,u8,hud,spec:hud,§5 colour gun_sprites_capture reads the edge sprites in (F107 at a station change)
 global,DS:EEA1,midship_mount_colour,u8,hud,spec:hud,§6 midship weapon 1: the piece at (B8h; 7Fh) (gun_shade_colour; 7 in EGA/Tandy: midship_screen)
 global,DS:EEA2,clip_runs,u16,hud,spec:hud,§5 run count of CLIP.LZ
@@ -1124,6 +1126,8 @@ global,DS:EEA6,gun_sprite_eea6,u8[21],hud,spec:hud,§6 1-bit sprite captured by 
 global,DS:EEBB,gun_sprite_eebb,u8[21],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow weapon 0: right muzzle flash 24 x 7 in muzzle_flash_colour
 global,DS:EED0,map_a_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnA.LZ
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
+global,DS:EED4,midship_art2_runs,u16,world,spec:world,§4 run count of BM2.LZ / BR2.LZ / B62.LZ
+global,DS:EED8,stern_art2_runs,u16,world,spec:world,§4 run count of B62.LZ / BGR2.LZ
 global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
 global,DS:F0DE,pictures_runs,u16,hud,spec:hud,§5 run count of the picture in pictures_far (MAP.LZ in a mission)
 global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
@@ -1132,6 +1136,7 @@ global,DS:F0E8,cms_driver_entry,u16[2],sound,spec:sound,§4.5 far pointer to the
 global,DS:F0EC,map_sheet_b_runs,u16,hud,spec:hud,§5 run count of MPnB.LZ
 global,DS:F0F0,gun_sprite_f0f0,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece left of the barrels (weapon 0: gun_edge_colour; weapon 1: dark)
 global,DS:F0F4,gun_sprite_f0f4,u8[4],hud,spec:hud,§6 1-bit sprite captured by the gun station screens (8 pixels per byte); bow: 8 x 4 piece (weapon 0: gun_shade_colour; weapon 1: colour 0)
+global,DS:F0F8,bd5_runs,u16,world,spec:world,§4 run count of BD5.LZ
 global,DS:F0FA,mp5b_runs,u16,game_flow,spec:game_flow,§6 run count of MP5B.LZ
 global,DS:F0FC,bd1_far,u16[2],platform,spec:platform,§5 1784h bytes
 global,DS:F100,map_b_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnB.LZ
@@ -1147,8 +1152,11 @@ global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0
 global,DS:F112,gun_frame_left,u8[32],hud,spec:hud,§5 8 x 32 captured at (60h; 2Fh)
 global,DS:F132,flash_midship_latch,u8,world,spec:world,§3.2 flash_midship (B839) taken before game_frame for view_present
 global,DS:F134,title_colour_a,u16,game_flow,spec:game_flow,§3 the title sprite's first colour layer; the pencil's; then the menu text colour (0 in VGA)
+global,DS:F136,bd1_runs,u16,world,spec:world,§4 run count of BD1.LZ
+global,DS:F138,bd2_runs,u16,world,spec:world,§4 run count of BD2.LZ
 global,DS:F13A,flow_scratch,u16,world,spec:world,"§1 scratch of main and config_load: the title choice, the page allocation result | was copy_counter | §3.3 shared with the front end"
 global,DS:F13C,folder_code,char[5],game_flow,spec:game_flow,"§6 ""4x7x"" with the folder letter and digit (shown at row 7 col 31)"
+global,DS:F142,tile_bin_size,u16,world,spec:world,§4 size of TILE.BIN (low word of the archive entry size)
 global,DS:F144,title_colour_b,u16,game_flow,spec:game_flow,§3 the sprite's second layer / the pencil's second
 global,DS:F146,gun_frame_mask_colour,u8,hud,spec:hud,§5 gun_sprites_capture: colour of the frame pieces (VGA 10h)
 global,DS:F148,map_blink,u16,game_flow,spec:game_flow,§6 the assignment map's objective blink counter

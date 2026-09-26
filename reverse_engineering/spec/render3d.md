@@ -98,7 +98,7 @@ bit 7 (primitive mode) kept. Height → word `DS:1496 + 2i`; X and Y (rotated, �
 ×4) → words `DS:1C96 + 2i` and `DS:2496 + 2i`. `D94F..D952` and `D9B0/D9B1` come from the time
 of day (simulation §9.2).
 
-## 3. Terrain frame (`terrain_frame`, 0919:7158)
+## 3. Terrain frame (`terrain_frame`, 0919:7158) **verified** (port, differential test)
 
 ```
 terrain_frame()
@@ -112,8 +112,14 @@ terrain_frame()
 draw:
   if D8BC: order_reset()                                   0919:72a9   §3.5
   order_sort()                                             0919:72c0   §3.5
+  EGA (byte EED2 == 0Dh): map mask 0Fh, graphics mode 0, enable set/reset 0Fh, rotate 0
+     (OUT 3C4h/3CEh at 7268; parked in the port)
   draw_group_b()                                           0919:763f   §3.4
 ```
+
+The skip test compares the view heading as the word `D191:D192` (heading high, fraction low)
+with `D90A`, and the horizon after `terrain_setup` has recomputed (and decremented) it. The
+contact of the last projection survives a skipped frame (D8FF, D900 unchanged).
 
 ### 3.1 Horizon, sky and water (`terrain_setup`) **verified**
 
