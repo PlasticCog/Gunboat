@@ -1,0 +1,26 @@
+kind,address,name,type,notes
+func,12ed:0000,engine_sound_on,far void(),§2
+func,12ed:0018,sfx_play_far,far void(u16 id),§2 C wrapper of sfx_play
+func,12ed:0063,engine_sound_off,far void(),§2
+func,12ed:08c0,sfx_install,near void(),§2 timer 13B1h
+func,12ed:08f3,sfx_remove,near void(),§2
+func,1ace:005c,cms_silence,far void(),§4
+func,1ace:00e8,sound_detect,far void(u8 mask ...),§3 DS:F2A0
+func,1af5:0006,music_tick,far void(),§4 from the menu timer
+func,1af5:0192,mpu_command,far u16(u8 cmd),§3 ports 330h/331h
+func,1af5:01be,mpu_reset,far u16(),§3 MT-32 detection
+func,1af5:01cf,mpu_write,near void(AL data),§3
+func,1af5:0290,adlib_driver_present,far u16(),§3 INT 65h signature
+func,1af5:02b0,adlib_driver_init,far void(),§3 INT 65h function 0
+func,1af5:02b9,adlib_call,far void(u16 ...),§4 INT 65h SI=15h
+func,1b37:0002,tandy_detect,far void(),§3
+func,1b37:00c0,speaker_music_tick,far void(),§4 PC speaker / Tandy music
+func,1b5f:000e,cms_detect,far u16(),§3
+global,DS:007E,sound_muted,u16,§2
+global,DS:DA47,sfx_device_tandy,u8,§2
+global,DS:F292,music_voices,u16,§3
+global,DS:F294,music_note_on,u16[2],§3 far pointer
+global,DS:F298,music_note_off,u16[2],§3 far pointer
+global,DS:F29C,music_control,u16[2],§3 far pointer
+global,DS:F2A0,sound_device,u16,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
+global,DS:F5D8,music_stream,u16[2],§4 far pointer

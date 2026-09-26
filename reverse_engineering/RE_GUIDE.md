@@ -123,8 +123,10 @@ function that contains them:
 
 ## Subsystem specs
 
-Status: **simulation**, **render3d**, **world**, **game_flow**, **hud** — done (`spec/*.md`,
-2026-09-25). platform, video, sound — to do.
+Status: **all eight specs done** (2026-09-25): simulation, render3d, world, game_flow, hud,
+platform, video, sound. 408 of 597 functions named; the unnamed rest are mostly the
+EGA/Tandy/CGA twins of drawing routines, BIOS text helpers (`17f0`), AdLib/CMS back-end helpers
+and C runtime internals. Open questions are listed at the end of each spec.
 
 As TD3: one spec per subsystem in `reverse_engineering/spec/<owner>.md`, each with an overview
 and call graph, a function table, a globals table, pseudocode, file formats, the DOS/hardware

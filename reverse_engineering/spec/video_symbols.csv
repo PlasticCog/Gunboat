@@ -1,0 +1,10 @@
+kind,address,name,type,notes
+func,00f2:0eec,pal_apply_vga,far void(),§3 wrapper of 121b:087f
+func,00f2:0efa,pal_black_vga,far void(),§3
+func,00f2:0f08,pal_fade_in_vga,far void(),§3
+func,00f2:0f16,pal_fade_out_vga,far void(),§3
+func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),§3 parked
+func,00f2:0f46,ega_pal_apply,far void(),§3 parked
+func,147b:000c,gfx_move_to,far void(u16 x u16 y),§2 DS:DCFF/DD01
+func,147c:000f,ega_pal_register,far void(u16 reg u16 value),§2 parked
+func,14ae:0005,ega_pal_set,far void(u16 u16),§2 parked

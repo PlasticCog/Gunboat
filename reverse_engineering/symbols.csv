@@ -22,6 +22,12 @@ func,00f2:0e10,print_text,,game_flow,td3-match,"TD3 01f4:1ad6 print_text, score 
 func,00f2:0e44,print_chars,,game_flow,td3-match,"TD3 01f4:1b58 print_chars, score 1.00"
 func,00f2:0e7a,wait_key,,game_flow,td3-match,"TD3 01f4:1b8e wait_key, score 1.00"
 func,00f2:0ece,screen_present,,game_flow,td3-match,"TD3 01f4:1be2 screen_present, score 1.00"
+func,00f2:0eec,pal_apply_vga,far void(),video,spec:video,§3 wrapper of 121b:087f
+func,00f2:0efa,pal_black_vga,far void(),video,spec:video,§3
+func,00f2:0f08,pal_fade_in_vga,far void(),video,spec:video,§3
+func,00f2:0f16,pal_fade_out_vga,far void(),video,spec:video,§3
+func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),video,spec:video,§3 parked
+func,00f2:0f46,ega_pal_apply,far void(),video,spec:video,§3 parked
 func,00f2:0fea,ega_pal_init,,game_flow,td3-match,"TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
 func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 VALKPC/VALK12/VALK3V
 func,00f2:119c,music_stop,far void(),game_flow,spec:game_flow,§3.1
@@ -65,13 +71,15 @@ func,05bd:2efc,screen_clear,far void(),world,spec:world,§3.1
 func,05bd:30ae,gun_panel_copy,far void(u16),hud,spec:hud,§5
 func,05bd:3114,window_cracks_draw,near void(),world,spec:world,§3.3 simulation §8.6
 func,08e1:006e,demo_next_key,far void(u8 *key),simulation,spec:simulation,§3.1 recorded demo keys; any real key ends the demo
+func,08e1:016f,lzw_decode_cracks,far void(),platform,spec:platform,§6 crack picture
 func,08e1:018e,lzw_alloc,,platform,td3-match,"TD3 0ab4:000f lzw_alloc, score 0.53; low score: confirm in the spec"
 func,08e1:01aa,lzw_free,,platform,td3-match,"TD3 0ab4:0034 lzw_free, score 1.00"
+func,08e1:01bd,lzw_decode_picture,far void(u8 far *src u16 dst_off u16 dst_seg),platform,spec:platform,§6 into DS:1094
 func,08e1:01db,lzw_decode_body,,platform,td3-match,"TD3 0ab4:006a lzw_decode_body, score 1.00"
 func,08e1:02b1,lzw_fill_input,,platform,td3-match,"TD3 0ab4:0140 lzw_fill_input, score 1.00"
 func,08e1:02cd,lzw_get_code,,platform,td3-match,"TD3 0ab4:015c lzw_get_code, score 1.00"
 func,08e1:0361,lzw_add_entry,,platform,td3-match,"TD3 0ab4:01f0 lzw_add_entry, score 1.00"
-func,0919:0000,panel_redraw_all,far void(),world,spec:world,§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
+func,0919:0000,panel_redraw_all,far void(),world,spec:world+spec:platform,hud §2.1 (kept here: same address as 08e1:0380) | §3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
 func,0919:000e,panel_blink,near void(),hud,spec:hud,§2.1 every frame; timer DS:D5BE
 func,0919:0027,indicator_draw,near void(AL mode_id AH value),hud,spec:hud,§2.1
 func,0919:016a,panel_switches_redraw,far void(),hud,spec:hud,§2.1
@@ -279,16 +287,30 @@ func,121b:036e,world_a_base,far u16(),world,spec:world,§3.1 returns 6E54h
 func,121b:0372,pit_random,far u16(u16 base),world,spec:world,reads PIT counter 2 (port 42h) + base (platform spec)
 func,121b:0380,far_normalize,,platform,td3-match,"TD3 0c1c:071c far_normalize, score 1.00"
 func,121b:0397,text_set_colours,,platform,td3-match,"TD3 0c1c:0733 text_set_colours, score 1.00"
+func,121b:03b0,text_goto_cell,far void(u8 col u8 row),platform,spec:platform,§7
+func,121b:03d8,text_draw_char,far void(u8 *c),platform,spec:platform,§7
 func,121b:050a,dos_seek,,platform,td3-match,"TD3 0c1c:084e dos_seek, score 1.00"
 func,121b:0524,dos_open_read,,platform,td3-match,"TD3 0c1c:0868 dos_open_read, score 1.00"
 func,121b:0536,dos_file_size,,platform,td3-match,"TD3 0c1c:087a dos_file_size, score 1.00"
 func,121b:055c,dos_read,,platform,td3-match,"TD3 0c1c:08a0 dos_read, score 1.00"
+func,121b:0575,dos_close,far void(u16 handle),platform,spec:platform,§4 INT 21h AH=3Eh
+func,121b:07ae,pal_fade_out,far void(),platform,spec:platform,video §3
+func,121b:0804,pal_fade_in,far void(),platform,spec:platform,video §3
+func,121b:085d,pal_black,far void(),platform,spec:platform,video §3
+func,121b:087f,pal_apply,far void(),platform,spec:platform,video §3
+func,121b:08a8,picture_draw_vga,far void(u16 src u16 size u16 rows),platform,spec:platform,§6
+func,121b:0902,cga_composite_setup,far void(),platform,spec:platform,§8 parked
 func,121b:0a4d,kbd_install,,platform,td3-match,"TD3 0c1c:0e2d kbd_install, score 0.55; low score: confirm in the spec"
 func,121b:0a88,kbd_restore,,platform,td3-match,"TD3 0c1c:0e7d kbd_restore, score 0.55; low score: confirm in the spec"
 func,121b:0a9c,kbd_isr,,platform,td3-match,"TD3 0c1c:0e98 kbd_isr, score 0.89"
 func,121b:0c9a,timer_install,,platform,td3-match,"TD3 0c1c:109f timer_install, score 0.62; low score: confirm in the spec"
 func,121b:0cc4,timer_restore,,platform,td3-match,"TD3 0c1c:10cf timer_restore, score 0.78; low score: confirm in the spec"
+func,121b:0ce2,menu_timer_isr,interrupt,platform,spec:platform,§1 89.63 Hz
+func,12ed:0000,engine_sound_on,far void(),sound,spec:sound,§2
+func,12ed:0018,sfx_play_far,far void(u16 id),sound,spec:sound,§2 C wrapper of sfx_play
 func,12ed:0025,sfx_play,,sound,codex,ORIGINAL_AUDIO.md 12EF5: trigger effect 0..12
+func,12ed:0063,engine_sound_off,far void(),sound,spec:sound,§2
+func,12ed:00a3,sfx_timer_isr,interrupt,platform,spec:platform,§1 236.695 Hz (continues at 12ed:00b1)
 func,12ed:00eb,sfx_timer_tick,,sound,codex,"ORIGINAL_AUDIO.md 12FBB: PIT reload 13B1h, ~236.7 Hz"
 func,12ed:02b8,sfx_channel_transfer,,sound,codex,ORIGINAL_AUDIO.md 13188
 func,12ed:03c4,sfx_parse_command,,sound,codex,ORIGINAL_AUDIO.md 13294
@@ -297,14 +319,24 @@ func,12ed:0523,sfx_note_duration,,sound,codex,ORIGINAL_AUDIO.md 133F3
 func,12ed:0655,sfx_tempo_loop,,sound,codex,ORIGINAL_AUDIO.md 13525
 func,12ed:0752,sfx_raw_pitch,,sound,codex,ORIGINAL_AUDIO.md 13622
 func,12ed:0800,sfx_speaker_init,,sound,codex,ORIGINAL_AUDIO.md 136D0: PC speaker/Tandy init; PIT reload at +B7 (137B7)
+func,12ed:08c0,sfx_install,near void(),sound,spec:sound,§2 timer 13B1h
+func,12ed:08f3,sfx_remove,near void(),sound,spec:sound,§2
 func,137e:0000,gfx_alloc_page,,video,td3-match,"TD3 172d:000e gfx_alloc_page, score 1.00"
 func,1386:0004,gfx_detect,,video,td3-match,"TD3 16cf:0006 gfx_detect, score 0.97"
+func,1390:0000,picture_draw,far void(u16 src u16 size u16 width),platform,spec:platform,§6 all modes
 func,13d5:000d,gfx_line_to,,video,td3-match,"TD3 16d9:0002 gfx_line_to, score 0.95"
 func,13e2:0002,gfx_draw_bitmap,,video,td3-match,"TD3 185f:000b gfx_draw_bitmap, score 0.88"
 func,142c:0009,gfx_free_page,,video,td3-match,"TD3 1736:0004 gfx_free_page, score 1.00"
 func,1432:000c,gfx_read_bitmap,,video,td3-match,"TD3 18b3:0004 gfx_read_bitmap, score 0.85"
+func,1469:0008,gfx_saved_mode,far u16(),platform,spec:platform,§8 DS:DCFC
+func,146a:000b,joystick_axis,far u16(u16 axis),platform,spec:platform,§3 port 201h
+func,146e:000e,joystick_calibrate,far void(u16),platform,spec:platform,§3
+func,1473:0008,joystick_read,far void(u16 stick u8 *code u8 *dir),platform,spec:platform,§3
+func,147b:000c,gfx_move_to,far void(u16 x u16 y),video,spec:video,§2 DS:DCFF/DD01
+func,147c:000f,ega_pal_register,far void(u16 reg u16 value),video,spec:video,§2 parked
 func,148c:000d,gfx_set_ega_palette,,video,td3-match,"TD3 18f3:0002 gfx_set_ega_palette, score 1.00"
 func,149f:0004,gfx_set_display_offset,,video,td3-match,"TD3 1776:0008 gfx_set_display_offset, score 1.00"
+func,14ae:0005,ega_pal_set,far void(u16 u16),video,spec:video,§2 parked
 func,14b5:000d,gfx_put_pixel,,video,td3-match,"TD3 173c:0005 gfx_put_pixel, score 0.89"
 func,14cf:0008,gfx_fill_rect,,video,td3-match,"TD3 1785:000b gfx_fill_rect, score 0.57; low score: confirm in the spec"
 func,14ff:0001,text_exit_clear,,video,td3-match,"TD3 16fc:000b text_exit_clear, score 0.69; low score: confirm in the spec"
@@ -318,6 +350,7 @@ func,157d:0078,gfx_set_pal_reg,,video,td3-match,"TD3 173c:01ca gfx_set_pal_reg, 
 func,1592:0004,gfx_set_visible_page,,video,td3-match,"TD3 171b:000a gfx_set_visible_page, score 1.00"
 func,15a4:0006,gfx_copy_rect,,video,td3-match,"TD3 1818:0003 gfx_copy_rect, score 0.66; low score: confirm in the spec"
 func,15d4:0007,bios_wait_ticks,,video,td3-match,"TD3 16ff:000b bios_wait_ticks, score 0.69; low score: confirm in the spec"
+func,15d7:000d,joystick_button,far u16(u16 stick),platform,spec:platform,§3
 func,15d9:0003,gfx_fill_rect_clipped,,video,td3-match,"TD3 192e:0005 gfx_fill_rect_clipped, score 1.00"
 func,15e2:0001,gfx_clear_page,,video,td3-match,"TD3 1937:0003 gfx_clear_page, score 0.82"
 func,15ee:0016,_astart,,runtime,td3-match,"TD3 1940:0018 _astart, score 1.00"
@@ -362,6 +395,18 @@ func,15ee:1da8,open,,runtime,td3-match,"TD3 1940:1652 open, score 1.00"
 func,15ee:1f4c,stackavail,,runtime,td3-match,"TD3 1940:17f6 stackavail, score 1.00"
 func,15ee:1f6a,memset,,runtime,td3-match,"TD3 1940:180a memset, score 1.00"
 func,15ee:1fee,flushall,,runtime,td3-match,"TD3 1940:18b2 flushall, score 0.84"
+func,1ace:005c,cms_silence,far void(),sound,spec:sound,§4
+func,1ace:00e8,sound_detect,far void(u8 mask ...),sound,spec:sound,§3 DS:F2A0
+func,1af5:0006,music_tick,far void(),sound,spec:sound,§4 from the menu timer
+func,1af5:0192,mpu_command,far u16(u8 cmd),sound,spec:sound,§3 ports 330h/331h
+func,1af5:01be,mpu_reset,far u16(),sound,spec:sound,§3 MT-32 detection
+func,1af5:01cf,mpu_write,near void(AL data),sound,spec:sound,§3
+func,1af5:0290,adlib_driver_present,far u16(),sound,spec:sound,§3 INT 65h signature
+func,1af5:02b0,adlib_driver_init,far void(),sound,spec:sound,§3 INT 65h function 0
+func,1af5:02b9,adlib_call,far void(u16 ...),sound,spec:sound,§4 INT 65h SI=15h
+func,1b37:0002,tandy_detect,far void(),sound,spec:sound,§3
+func,1b37:00c0,speaker_music_tick,far void(),sound,spec:sound,§4 PC speaker / Tandy music
+func,1b5f:000e,cms_detect,far u16(),sound,spec:sound,§3
 cglobal,0919:0270,panel_switch_table,u8[2][],simulation,spec:simulation,§3.3 switch number / indicator per entry
 cglobal,0919:0290,key_handlers,u16[127],simulation,spec:simulation,§3.2 codes 01h-7Fh
 cglobal,0919:0feb,message_table,u16[56],simulation,spec:simulation,§9.1 attribute byte + text ending with a byte >= 80h
@@ -385,14 +430,14 @@ global,DS:0074,view_page,u16,game_flow,spec:game_flow,§2 0 in VGA else 2
 global,DS:0076,cga_special,u16,game_flow,spec:game_flow,§2
 global,DS:0078,single_page_mode,u16,game_flow,spec:game_flow,§2 1 in VGA
 global,DS:007A,draw_page,u16,simulation,spec:simulation,graphics library page
-global,DS:007E,sound_muted,u16,simulation,spec:simulation,§3.1
+global,DS:007E,sound_muted,u16,sound,spec:simulation+spec:sound,§2 | §3.1
 global,DS:0082,phase,u16,game_flow,spec:game_flow,§1 FFh config 0 title 1 HQ 2 front end 3 mission
 global,DS:0084,front_end_state,u16,game_flow,spec:game_flow,§6
 global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 map; 6 chase; 7 damage report; 8 assignment; 9 quit | §2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
 global,DS:027C,archive_directory,u8[1190],game_flow,spec:game_flow,§1 DATAC.DAT
-global,DS:08C0,tick_counter,u16,simulation,spec:simulation,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
-global,DS:08C4,palette_3d,u8[225],world,spec:world,§4 TACTCOLR.BIN
+global,DS:08C0,tick_counter,u16,simulation,spec:simulation+spec:platform,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
+global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,was palette | video §3 | was palette_3d | §4 TACTCOLR.BIN
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
 global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation+spec:hud,§5 per station | §8.6 per station
@@ -525,7 +570,7 @@ global,DS:D1DC,projectile_record,u8[32][8],simulation,spec:simulation,§7.1
 global,DS:D390,damage_report_labels,u16,hud,spec:hud,§5 pointer to records
 global,DS:D392,damage_report_list,u16,hud,spec:hud,§5 pointer to (x y id) triples
 global,DS:D394,condition_words,u16[8],hud,spec:hud,§5
-global,DS:D502,boat_record,u8[189],simulation,spec:simulation+spec:hud,was indicators | §2 same bytes as the component conditions | was boat_record | §2.2 DAT10/DAT11
+global,DS:D502,boat_record,u8[189],simulation,spec:simulation+spec:hud,was indicators | was boat_record | was indicators | §2 same bytes as the component conditions | was boat_record | §2.2 DAT10/DAT11
 global,DS:D503,engine_indicator,u8[2],simulation,spec:simulation,§2.2
 global,DS:D505,objective_state,u8,simulation,spec:simulation,§5.2
 global,DS:D506,fuel_tank_condition,u8[2],simulation,spec:simulation,§8.6
@@ -540,7 +585,7 @@ global,DS:D512,seaman_condition,u8,simulation,spec:simulation,§8.6 midship gunn
 global,DS:D513,gunners_mate_condition,u8,simulation,spec:simulation,§8.6 bow gunner
 global,DS:D514,captain_condition,u8,simulation,spec:simulation,§8.6
 global,DS:D515,engineman_condition,u8,simulation,spec:simulation,§8.6 stern gunner
-global,DS:D520,main_switch,u8,simulation,spec:simulation+spec:hud,was switches | §2 bit 0 set = off | was main_switch | §4.4 panel switch 0; bit 0 set = off
+global,DS:D520,main_switch,u8,simulation,spec:simulation+spec:hud,was switches | was main_switch | was switches | §2 bit 0 set = off | was main_switch | §4.4 panel switch 0; bit 0 set = off
 global,DS:D521,engine_switches,u8[2],simulation,spec:simulation,§4.2
 global,DS:D525,bow_mount,u8[2],simulation,spec:simulation,§6.1
 global,DS:D529,midship_mount,u8[2],simulation,spec:simulation,§6.1
@@ -654,20 +699,37 @@ global,DS:D9B6,page_segments,u16[3],hud,spec:hud,§1
 global,DS:D9B8,draw_page_segment,u16,render3d,spec:render3d,§1.1
 global,DS:DA39,fast_forward_key,u8,simulation,spec:simulation,§3.1 Backspace held
 global,DS:DA3A,ctrl_held,u8,simulation,spec:simulation,§3.1
+global,DS:DA3F,kbd_prefix_state,u8,platform,spec:platform,§2
+global,DS:DA40,kbd_typematic,u8,platform,spec:platform,§2
+global,DS:DA41,kbd_last_scancode,u8,platform,spec:platform,§2
 global,DS:DA42,isr_key_code,u8,simulation,spec:simulation,§3.1
 global,DS:DA43,held_keys,u8,simulation,spec:simulation,§3.1
+global,DS:DA44,menu_timer_divider,u8,platform,spec:platform,§1
+global,DS:DA47,sfx_device_tandy,u8,sound,spec:sound,§2
+global,DS:DA52,sfx_timer_divider,u16,platform,spec:platform,§1
+global,DS:DA8F,sfx_timer_vector,u8,platform,spec:platform,§1
+global,DS:DCFC,gfx_saved_mode_byte,u8,platform,spec:platform,§8
+global,DS:DD17,joystick_limits,u16[4],platform,spec:platform,§3
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
+global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
+global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
 global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
 global,DS:F13A,copy_counter,u16,world,spec:world,§3.3 shared with the front end
 global,DS:F26C,front_end_running,u16,game_flow,spec:game_flow,§6
 global,DS:F280,tile_bin_offset,u16,render3d,spec:render3d,§2 far pointer offset of TILE.BIN
 global,DS:F282,tile_bin_segment,u16,render3d,spec:render3d,§2
+global,DS:F292,music_voices,u16,sound,spec:sound,§3
+global,DS:F294,music_note_on,u16[2],sound,spec:sound,§3 far pointer
+global,DS:F298,music_note_off,u16[2],sound,spec:sound,§3 far pointer
+global,DS:F29C,music_control,u16[2],sound,spec:sound,§3 far pointer
+global,DS:F2A0,sound_device,u16,sound,spec:sound,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2
 global,DS:F394,joystick,u16,game_flow,spec:game_flow,§2
 global,DS:F396,world_b_size,u16,world,spec:world,§4
 global,DS:F398,first_run,u8,game_flow,spec:game_flow,§1
 global,DS:F39C,bios_video_mode,u16,game_flow,spec:game_flow,§2
 global,DS:F5D4,world_b_far,u16[2],world,spec:world,§4 far pointer to the B data copy
+global,DS:F5D8,music_stream,u16[2],sound,spec:sound,§4 far pointer
 global,DS:F626,name_input,char[20],game_flow,spec:game_flow,§6.1
