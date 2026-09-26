@@ -26,6 +26,10 @@ from test_video import run_original
 POLLS = ['121b:07eb', '121b:0841', '15d4:0019']
 MISSION_POLL = '05bd:0000'   # replaced by the real address below (the loop's "loop_start_ticks = DS:08C0")
 
+# The full-screen stations (station >= 5) wait at the loop's end until DS:08C0 has advanced by 3
+# since the loop's start, calling random() meanwhile: the poll is the read of DS:08C0 there.
+STATION_WAIT_POLL = '05bd:0450'
+
 GAME_FRAME = (0x0919, 0x8930)
 
 
@@ -103,7 +107,7 @@ def mission_state(h, practice=None, region=0, mission=1, rank=1, station=1, weap
         hook = h.orig.uc.hook_add(UC_HOOK_CODE, on_frame, None, at, at)
         # keys: one per loop pass, at the loop's tick read (the port pumps the host there)
         with sound(h):
-            h.set_tick((POLLS + [MISSION_POLL], 'both', [0] + list(keys)))
+            h.set_tick((POLLS + [MISSION_POLL, STATION_WAIT_POLL], 'both', [0] + list(keys)))
             try:
                 h.orig.set_memory(m)
                 file_seg, off, far = h.sym.func('mission_run')
