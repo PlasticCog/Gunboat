@@ -12,4 +12,4 @@ if ($LASTEXITCODE -ne 0) { throw 'CMake configuration failed.' }
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 & ctest --test-dir $build --output-on-failure
 if ($LASTEXITCODE -ne 0) { throw 'Native checks failed.' }
-Write-Host 'Ready: double-click Run Gunboat.cmd'
+Write-Host 'Ready. build\gunboat.exe is the port (--check); Run Gunboat.cmd starts the Codex prototype.'

@@ -267,7 +267,7 @@ give the tanks weapon class 6 and higher accuracy.
 Header words: `[0]` offset of the animation byte whose bit 20h `enemy_update` toggles once per
 frame and time compression holds (simulation §8.3); `[2]`, `[4]` colour-remap range; `[6]` the
 composite-parts table for sprites (NATIVE_PORT.md); further words: sprite descriptors. The mission
-text blocks (§6.2) are inside it. Sprite decoding: `gunboat-port/src/assets.cpp`
+text blocks (§6.2) are inside it. Sprite decoding: `gunboat-port/legacy/src/assets.cpp`
 (`SpriteBank`), verified.
 
 ### 6.5 Other files loaded for a mission

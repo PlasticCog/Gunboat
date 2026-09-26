@@ -9,7 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-PORT = Path(__file__).resolve().parents[1]
+PORT = Path(__file__).resolve().parents[2]
 ROOT = PORT.parent
 sys.path.insert(0, str(ROOT / "reverse_engineering/tools"))
 from gunboat_formats import read_datac, asset_path, td3_lzw_decode, UNPACKED_IMAGE
@@ -21,7 +21,7 @@ def rotate(x, y, angle):
 
 
 def main():
-    binary = PORT / "build/gunboat.exe"
+    binary = PORT / "build/gunboat_legacy.exe"
     output = PORT / "out/native"
     subprocess.run([str(binary), "--game-dir", str(ROOT / "Original DOS version"),
                     "--dump-assets", str(output)], check=True)

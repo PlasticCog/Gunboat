@@ -31,8 +31,8 @@ the `EE01` blitter. Important details recovered during translation:
 - Cached fixture images are 256×64, cropped from DOS screen X=40..295,
   Y=64..127, with the baseline at local Y=56 and pivot X=120.
 
-`gunboat-port/tests/probe_sprites.py` records the independent Python translation.
-`gunboat-port/tests/verify_assets.py` compares the compiled C++ output directly
+`gunboat-port/legacy/tests/probe_sprites.py` records the independent Python translation.
+`gunboat-port/legacy/tests/verify_assets.py` compares the compiled C++ output directly
 with execution of the original routines under the development-only Unicorn
 oracle. None of that emulation is used by the native game.
 

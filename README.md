@@ -13,10 +13,11 @@ original function and check it against the original machine code.
 
 | Phase | State |
 | --- | --- |
-| Executable map | Done: 597 functions indexed, 408 named (`reverse_engineering/RE_GUIDE.md`) |
+| Executable map | Done: 597 functions indexed, 409 named (`reverse_engineering/RE_GUIDE.md`) |
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
-| Faithful port | Not started. Verified translations of the boat physics, weapons, PC-speaker effects, sprites and terrain loading already exist in `gunboat-port/src/original_*.cpp` and `assets.cpp`. |
-| Playable build | `gunboat-port/` contains an earlier *non-faithful* patrol mode on the original assets, kept as a reference until the port replaces it |
+| Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
+| Porting | Started: 4 functions ported and verified. Next: start-up, title screen and menus |
+| Playable build | `gunboat-port/legacy/`: an earlier *non-faithful* patrol mode on the original assets, kept as a reference until the port replaces it |
 
 ## Layout
 
@@ -28,8 +29,9 @@ original function and check it against the original machine code.
 
 ## Building the current build (Windows)
 
-MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1`, then run
-`gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE and DATAA/B/C.DAT>`.
+MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1` builds
+and tests everything. `gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE> --check`
+checks the original executable; the prototype runs as `gunboat_legacy.exe` (`gunboat-port/legacy/README.md`).
 
 ## Credits
 

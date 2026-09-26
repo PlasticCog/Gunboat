@@ -220,7 +220,7 @@ global,DS:D512,seaman_condition,u8,§8.6 midship gunner
 global,DS:D513,gunners_mate_condition,u8,§8.6 bow gunner
 global,DS:D514,captain_condition,u8,§8.6
 global,DS:D515,engineman_condition,u8,§8.6 stern gunner
-global,DS:D520,main_switch,u8,§4.4 panel switch 0; bit 0 set = off
+global,DS:D520,panel_switches,u8[17],§4.4 [0] = main switch; bit 0 set = off
 global,DS:D521,engine_switches,u8[2],§4.2
 global,DS:D525,bow_mount,u8[2],§6.1
 global,DS:D529,midship_mount,u8[2],§6.1
@@ -302,3 +302,17 @@ global,DS:EE9C,key_code,u8,§3.2
 global,DS:F110,practice_mode,u16,§3.3 0 mission; 1-3 practice types
 global,DS:F346,look_direction,u16,§1.2
 func,0919:2a69,boat_hit_component,near void(AL component CL message),§8.6 entry of boat_hit with a chosen component (ramming: render3d §5.4)
+func,0919:3706,vec_scale,near AX(AL),§5.1 AX = AL * vec_factor B7E5; product to B7E9/B7EA
+func,0919:7e5f,heading_vector,near AX(AL angle),§5.1 sine components of an angle; vec_factor scaled by |speed|
+func,0919:7ee8,boat_move,near void(),§5.1 moves the boat along the hull heading; map clipping; water marks
+global,DS:B7E2,scratch_b7e2,u8,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)
+global,DS:B7E3,scratch_b7e3,u8,§5.1 shared scratch byte (step fraction here)
+global,DS:B7E5,vec_factor,u8,§5.1 multiplicand of vec_scale
+global,DS:B7E7,vec_angle,u8,§5.1 angle of the last heading_vector; bit 7 flipped in reverse
+global,DS:B7E8,vec_sin,u8,§5.1 second component of the last heading_vector
+global,DS:B7E9,vec_product_lo,u8,§5.1
+global,DS:B7EA,vec_product_hi,u8,§5.1
+global,DS:B829,water_phase_fraction,u8,§5.1
+global,DS:D94D,water_phase,u8,§5.1; render3d §3.2 horizon row r shows mark ((D94D >> 2) + r) & 1Fh
+global,DS:D984,water_mark_x_fraction,u8[32],§5.1 fraction of water_mark_x D90D
+cglobal,0919:7dbf,water_shift_table,u8[16][10],§5.1 bits 2-7 fraction; bits 0-1 whole

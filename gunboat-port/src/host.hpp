@@ -1,0 +1,74 @@
+#pragma once
+// Host services: the only layer that talks to SDL3 (host.cpp). Window and presentation, the PIT
+// timer interrupt, VGA vertical retrace, keyboard (XT byte stream for the game's own INT 9
+// handler), joystick, audio (OPL2 through Nuked-OPL3, PC speaker), game files and fatal errors.
+// No game logic lives here. Converted to C++ from the Test Drive III port's host.h/host.c (MIT,
+// (c) 2026 Krzysztof Kania; THIRD_PARTY.md). The differential tests link a stub instead
+// (tests/difftest/host_stub.cpp).
+#include "types.hpp"
+
+namespace gb {
+
+constexpr u32 PIT_HZ = 1193182;
+// PIT channel 0 divisors used by GB.EXE (platform.md §1). 0 means 65536.
+constexpr u16 PIT_DIV_BIOS = 0;         // 18.2065 Hz, the BIOS rate
+constexpr u16 PIT_DIV_MENU = 0x3400;    // 89.63 Hz, timer_install 121b:0c9a (menus, music)
+constexpr u16 PIT_DIV_MISSION = 0x13B1; // 236.695 Hz, sfx_install 12ed:08c0 (missions)
+
+bool host_init(const char *game_dir, int window_scale, bool fullscreen);
+void host_shutdown();
+
+// PIT channel 0 and the INT 8 handler: the host calls handler (the port's version of the game's
+// timer interrupt body) once per timer interrupt at PIT_HZ / divisor, from host_pump(). A change of
+// divisor takes effect from the last tick on, as reprogramming the PIT does. handler may be null.
+void host_set_timer(u16 divisor, void (*handler)());
+
+// Source of the displayed image: fills a w x h XRGB8888 frame and returns true if it changed since
+// the last call. Installed by the VGA model (platform/vga.cpp, 320x200). Shown with 4:3 aspect.
+constexpr int HOST_FRAME_MAX_W = 320;
+constexpr int HOST_FRAME_MAX_H = 200;
+void host_set_frame_source(bool (*compose)(u32 *xrgb), int w, int h);
+
+// Runs the timer ticks that are due (and their audio), handles window events and presents the
+// screen when it changed. Every busy-wait loop of the original (tick waits, key polls, delays)
+// calls this once per iteration. Sleeps briefly when nothing was due.
+void host_pump();
+
+// Waits for the start of the next vertical retrace of the emulated VGA (mode 13h: 70.086 Hz),
+// pumping meanwhile. Replaces the port 3DAh polls.
+void host_wait_vretrace();
+
+// Keyboard: the game's INT 9 handler (kbd_isr 121b:0a9c, platform.md §2) receives the XT byte
+// sequence the keyboard would send, in event order: normal keys sc / sc|80h, grey keys E0 sc /
+// E0 sc|80h, Pause E1 1D 45 E1 9D C5, Print Screen E0 2A E0 37 / E0 B7 E0 AA. Key repeats feed the
+// make code again.
+void host_set_kbd_handler(void (*handler)(u8 byte));
+// Called when the window loses keyboard focus (keys released outside it never send their break).
+void host_set_focus_lost_handler(void (*handler)());
+
+// Joystick (port 201h replacement, platform.md §3): the first connected gamepad. Axes
+// -32768..32767, buttons bit 0 = A, bit 1 = B. False when there is none.
+bool host_joy_read(s16 *x, s16 *y, u8 *buttons);
+
+// Audio. Sound code writes OPL2 registers and the PC speaker as the original does; writes take
+// effect from the current tick onward.
+void host_opl_write(u8 reg, u8 value);
+void host_speaker(u16 divisor, bool on);  // PIT channel 2 divisor (0 = 65536) and the port 61h gate
+
+// Game files: case-insensitive lookup in the game folder. Returns a path to free with host_free,
+// or null if the file does not exist; with create = true, the path for a new file.
+char *host_game_path(const char *name, bool create);
+void host_free(void *p);
+
+// Shows a message box, shuts down and exits with code 3.
+[[noreturn]] void host_fatal(const char *fmt, ...);
+
+// Developer aids (environment variables):
+//   GB_SNAPSHOT_DIR=dir   every presented frame >= 2 s after the previous one is saved as
+//                         snapNNNN.bmp (works with SDL_VIDEO_DRIVER=dummy)
+//   GB_KEYS="<seconds>:<xt>[+<xt>...],..."  presses (in order) and releases (in reverse) the XT
+//                         keys at that many seconds after start-up; "p" after the codes only
+//                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.
+//                         Grey keys are written with their E0 prefix, as e048.
+
+} // namespace gb

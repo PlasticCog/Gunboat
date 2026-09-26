@@ -5,8 +5,8 @@ Target: `reverse_engineering/out/GB_unp.exe`, DGROUP `1B73`. Symbols: `spec/vide
 The graphics library is **the same code as Test Drive III's** (23 of its 35 routines match, the
 rest are the same library's mode-specific helpers). `test-drive-3-sdl3/port/spec/platform.md`
 §2.1, §3.1, §4.1–4.3 is its specification; the port implements the **mode 13h (VGA) path only**,
-exactly as TD3 does (`platform/vga.*` in the TD3 port is already vendored in
-`gunboat-port/vendor/td3`).
+exactly as TD3 does (TD3's `platform/vga.*` is converted to C++ as
+`gunboat-port/src/platform/vga.cpp`).
 
 ## 1. Modes and pages **verified**
 

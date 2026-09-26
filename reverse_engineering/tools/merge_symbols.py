@@ -30,7 +30,8 @@ def main():
     path = os.path.join(RE, 'symbols.csv')
     with open(path, newline='', encoding='utf-8') as fh:
         rows = {key(r['kind'], r['address']): r for r in csv.DictReader(fh)}
-    changed = added = 0
+    before = {k: dict(r) for k, r in rows.items()}
+    added = 0
     for spec in sorted(glob.glob(os.path.join(RE, 'spec', '*_symbols.csv'))):
         owner = os.path.basename(spec)[:-len('_symbols.csv')]
         with open(spec, newline='', encoding='utf-8') as fh:
@@ -55,7 +56,6 @@ def main():
                     new['source'] = old['source'] + '+spec:' + owner
                 if new != old:
                     rows[k] = new
-                    changed += 1
     seen = {}
     for r in rows.values():
         if r['name'] in seen:
@@ -66,6 +66,7 @@ def main():
         w.writeheader()
         for r in sorted(rows.values(), key=sort_key):
             w.writerow({f: r.get(f, '') for f in FIELDS})
+    changed = sum(1 for k, r in rows.items() if k in before and r != before[k])
     print('%d symbols: %d added, %d updated' % (len(rows), added, changed))
 
 

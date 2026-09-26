@@ -17,9 +17,10 @@ format, LZW decompressor, graphics library and Microsoft C 5.1 runtime.
 | `out/decomp/gb_ds.c` | Ghidra decompilation of every indexed function, names applied, DGROUP globals renamed `DS_xxxx` |
 | `out/decomp/gb_globals_xref.txt` | For each DS global: the functions that use it |
 | `tools/x86dis.py out/GB_unp.exe dis SSSS:OOOO LEN` | Ground-truth disassembly when the decompiler looks wrong |
-| `/gunboat-port/tests/verify_*.py` | Unicorn differential tests: original x86 against the C++ translation |
+| `/gunboat-port/tests/difftest/` | Differential tests: original x86 in Unicorn against the port's C++, all memory compared (`gunboat-port/PORTING.md`) |
+| `/gunboat-port/legacy/tests/verify_*.py` | The Codex-era Unicorn tests (hand-picked bytes) |
 | `ORIGINAL_WORLD_FORMAT.md`, `OBJECT_FORMAT.md` | Decoded world, tile and object formats |
-| `/gunboat-port/ORIGINAL_*.md` | Codex-era translations of physics, weapons and PC-speaker audio |
+| `/gunboat-port/legacy/ORIGINAL_*.md` | Codex-era translations of physics, weapons and PC-speaker audio |
 
 Everything under `out/` is generated and git-ignored (much of it is derived from the original
 game data). `map/` and `symbols.csv` are tracked.
@@ -124,7 +125,7 @@ function that contains them:
 ## Subsystem specs
 
 Status: **all eight specs done** (2026-09-25): simulation, render3d, world, game_flow, hud,
-platform, video, sound. 408 of 597 functions named; the unnamed rest are mostly the
+platform, video, sound. 409 of 597 functions named; the unnamed rest are mostly the
 EGA/Tandy/CGA twins of drawing routines, BIOS text helpers (`17f0`), AdLib/CMS back-end helpers
 and C runtime internals. Open questions are listed at the end of each spec.
 
@@ -160,7 +161,9 @@ python reverse_engineering/tools/unexepack.py <TD3 game>/TDIII.EXE reverse_engin
 python reverse_engineering/tools/gbmatch.py reverse_engineering/out/td3/TDIII_unp.exe \
     test-drive-3-sdl3/port/tdiii_functions.json test-drive-3-sdl3/port/symbols.csv \
     reverse_engineering/map/gb_td3_matches.csv
+python reverse_engineering/tools/merge_symbols.py
 python reverse_engineering/tools/symbols.py
+python reverse_engineering/tools/gen_symbols.py
 powershell -File reverse_engineering/tools/decompile.ps1
 ```
 

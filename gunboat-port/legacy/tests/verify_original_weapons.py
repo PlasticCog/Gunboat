@@ -7,7 +7,7 @@ import subprocess
 import sys
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE
 from unicorn.x86_const import *
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 IMAGE = ROOT / 'reverse_engineering/out/gunboat_unpacked_image.bin'
 NATIVE = Path(sys.argv[1]) if len(sys.argv)>1 else ROOT/'gunboat-port/out/original_weapons_trace.exe'
 DS = 0x2b730

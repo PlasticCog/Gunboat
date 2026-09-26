@@ -313,7 +313,7 @@ but the fire bit is dropped.
 ## 4. Pilot, engines and propulsion
 
 The kernels in this section were translated by the Codex sessions and differential-tested
-against the original (`gunboat-port/src/original_physics.cpp`, `ORIGINAL_PHYSICS.md`: 20,400
+against the original (`gunboat-port/legacy/src/original_physics.cpp`, `ORIGINAL_PHYSICS.md`: 20,400
 cases, 0 mismatches). This section places them in the frame and adds the parts those tests
 skipped.
 
@@ -458,9 +458,68 @@ boat_motion()
   D972 = CX; D974 = DX                                (camera in 1/4 units, renderer input)
 ```
 
-`boat_move` moves the boat along `heading_vector` (`0919:7e5f`) by the speed, with 1/256
-fractions in `B826`/`B827`, and clips to the map (X high byte < 3Fh, Y high byte < 27h, both
-≥ 5). `camera_pitch_bob` (`0919:80e0`) is also Codex-verified.
+`camera_pitch_bob` (`0919:80e0`) is Codex-verified.
+
+#### `boat_move` (0919:7ee8) and its helpers **verified** (disassembly; port differential test)
+
+All values are bytes, all arithmetic 8-bit with the carries shown. `sine_table` (`CS:3502`) has
+a 4-byte stride; only the high byte of each word is used. `B7E2..B7EA` are shared scratch bytes
+(names in `simulation_symbols.csv`).
+
+```
+vec_scale(AL)                                         0919:3706
+  AX = AL * vec_factor B7E5 (MUL, unsigned); B7E9 = AL; B7EA = AH; return AX
+
+heading_vector(AL = angle)                            0919:7e5f
+  vec_angle B7E7 = angle
+  i = angle & 3Fh; if angle & 40h: i = 40h - i       (as (i xor FFh) + 41h)
+  vec_sin B7E8    = high byte of sine_table[i]
+  vec_factor B7E5 = high byte of sine_table[40h - i]
+  a = speed B828; if a < 0: vec_angle ^= 80h; a = -a (8-bit, -80h stays 80h)
+  return vec_scale(a)                                 (AX; BX is left as a table address)
+
+boat_move()
+  heading_vector(hull heading B81E)                   |speed| x cos -> B7EA
+  -- Y: B7E2 = (B7EA >> 5) & 3, B7E3 = B7EA << 3 (bit 7 of B7EA is lost)
+  if (B7E7 & C0h) is 40h or 80h:                      (moving towards smaller Y)
+     B827 -= B7E3, borrow -> B7E2++
+     w = boat_y C8FD; lo(w) -= B7E2
+     if borrow: if hi(w) < 5: skip the store (clipped) else hi(w)--
+  else:
+     B827 += B7E3, carry -> B7E2++
+     w = C8FD; lo(w) += B7E2
+     if carry: if hi(w) >= 27h: skip the store else hi(w)++
+  C8FD = w (unless skipped; the fraction B827 is kept even when the store is skipped)
+  -- X: vec_factor B7E5 = vec_sin B7E8; vec_scale(|speed|); B7E2 and B7E3 as for Y
+  if B7E7 & 80h: B826 -= B7E3 ... boat_x C12D, low limit hi < 5
+  else:          B826 += B7E3 ... C12D, high limit hi >= 3Fh
+  -- water marks (render3d §3.2): the view's heading relative to the hull
+  heading_vector(heading[station - 1] - B81E)         (DS:B81D + station; stations above 4 read
+                                                        the bytes after the heading array)
+  B7E2 = 0
+  if (B7E7 & C0h) is 40h or 80h:
+     B7E2 = B7EA >> 6; B7E3 = B7EA << 2
+     water_phase_fraction B829 -= B7E3, borrow -> B7E2++
+     water_phase D94D += B7E2
+  else:
+     B7E2 = B7EA >> 6; B829 += (B7EA << 2), carry -> B7E2++
+     D94D -= B7E2
+  B7E5 = B7E8; vec_scale(|speed|)
+  n = B7EA >> 3; if n == 0: return
+  k = (D94D >> 2) & 1Fh                               (the mark of the first horizon row)
+  for row in 0..15:                                   (two marks per row entry)
+     e = water_shift_table CS:7DBF[n + 10*row]        (n can exceed 9: the read then runs into
+                                                        the next rows, and past the 160-byte table
+                                                        into the code of heading_vector)
+     whole = e & 3; frac = e & FCh
+     twice (k, then k = (k+1) & 1Fh):
+        if B7E7 & 80h: D984[k] += frac, carry -> whole+1; D90D[k] -= whole+carry
+        else:          D984[k] -= frac, borrow -> whole+1; D90D[k] += whole+borrow
+     k = (k+1) & 1Fh
+```
+
+The Y and X steps are 1/256 of a map unit per unit of `B7EA` × 8 (10-bit step, integer part 0–3),
+the water phase uses × 4.
 
 ### 5.2 `mission_stop` (0919:1e87): passengers **verified**
 

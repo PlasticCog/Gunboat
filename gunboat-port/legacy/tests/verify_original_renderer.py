@@ -7,7 +7,7 @@ import subprocess
 import sys
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_16
 from unicorn.x86_const import *
-ROOT=Path(__file__).resolve().parents[2]
+ROOT=Path(__file__).resolve().parents[3]
 PORT=ROOT/'gunboat-port'
 image=(ROOT/'reverse_engineering/out/gunboat_unpacked_image.bin').read_bytes()
 uc=Uc(UC_ARCH_X86,UC_MODE_16);uc.mem_map(0,0x100000);uc.mem_write(0x10000,image)
@@ -35,7 +35,7 @@ for i in range(1800):
 payload=struct.pack('<H',len(vertices))+b''.join(struct.pack('<7H',*v) for v in vertices)
 payload+=struct.pack('<H',len(triangles))+b''.join(struct.pack('<7H',*v) for v in triangles)
 inp=PORT/'out/renderer-input.bin';out=PORT/'out/renderer-output.bin';inp.write_bytes(payload)
-subprocess.run([str(PORT/'build/gunboat.exe'),'--game-dir',str(ROOT/'Original DOS version'),'--renderer-probe',str(inp),str(out)],check=True)
+subprocess.run([str(PORT/'build/gunboat_legacy.exe'),'--game-dir',str(ROOT/'Original DOS version'),'--renderer-probe',str(inp),str(out)],check=True)
 got=out.read_bytes();position=0
 for i,(x,h,y,cx,cy,heading,horizon) in enumerate(vertices):
     w(0x1c96,x);w(0x2496,y);w(0x1496,h);w(0x1498,0)

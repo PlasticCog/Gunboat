@@ -20,7 +20,7 @@ func,1473:0008,joystick_read,far void(u16 stick u8 *code u8 *dir),§3
 func,15d7:000d,joystick_button,far u16(u16 stick),§3
 func,1390:0000,picture_draw,far void(u16 src u16 size u16 width),§6 all modes
 global,DS:08C0,tick_counter,u16,§1
-global,DS:08C4,palette,u8[225],video §3
+global,DS:08C4,palette_3d,u8[225],video §3
 global,DS:DA3F,kbd_prefix_state,u8,§2
 global,DS:DA40,kbd_typematic,u8,§2
 global,DS:DA41,kbd_last_scancode,u8,§2

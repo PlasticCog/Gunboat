@@ -91,7 +91,7 @@ far pointers stored in DGROUP keep their original values (TD3 `mem.h` model).
 arrays' memory, used as a scratch buffer). Then `1390:0000` (all modes) or `121b:08a8` (VGA) draws
 it: the RLE picture format of TD3 (`pic_draw`, bottom-to-top rows). `08e1:016f` decodes the crack
 picture for the cockpit (`window_cracks_draw`). Verified by Codex against the original
-(`gunboat-port/tests/verify_assets.py`: six pictures).
+(`gunboat-port/legacy/tests/verify_assets.py`: six pictures).
 
 ## 7. Text **verified** (structure)
 

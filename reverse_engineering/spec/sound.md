@@ -14,7 +14,7 @@ driver and an MT-32.
 | Timer | 236.695 Hz, own handler (platform §1) | 89.63 Hz, `121b:0ce2` |
 | Data | 13 effect programs in DGROUP (`DS:DB1E`) | `VALK12.MUS`, `VALK3V.MUS`, `VALKPC.MUS` + `ADLIB.BIN` |
 
-## 2. Effects **verified** (Codex: `gunboat-port/src/original_audio.cpp`, ORIGINAL_AUDIO.md)
+## 2. Effects **verified** (Codex: `gunboat-port/legacy/src/original_audio.cpp`, ORIGINAL_AUDIO.md)
 
 68,700 timer updates over 92 cases matched the original exactly. API: `sfx_play(id)`
 (`12ed:0025`, ids 0..12), the engine note (`engine_sound_update`, `0919:3cc9`, effect 6 looping

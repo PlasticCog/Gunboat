@@ -179,6 +179,7 @@ func,0919:3217,schedule_shot,near void(AL behaviour byte),simulation,spec:simula
 func,0919:32fb,incoming_fire,near void(),simulation,spec:simulation,§8.5
 func,0919:3479,evade_incoming,near void(),simulation,spec:simulation,§4.1 lowers the accuracy of incoming slots 0-7
 func,0919:348e,line_of_sight,near (SI entry*2)->CH,simulation,spec:simulation,§8.2
+func,0919:3706,vec_scale,near AX(AL),simulation,spec:simulation,§5.1 AX = AL * vec_factor B7E5; product to B7E9/B7EA
 func,0919:3712,atan,near (CX dx DX dy)->AL,simulation,spec:simulation,§4.6
 func,0919:37af,projectile_alloc,,simulation,codex,"ORIGINAL_WEAPONS.md C93F: free slot, descending from 31"
 func,0919:37c7,projectile_aim,,simulation,codex,"ORIGINAL_WEAPONS.md C957: integer aim, flight time, impact XY"
@@ -214,14 +215,14 @@ func,0919:5c71,blit_record,,render3d,codex,"NATIVE_PORT.md EE01: direct VGA blit
 func,0919:5d5a,blit_place,near void(),render3d,spec:render3d,§5.7
 func,0919:5e66,blit_rows_vga,near void(),render3d,td3-match+spec:render3d,"§5.7 TD3 match sprite_rows_mirror (wrong role here) | was sprite_rows_mirror | TD3 0e12:2a9e sprite_rows_mirror, score 0.64; low score: confirm in the spec"
 func,0919:5f4b,sprite_scale_rows,,render3d,td3-match,"TD3 0e12:2d54 sprite_scale_rows, score 0.57; low score: confirm in the spec"
-func,0919:5fc8,sprite_scale_rows_up,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
+func,0919:5fc8,sprite_scale_rows_up,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6054,sprite_scale_rows_up_b,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec"
 func,0919:60e0,sprite_view_angle,near void(BX entry DX distance),render3d,spec:render3d,§5.7 -> D864 D86A
 func,0919:6174,sprite_scale_patterns,,render3d,td3-match,"TD3 0e12:2eb6 sprite_scale_patterns, score 0.95"
 func,0919:6373,sprite_cache_f503,,render3d,codex,NATIVE_PORT.md F503; role to name in the spec
-func,0919:66a7,sprite_scale_row_up,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
+func,0919:66a7,sprite_scale_row_up,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6824,sprite_scale_row,,render3d,td3-match,"TD3 0e12:2f84 sprite_scale_row, score 1.00"
-func,0919:68a4,sprite_scale_row_up_b,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
+func,0919:68a4,sprite_scale_row_up_b,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6925,sprite_scale_row_up_c,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.77; low score: confirm in the spec"
 func,0919:69a9,visible_list_rebuild,near void(),render3d,spec:render3d,§5.1
 func,0919:6af9,object_update,near void(),render3d,spec:render3d,§5.3-5.4 sort and ramming
@@ -250,9 +251,9 @@ func,0919:79e1,shore_contact_test,,simulation,codex,ORIGINAL_PHYSICS.md 10B71: e
 func,0919:7a89,spotlights,near void(),render3d,spec:render3d,§6
 func,0919:7b17,spotlight_beam,near void(AX bearing BL elevation),render3d,spec:render3d,§6
 func,0919:7bbd,spotlight_beam_vga,near void(),render3d,spec:render3d,§6
-func,0919:7e5f,heading_vector,,simulation,codex,ORIGINAL_PHYSICS.md 10FEF: integer heading lookup
+func,0919:7e5f,heading_vector,near AX(AL angle),simulation,codex+spec:simulation,§5.1 sine components of an angle; vec_factor scaled by |speed| | ORIGINAL_PHYSICS.md 10FEF: integer heading lookup
 func,0919:7ebb,boat_motion,near void(),simulation,spec:simulation,§5.1
-func,0919:7ee8,boat_move,,simulation,codex,ORIGINAL_PHYSICS.md 11078: fractional XY motion and map-edge clipping
+func,0919:7ee8,boat_move,near void(),simulation,codex+spec:simulation,§5.1 moves the boat along the hull heading; map clipping; water marks | ORIGINAL_PHYSICS.md 11078: fractional XY motion and map-edge clipping
 func,0919:80e0,camera_pitch_bob,,simulation,codex,"ORIGINAL_PHYSICS.md 11270: pitch decay, wave bob, gun-station pitch"
 func,0919:81f8,muzzle_flash_tick,,simulation,codex,ORIGINAL_WEAPONS.md 11388: once per outer loop
 func,0919:8229,camera_position,near ()->CX DX,simulation,spec:simulation,§5.3
@@ -419,6 +420,7 @@ cglobal,0919:3606,atan_table,u8[256],simulation,spec:simulation,§4.6
 cglobal,0919:378f,damage_matrix,u8[32],simulation,spec:simulation,§7.2 Codex image C91F
 cglobal,0919:6f5f,sprite_slot_level,u8[],render3d,spec:render3d,§5.6
 cglobal,0919:709a,spotlight_widths,u8[],render3d,spec:render3d,§6
+cglobal,0919:7dbf,water_shift_table,u8[16][10],simulation,spec:simulation,§5.1 bits 2-7 fraction; bits 0-1 whole
 cglobal,0919:8399,neighbour_records,u8[][5],render3d,spec:render3d,§2
 cglobal,0919:83c6,tile_visibility,u8[34],render3d,spec:render3d,§2
 cglobal,0919:83e4,neighbour_order,u8[4][9],render3d,spec:render3d,§2
@@ -437,7 +439,7 @@ global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 m
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
 global,DS:027C,archive_directory,u8[1190],game_flow,spec:game_flow,§1 DATAC.DAT
 global,DS:08C0,tick_counter,u16,simulation,spec:simulation+spec:platform,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
-global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,was palette | video §3 | was palette_3d | §4 TACTCOLR.BIN
+global,DS:08C4,palette_3d,u8[225],world,spec:world+spec:platform,§4 TACTCOLR.BIN | video §3
 global,DS:0AC6,map_sheet_names,char[4][16],world,spec:world,§7
 global,DS:0B26,mission_record_names,char[4][9],world,spec:world,§7
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation+spec:hud,§5 per station | §8.6 per station
@@ -504,6 +506,13 @@ global,DS:B54A,clock_minutes,u8,simulation,spec:simulation,§9.2
 global,DS:B54B,clock_hours,u8,simulation,spec:simulation,§9.2 BCD
 global,DS:B54C,commander_slot,u16,game_flow,spec:game_flow,§5
 global,DS:B54E,roster,u8[703],game_flow,spec:game_flow,§5 GBROSTER.DAT image
+global,DS:B7E2,scratch_b7e2,u8,simulation,spec:simulation,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)
+global,DS:B7E3,scratch_b7e3,u8,simulation,spec:simulation,§5.1 shared scratch byte (step fraction here)
+global,DS:B7E5,vec_factor,u8,simulation,spec:simulation,§5.1 multiplicand of vec_scale
+global,DS:B7E7,vec_angle,u8,simulation,spec:simulation,§5.1 angle of the last heading_vector; bit 7 flipped in reverse
+global,DS:B7E8,vec_sin,u8,simulation,spec:simulation,§5.1 second component of the last heading_vector
+global,DS:B7E9,vec_product_lo,u8,simulation,spec:simulation,§5.1
+global,DS:B7EA,vec_product_hi,u8,simulation,spec:simulation,§5.1
 global,DS:B7F0,joystick_bits,u8,simulation,spec:simulation,was keypad_bits | §3.1
 global,DS:B7F1,time_compression,u8,simulation,spec:simulation,§1.2
 global,DS:B7F8,shot_elevation,u8,simulation,spec:simulation,§6.1
@@ -530,6 +539,7 @@ global,DS:B822,heading_fraction,u8[4],simulation,spec:simulation,§2.3
 global,DS:B826,boat_x_fraction,u8,simulation,spec:simulation,§2.3
 global,DS:B827,boat_y_fraction,u8,simulation,spec:simulation,§2.3
 global,DS:B828,speed,s8,simulation,spec:simulation,§2.3
+global,DS:B829,water_phase_fraction,u8,simulation,spec:simulation,§5.1
 global,DS:B82A,bob_velocity,s8,simulation,spec:simulation,§2.3
 global,DS:B82B,bob_position,u16,simulation,spec:simulation,§2.3
 global,DS:B82D,pitch_reference,u8,simulation,spec:simulation,§2.3
@@ -570,7 +580,7 @@ global,DS:D1DC,projectile_record,u8[32][8],simulation,spec:simulation,§7.1
 global,DS:D390,damage_report_labels,u16,hud,spec:hud,§5 pointer to records
 global,DS:D392,damage_report_list,u16,hud,spec:hud,§5 pointer to (x y id) triples
 global,DS:D394,condition_words,u16[8],hud,spec:hud,§5
-global,DS:D502,boat_record,u8[189],simulation,spec:simulation+spec:hud,was indicators | was boat_record | was indicators | §2 same bytes as the component conditions | was boat_record | §2.2 DAT10/DAT11
+global,DS:D502,boat_record,u8[189],simulation,spec:simulation+spec:hud,§2.2 DAT10/DAT11 | hud §2 the cockpit indicators read the component condition bytes of this record
 global,DS:D503,engine_indicator,u8[2],simulation,spec:simulation,§2.2
 global,DS:D505,objective_state,u8,simulation,spec:simulation,§5.2
 global,DS:D506,fuel_tank_condition,u8[2],simulation,spec:simulation,§8.6
@@ -585,7 +595,7 @@ global,DS:D512,seaman_condition,u8,simulation,spec:simulation,§8.6 midship gunn
 global,DS:D513,gunners_mate_condition,u8,simulation,spec:simulation,§8.6 bow gunner
 global,DS:D514,captain_condition,u8,simulation,spec:simulation,§8.6
 global,DS:D515,engineman_condition,u8,simulation,spec:simulation,§8.6 stern gunner
-global,DS:D520,main_switch,u8,simulation,spec:simulation+spec:hud,was switches | was main_switch | was switches | §2 bit 0 set = off | was main_switch | §4.4 panel switch 0; bit 0 set = off
+global,DS:D520,panel_switches,u8[17],simulation,spec:simulation+spec:hud,§2 bit 0 set = off; [0] = main switch | §4.4 [0] = main switch; bit 0 set = off | hud §2
 global,DS:D521,engine_switches,u8[2],simulation,spec:simulation,§4.2
 global,DS:D525,bow_mount,u8[2],simulation,spec:simulation,§6.1
 global,DS:D529,midship_mount,u8[2],simulation,spec:simulation,§6.1
@@ -666,6 +676,7 @@ global,DS:D90A,saved_view_heading,u16,render3d,spec:render3d,§3
 global,DS:D90C,saved_horizon,u8,render3d,spec:render3d,§3
 global,DS:D90D,water_mark_x,u8[32],render3d,spec:render3d,§3.2
 global,DS:D92D,water_mark_age,u8[32],render3d,spec:render3d,§3.2
+global,DS:D94D,water_phase,u8,simulation,spec:simulation,§5.1; render3d §3.2 horizon row r shows mark ((D94D >> 2) + r) & 1Fh
 global,DS:D94E,last_view_heading,u8,render3d,spec:render3d,§3.2
 global,DS:D94F,scene_colours,u8[4],simulation,spec:simulation,§9.2
 global,DS:D953,horizon_row,u8,render3d,spec:render3d,§3.1
@@ -684,6 +695,7 @@ global,DS:D974,camera_qy,u16,simulation,spec:simulation,§5.1
 global,DS:D976,last_good_x,u16,simulation,spec:simulation,§5.3
 global,DS:D978,last_good_y,u16,simulation,spec:simulation,§5.3
 global,DS:D982,pitch_impulse,s16,simulation,spec:simulation,§2.3
+global,DS:D984,water_mark_x_fraction,u8[32],simulation,spec:simulation,§5.1 fraction of water_mark_x D90D
 global,DS:D9A4,scenery_count,u8,render3d,spec:render3d,§2
 global,DS:D9A5,window_quadrant,u8,render3d,spec:render3d,§2
 global,DS:D9A6,window_overflow,u8,render3d,spec:render3d,§2

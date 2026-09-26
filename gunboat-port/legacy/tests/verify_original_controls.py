@@ -3,7 +3,7 @@
 Unicorn is an offline development oracle. Neither it nor GB.EXE instructions are
 executed by the native game. Run after building out/controls-test.exe:
 
-  python gunboat-port/tests/verify_original_controls.py
+  python gunboat-port/legacy/tests/verify_original_controls.py
 """
 from pathlib import Path
 import hashlib
@@ -17,7 +17,7 @@ from unicorn.x86_const import (
     UC_X86_REG_SP,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 IMAGE = ROOT / "reverse_engineering/out/gunboat_unpacked_image.bin"
 data = IMAGE.read_bytes()
 DS = 0x2B730

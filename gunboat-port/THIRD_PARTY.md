@@ -2,50 +2,47 @@
 
 ## Test Drive III SDL3 port
 
-Source: the user-supplied `../test-drive-3-sdl3` repository, revision
-`2c5a58d9440a450ac639542965dbef0f18a696d0`.
+Source: the `test-drive-3-sdl3` repository (github.com/kylofon/test-drive-3-sdl3), revision
+`2c5a58d9440a450ac639542965dbef0f18a696d0`. Copyright (c) 2026 Krzysztof Kania. MIT license,
+reproduced in [`licenses/test-drive-3-sdl3-MIT.txt`](licenses/test-drive-3-sdl3-MIT.txt).
 
-Copyright (c) 2026 Krzysztof Kania. MIT license, reproduced in
-[`vendor/td3/LICENSE`](vendor/td3/LICENSE).
+Converted to C++ for the port (each file says so in its header):
 
-Copied from `td3port/src`:
+| Port file | From `td3port/src` | Changes |
+| --- | --- | --- |
+| `src/host.hpp`, `src/host.cpp` | `host.h`, `host.c` | C++ and `namespace gb`; the timer follows the PIT divisor the game sets (Gunboat uses three rates) instead of TD3's fixed rate; audio generated in chunks for long ticks; no overflow of the tick clock in long sessions; no mouse (GB.EXE has no INT 33h); no race frame pacing; Gunboat captions; `GB_KEYS` / `GB_SNAPSHOT_DIR` |
+| `src/platform/vga.hpp`, `.cpp` | `platform/vga.h`, `vga.c` | C++ and `namespace gb` |
+| `src/mem.hpp`, `src/mem.cpp` | `mem.h`, `mem.c` | Gunboat's layout (DGROUP 1B73h), accessors as C++ lvalue functions, the EXEPACK decoder in C++, Gunboat's build checks |
 
-- `host.c`, `host.h`, `types.h`
-- `platform/vga.c`, `platform/vga.h`
+Adapted tools: `reverse_engineering/tools/unexepack.py`, `x86dis.py`, `gbindex.py`,
+`gen_symbols.py`, `merge_symbols.py` and the Ghidra scripts (each says so in its header).
 
-Local changes: Gunboat window/error captions; `GB_KEYS` / `GB_SNAPSHOT_DIR`
-environment names; C++ declaration compatibility in `host.h`. `mem.h` is a
-minimal new framebuffer adapter. It does not load or execute a TD3 memory image.
+The Codex prototype keeps its unmodified C copies of `host.c`, `host.h`, `types.h`,
+`platform/vga.*` (with Gunboat captions) and a small `mem.h` adapter in `legacy/vendor/td3`, with
+the license. `legacy/src/assets.cpp` adapts the EXEPACK method of `mem.c` and the LZW dictionary
+semantics of `platform/pic.c`.
 
-`src/assets.cpp` adapts the data-only EXEPACK method in TD3 `mem.c` and LZW
-dictionary semantics in `platform/pic.c`. The Gunboat hashes, records, tile
-commands, sprite banks and translated sprite routines come from this project's
-Gunboat reverse engineering.
+## Nuked-OPL3
 
-## Nuked OPL3
-
-Unmodified `opl3.c` / `opl3.h`, copied with their license from the supplied port.
-Copyright (C) 2013–2020 Nuke.YKT. GNU LGPL 2.1 or later. Source and license are
-included in [`vendor/nuked-opl3`](vendor/nuked-opl3).
-
-This component is part of the inherited SDL host's sound-chip support. It is not
-a DOS/x86 emulator. Current Gunboat gameplay only uses the host's speaker sound;
-the original game's OPL music is not ported yet. The complete source and CMake
-build are included so the executable can be rebuilt with a modified library.
+Unmodified `opl3.c` / `opl3.h` in [`vendor/nuked-opl3`](vendor/nuked-opl3), with its license.
+Copyright (C) 2013–2020 Nuke.YKT. GNU LGPL 2.1 or later. Built as its own static library
+(`nuked_opl3`) from the included source, so the executable can be relinked with a modified
+library. It emulates the OPL2 sound chip for AdLib music; it is not a DOS or x86 emulator.
 
 ## SDL3
 
-SDL 3.4.16, zlib license. The downloaded developer package and license are under
-`deps/SDL3-3.4.16`; the runtime copy is `build/SDL3.dll`.
+SDL 3.4.16, zlib license. The MinGW developer package and license are under
+`deps/SDL3-3.4.16` (not in git); the runtime copy is `build/SDL3.dll`.
+[Release](https://github.com/libsdl-org/SDL/releases/tag/release-3.4.16),
+[MinGW archive](https://github.com/libsdl-org/SDL/releases/download/release-3.4.16/SDL3-devel-3.4.16-mingw.tar.gz),
+SHA-256 `c7ef65bd72eabac6e5b535411dbd8d5824d0aab24fd62ff8812666b336f18a9c`.
 
-[Official release](https://github.com/libsdl-org/SDL/releases/tag/release-3.4.16)
-and [MinGW developer archive](https://github.com/libsdl-org/SDL/releases/download/release-3.4.16/SDL3-devel-3.4.16-mingw.tar.gz).
+## Development-only tools
 
-Archive SHA-256:
-`c7ef65bd72eabac6e5b535411dbd8d5824d0aab24fd62ff8812666b336f18a9c`.
+Unicorn (GPL-2.0) and Capstone (BSD) are used by the Python tests and research tools. They are
+not linked into the game.
 
 ## Original Gunboat resources
 
-Maps, sprites, pictures, palette data and DOS executable remain in the user's
-existing `Original DOS version` directory. This project reads them locally;
-third-party open-source licenses above do not relicense those resources.
+`GB.EXE`, the data files, pictures, palettes and music stay in the user's own `Original DOS
+version` folder. The port reads them at run time; nothing here relicenses or redistributes them.

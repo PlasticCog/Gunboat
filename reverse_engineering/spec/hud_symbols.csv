@@ -34,8 +34,8 @@ global,DS:0B49,window_cracks,u8[5],§5 per station
 global,DS:D390,damage_report_labels,u16,§5 pointer to records
 global,DS:D392,damage_report_list,u16,§5 pointer to (x y id) triples
 global,DS:D394,condition_words,u16[8],§5
-global,DS:D502,indicators,u8[30],§2 same bytes as the component conditions
-global,DS:D520,switches,u8[17],§2 bit 0 set = off
+global,DS:D502,boat_record,u8[189],§2 the cockpit indicators read the component condition bytes of this record
+global,DS:D520,panel_switches,u8[17],§2 bit 0 set = off; [0] = main switch
 global,DS:D531,indicator_positions,u8[30][2],§2
 global,DS:D56D,indicator_graphics,u8[30],§2
 global,DS:D5BE,blink_timer,u8,§2.1

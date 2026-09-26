@@ -1,7 +1,7 @@
 """Direct decoder prototype, compared with the original x86 execution oracle."""
 import sys, struct
 from pathlib import Path
-sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'reverse_engineering/tools'))
+sys.path.insert(0,str(Path(__file__).resolve().parents[3]/'reverse_engineering/tools'))
 from gunboat_formats import read_datac,asset_path,UNPACKED_IMAGE
 from probe_original_sprites import render
 
@@ -65,7 +65,7 @@ def native(kind,bank,angle):
 if __name__=='__main__':
     errors=[];cases=0
     for bank in (77,79,81,75):
-        d=__import__('json').load(open(Path(__file__).resolve().parents[2]/f'reverse_engineering/out/world_export/original-map-{[77,79,81,75].index(bank)+1}.json'))
+        d=__import__('json').load(open(Path(__file__).resolve().parents[3]/f'reverse_engineering/out/world_export/original-map-{[77,79,81,75].index(bank)+1}.json'))
         for kind in map(int,d['objectAtlas']['kinds']):
             for angle in range(0,256,32):
                 got=native(kind,bank,angle);want=render(kind,bank=bank,scale=47,angle=angle,screen=True)

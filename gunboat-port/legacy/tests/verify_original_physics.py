@@ -7,7 +7,7 @@ import ctypes, json, os, pathlib, random, struct, subprocess, time
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_CODE
 from unicorn.x86_const import *
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
+ROOT = pathlib.Path(__file__).resolve().parents[3]
 OUT = ROOT / 'gunboat-port/out'
 EXE = (ROOT / 'reverse_engineering/out/gunboat_unpacked_image.bin').read_bytes()
 DS = 0x2b730
@@ -19,8 +19,8 @@ def main():
     os.environ['PATH'] = str(compiler.parent) + os.pathsep + os.environ['PATH']
     library = OUT / 'physics-verification.dll'
     subprocess.run([str(compiler), '-std=c++17', '-O2', '-Wall', '-Wextra', '-shared', '-static',
-                    str(ROOT/'gunboat-port/tests/original_physics_bridge.cpp'),
-                    str(ROOT/'gunboat-port/src/original_physics.cpp'), '-o', str(library)], check=True)
+                    str(ROOT/'gunboat-port/legacy/tests/original_physics_bridge.cpp'),
+                    str(ROOT/'gunboat-port/legacy/src/original_physics.cpp'), '-o', str(library)], check=True)
     dll = ctypes.CDLL(str(library))
     data = (ctypes.c_uint8 * len(EXE)).from_buffer_copy(EXE)
     dll.setup.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_uint]

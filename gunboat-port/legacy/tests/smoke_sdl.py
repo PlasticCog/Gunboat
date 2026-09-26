@@ -5,8 +5,8 @@ from pathlib import Path
 import subprocess
 from PIL import Image
 
-PORT = Path(__file__).resolve().parents[1]
-binary = PORT / "build/gunboat.exe"
+PORT = Path(__file__).resolve().parents[2]
+binary = PORT / "build/gunboat_legacy.exe"
 
 
 def run(name, world, keys, seconds):
