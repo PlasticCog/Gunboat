@@ -25,7 +25,8 @@ bool tandy() { return ds_u8(DS_sfx_device_tandy) == 1; }
 // Element DI (a byte offset) of a word array.
 u16_m &voice(u16 array, u16 di) { return ds_u16(u16(array + di)); }
 
-// SHR/SHL r16, CL as the 386 does them: the count is masked to 5 bits.
+// SHR/SHL r16, CL as the 386 does them: the count is masked to 5 bits. PORT: an 8086 does not mask;
+// the results differ only for counts of 32 and more, which only corrupted data can produce.
 u16 shr16(u16 v, u8 cl)
 {
     cl &= 0x1F;

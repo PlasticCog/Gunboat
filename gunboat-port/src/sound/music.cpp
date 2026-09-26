@@ -289,7 +289,7 @@ void speaker_note_on(u16 ch, u16 note, u16 vel)
     u16 dx = ch;
     if (ds_u8(DS_sound_device) != 1) dx = 0;
     u16 divisor = ds_u16(u16(DS_speaker_note_divisors + u16(ax << 1)));
-    cl &= 0x1F;  // SHR r16, CL (386: the count masked to 5 bits)
+    cl &= 0x1F;  // SHR r16, CL. PORT: masked to 5 bits as a 386 (see sfx.cpp shr16)
     divisor = cl >= 16 ? 0 : u16(divisor >> cl);
     const u16 bx = ds_u16(u16(DS_speaker_voice_scripts + u16(dx << 1)));
     ds_u16(u16(bx + 1)) = divisor;
