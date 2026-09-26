@@ -42,6 +42,27 @@ if(WIN32)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:SDL3::SDL3> $<TARGET_FILE_DIR:gunboat>)
 endif()
 
+# The sound-effects editor (tools/sfx_editor): the AdLib instruments of the effects. Dear ImGui (MIT,
+# vendor/imgui) for its window; the core runs the original's effects driver for the notes, with the
+# tests' stub host as its host.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui.cpp")
+  add_library(imgui STATIC vendor/imgui/imgui.cpp vendor/imgui/imgui_draw.cpp vendor/imgui/imgui_tables.cpp
+              vendor/imgui/imgui_widgets.cpp vendor/imgui/backends/imgui_impl_sdl3.cpp
+              vendor/imgui/backends/imgui_impl_sdlrenderer3.cpp)
+  target_include_directories(imgui PUBLIC vendor/imgui vendor/imgui/backends)
+  target_link_libraries(imgui PUBLIC SDL3::SDL3)
+  add_executable(gunboat_sfx_editor WIN32 tools/sfx_editor/main.cpp src/enhanced/sfx_fm.cpp
+                 src/enhanced/settings.cpp tests/difftest/host_stub.cpp)
+  target_include_directories(gunboat_sfx_editor PRIVATE tests/difftest)
+  target_link_libraries(gunboat_sfx_editor PRIVATE gbcore imgui nuked_opl3 SDL3::SDL3)
+  if(NOT MSVC)
+    target_compile_options(gunboat_sfx_editor PRIVATE ${GB_WARNINGS})
+    if(WIN32)
+      target_link_options(gunboat_sfx_editor PRIVATE -static -static-libgcc -static-libstdc++)
+    endif()
+  endif()
+endif()
+
 # Differential tests (tests/difftest): the core plus a stub host as a library that Python loads next
 # to the original code in Unicorn. Development only.
 file(GLOB GB_DIFFTEST_SOURCES CONFIGURE_DEPENDS tests/difftest/*.cpp)

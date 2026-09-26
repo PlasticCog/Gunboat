@@ -22,7 +22,15 @@ Adapted tools: `reverse_engineering/tools/unexepack.py`, `x86dis.py`, `gbindex.p
 Unmodified `opl3.c` / `opl3.h` in [`vendor/nuked-opl3`](vendor/nuked-opl3), with its license.
 Copyright (C) 2013–2020 Nuke.YKT. GNU LGPL 2.1 or later. Built as its own static library
 (`nuked_opl3`) from the included source, so the executable can be relinked with a modified
-library. It emulates the OPL2 sound chip for AdLib music; it is not a DOS or x86 emulator.
+library. It emulates the OPL2 sound chip for the AdLib music and the optional AdLib sound effects
+(a second chip); it is not a DOS or x86 emulator.
+
+## Dear ImGui
+
+Version 1.91.9 (github.com/ocornut/imgui, tag `v1.91.9`): the core files and the SDL3 and
+SDL_Renderer3 back ends, unmodified, in [`vendor/imgui`](vendor/imgui) with its license.
+Copyright (c) 2014-2025 Omar Cornut. MIT license. Only the sound-effects editor
+(`tools/sfx_editor`, `gunboat_sfx_editor.exe`) uses it; the game does not.
 
 ## SDL3
 

@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "enhanced/capture.hpp"
+#include "enhanced/sfx_adlib.hpp"
 #include "enhanced/view3d.hpp"
 #include "enhanced/widen.hpp"
 #include "host.hpp"
@@ -740,6 +741,7 @@ void enhanced_install(const Settings &s)
     host_set_frame_hook(frame_hook);
     host_set_hotkey_handler(hotkey);
     host_set_presenter(present);
+    if (s.effects == Effects::Adlib) sfx_adlib_install();
 }
 
 } // namespace gb

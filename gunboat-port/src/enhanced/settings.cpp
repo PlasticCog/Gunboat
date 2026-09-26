@@ -36,6 +36,7 @@ const char *filter_name(Filter f)
     }
 }
 
+const char *effects_name(Effects e) { return e == Effects::Adlib ? "adlib" : "speaker"; }
 const char *sound_name(Sound s) { return s == Sound::Adlib ? "adlib" : s == Sound::Speaker ? "speaker" : "auto"; }
 
 const char *video_name(Video v)
@@ -122,6 +123,7 @@ bool settings_load(Settings &s)
         else if (!std::strcmp(k, "sound")) {
             s.sound = !std::strcmp(v, "adlib") ? Sound::Adlib : !std::strcmp(v, "speaker") ? Sound::Speaker : Sound::Auto;
         }
+        else if (!std::strcmp(k, "effects")) s.effects = !std::strcmp(v, "adlib") ? Effects::Adlib : Effects::Speaker;
         else if (!std::strcmp(k, "fps")) s.fps = SDL_clamp(std::atoi(v), 0, 1000);
         else if (!std::strcmp(k, "video")) {
             s.video = !std::strcmp(v, "ega")        ? Video::Ega
@@ -153,10 +155,12 @@ bool settings_save(const Settings &s)
                  "far_view = %d\n"
                  "widescreen = %s\n"
                  "sound = %s\n"
+                 "effects = %s\n"
                  "video = %s\n"
                  "fps = %d\n",
                  s.game_dir.c_str(), s.launcher, s.fullscreen, s.window_scale, aspect_name(s.aspect),
-                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), video_name(s.video), s.fps);
+                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), effects_name(s.effects),
+                 video_name(s.video), s.fps);
     return std::fclose(f) == 0;
 }
 

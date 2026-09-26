@@ -18,10 +18,10 @@ namespace gb {
 
 namespace {
 
-enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, SHOW, PLAY, QUIT, ITEMS };
+enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, EFFECTS, SHOW, PLAY, QUIT, ITEMS };
 
 const char *const LABELS[ITEMS] = {"Game folder", "Video card", "Preset",  "3D view", "Motion",      "Draw distance",
-                                   "Widescreen",  "Picture", "Scaling", "Display",     "Sound",
+                                   "Widescreen",  "Picture", "Scaling", "Display",     "Music",   "Sound effects",
                                    "This screen", "Play",    "Quit"};
 
 const char *const HELP[ITEMS][3] = {
@@ -52,8 +52,11 @@ const char *const HELP[ITEMS][3] = {
      "between the rows."},
     {"Window or full screen. Alt+Enter switches in the game.", "", ""},
     {"AdLib: the music on the AdLib (OPL2), through the game's ADLIB.COM driver.",
-     "PC speaker: the music on the speaker. The sound effects use the speaker either way,",
-     "as in the original. Auto: AdLib when the game folder has ADLIB.COM."},
+     "PC speaker: the music on the speaker. Auto: AdLib when the game folder has ADLIB.COM.",
+     "(The sound effects are the next setting.)"},
+    {"PC speaker: the effects as in the original. AdLib: each effect plays its original notes",
+     "on an FM instrument instead (an AdLib of its own, with or without the AdLib music).",
+     "gunboat_sfx_editor edits the instruments, effect by effect."},
     {"No: start the game directly next time (gunboat --launcher shows this screen again).", "", ""},
     {"Start the game with these settings (they are saved).", "", ""},
     {"Leave without starting the game.", "", ""},
@@ -137,6 +140,7 @@ std::string value_of(const Settings &s, int item)
         if (s.sound == Sound::Adlib) return "AdLib";
         if (s.sound == Sound::Speaker) return "PC speaker";
         return game.adlib ? "Auto (AdLib)" : "Auto (PC speaker: no ADLIB.COM)";
+    case EFFECTS: return s.effects == Effects::Adlib ? "AdLib (FM instruments)" : "PC speaker (original)";
     case SHOW: return s.launcher ? "Show at start" : "Skip next time";
     default: return "";
     }
@@ -162,6 +166,7 @@ void change(Settings &s, int item, int dir)
         host_set_fullscreen(s.fullscreen);
         break;
     case SOUND: s.sound = Sound((int(s.sound) + 3 + dir) % 3); break;
+    case EFFECTS: s.effects = s.effects == Effects::Adlib ? Effects::Speaker : Effects::Adlib; break;
     case SHOW: s.launcher = !s.launcher; break;
     default: break;
     }

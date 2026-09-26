@@ -34,6 +34,9 @@ void (*focus_lost_handler)();
 bool (*frame_source)(u32 *, int *, int *);
 bool (*presenter)(const u32 *, int, int, bool);
 void (*frame_hook)();
+bool (*speaker_filter)(u16, bool, bool);
+void (*tick_observer)();
+bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
 bool redraw = true;                      // the window needs a new picture (resized, exposed)
@@ -49,8 +52,12 @@ Uint64 clock_base_ns;
 Uint64 ticks_run;
 u32 pit_divisor = 65536;
 
-// Audio: the OPL2 (as one OPL3 in OPL2 mode) and the speaker's square wave, mixed to stereo.
+// Audio: the OPL2 (as one OPL3 in OPL2 mode) and the speaker's square wave, mixed to stereo; the
+// sound effects' own OPL2 (host_sfx_opl_write) once it is used.
 opl3_chip opl;
+opl3_chip opl_sfx;
+bool opl_sfx_used;
+int sfx_gain = 1;
 u16 spk_div;
 bool spk_on;
 double spk_phase;
@@ -79,6 +86,11 @@ void audio_for_one_tick()
     while (n > 0) {
         const int chunk = SDL_min(n, 512);
         OPL3_GenerateStream(&opl, buf, uint32_t(chunk));
+        if (opl_sfx_used) {
+            s16 fx[2 * 512];
+            OPL3_GenerateStream(&opl_sfx, fx, uint32_t(chunk));
+            for (int i = 0; i < 2 * chunk; i++) buf[i] = s16(SDL_clamp(buf[i] + fx[i] * sfx_gain, -32768, 32767));
+        }
         for (int i = 0; i < chunk; i++) {
             int s = 0;
             if (spk_on) {
@@ -332,6 +344,7 @@ bool host_init(const char *dir, int window_scale, bool fullscreen)
     host_set_frame_source(nullptr, 320, 200);
 
     OPL3_Reset(&opl, AUDIO_RATE);
+    OPL3_Reset(&opl_sfx, AUDIO_RATE);
     const SDL_AudioSpec spec = {SDL_AUDIO_S16, 2, AUDIO_RATE};
     audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
     if (audio) {
@@ -405,9 +418,31 @@ u8 host_pit2_low()
 
 void host_speaker(u16 divisor, bool on)
 {
+    if (speaker_filter && speaker_filter(divisor, on, speaker_effects)) {
+        spk_on = false;  // the change is the filter's: the speaker falls silent
+        return;
+    }
     spk_div = divisor;
     spk_on = on;
 }
+
+bool host_speaker_effects(bool effects)
+{
+    const bool was = speaker_effects;
+    speaker_effects = effects;
+    return was;
+}
+
+void host_set_sfx_gain(int gain) { sfx_gain = gain; }
+
+void host_sfx_opl_write(u8 reg, u8 value)
+{
+    opl_sfx_used = true;
+    OPL3_WriteReg(&opl_sfx, reg, value);
+}
+
+void host_set_speaker_filter(bool (*filter)(u16 divisor, bool on, bool effects)) { speaker_filter = filter; }
+void host_set_tick_observer(void (*observer)()) { tick_observer = observer; }
 
 void host_pump()
 {
@@ -420,6 +455,7 @@ void host_pump()
     while (tick_due_ns(ticks_run + 1) <= now && budget-- > 0) {
         ticks_run++;
         if (tick_handler) tick_handler();
+        if (tick_observer) tick_observer();
         audio_for_one_tick();
         worked = true;
     }

@@ -25,12 +25,17 @@ void timer_interrupt() { run_int8_handler(int8_vector()); }
 
 // PORT: runs the INT 8 handler at `vector`: one of the game's, the resident Ad Lib driver's (it
 // hooks INT 8 when installed, sound/adlib_driver.cpp), or else the BIOS's.
+// PORT: the host is told which handler runs (host_speaker_effects: the speaker changes of the effects
+// driver's handler can be played on AdLib by the presentation layer); nothing in mem[] changes.
 void run_int8_handler(FarPtr vector)
 {
+    const bool sfx = vector.seg == seg_of(SFX_ISR_FILE_SEG) && vector.off == SFX_ISR_OFF;
+    const bool outer = host_speaker_effects(sfx);
     if (vector.seg == seg_of(CSSEG_menu_timer_old_vector) && vector.off == MENU_ISR_OFF) menu_timer_isr();
-    else if (vector.seg == seg_of(SFX_ISR_FILE_SEG) && vector.off == SFX_ISR_OFF) sfx_timer_isr();
+    else if (sfx) sfx_timer_isr();
     else if (adlib_is_clock_isr(vector)) adl_clock_isr();
     else bios_tick();  // the BIOS handler (its INT 1Ch hook is not used)
+    host_speaker_effects(outer);
 }
 
 // 121b:0c9a timer_install (platform.md §1): saves the INT 8 vector in menu_timer_old_vector, points

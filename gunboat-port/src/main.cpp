@@ -1,7 +1,8 @@
 // Gunboat (Accolade, 1990): faithful C++/SDL3 port of GB.EXE. Entry point.
 //
 // usage: gunboat [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window]
-//                [--fps N] [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]
+//                [--fps N] [--sound adlib|speaker] [--effects speaker|adlib]
+//                [--original | --enhanced] [--view original|hires]
 //                [--motion original|smooth] [--draw-distance original|extended]
 //                [--widescreen off|world|cockpit] [--aspect 4:3|square]
 //                [--video vga|ega|tandy|cga|hercules]
@@ -20,8 +21,9 @@
 //                driver V1.51 of the game folder) before GB.EXE: its resident image is installed
 //                first (sound/adlib_driver.cpp) and the title music plays VALK12.MUS on the OPL2.
 //                speaker: no AdLib driver: the music plays VALKPC.MUS on the PC speaker. Default:
-//                adlib when the game folder has ADLIB.COM, else speaker. (The effects use the
-//                speaker either way, as in the original.)
+//                adlib when the game folder has ADLIB.COM, else speaker.
+//   --effects    speaker: the sound effects on the PC speaker, as in the original. adlib: on FM
+//                instruments (src/enhanced/sfx_fm.hpp; the bank sfx.ini, gunboat_sfx_editor).
 //   --original   no enhancements: the picture exactly as the original drew it (F11 in the game
 //                switches); --enhanced: all of them. Or one by one: --view hires (the 3D view at the
 //                window's resolution), --motion smooth (60 fps, interpolated), --draw-distance
@@ -61,7 +63,8 @@ int usage(const char *prog)
 {
     std::fprintf(stderr,
                  "usage: %s [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window] [--fps N]\n"
-                 "          [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]\n"
+                 "          [--sound adlib|speaker] [--effects speaker|adlib] [--original | --enhanced]\n"
+                 "          [--view original|hires]\n"
                  "          [--motion original|smooth] [--draw-distance original|extended]\n"
                  "          [--widescreen off|world|cockpit] [--aspect 4:3|square] [--video vga|ega|tandy|cga|hercules]\n"
                  "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]\n",
@@ -140,6 +143,8 @@ int main(int argc, char **argv)
         else if (is("--fps") && v) { st.fps = std::atoi(v); i++; }
         else if (val("--sound", "adlib")) st.sound = Sound::Adlib;
         else if (val("--sound", "speaker")) st.sound = Sound::Speaker;
+        else if (val("--effects", "speaker")) st.effects = Effects::Speaker;
+        else if (val("--effects", "adlib")) st.effects = Effects::Adlib;
         else if (is("--original")) st.set_original();
         else if (is("--enhanced")) st.set_enhanced();
         else if (val("--view", "original")) st.hires_view = false;
