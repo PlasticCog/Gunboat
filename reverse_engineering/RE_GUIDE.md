@@ -118,12 +118,20 @@ function that contains them:
 * The `engine` owner of `0919` has to be split by call tree into `simulation`, `render3d` and
   `hud`, starting from `game_frame`'s callees.
 
-## Subsystem specs (next phase)
+## Subsystem specs
+
+Status: **simulation** — done (`spec/simulation.md`, 2026-09-25). platform, video, game_flow,
+world, render3d, hud, sound — to do.
 
 As TD3: one spec per subsystem in `reverse_engineering/spec/<owner>.md`, each with an overview
 and call graph, a function table, a globals table, pseudocode, file formats, the DOS/hardware
 dependencies with their SDL3 replacement, timing, and open questions. Names found in a spec go
-into `symbols.csv` with `source` = `spec:<owner>`.
+into `spec/<owner>_symbols.csv` (`kind,address,name,type,notes`) and are merged into
+`symbols.csv` by `tools/merge_symbols.py` (spec names win; the old name is kept in the notes).
+
+Helpers for reading code: `tools/fn.py NAME|SSSS:OOOO` (index facts, Ghidra C, disassembly with
+names; `-r SSSS:OOOO LEN` for any range), `tools/calltree.py NAME [depth]`,
+`tools/gbfile.py NAME` (extract an archived file).
 
 | Spec | Scope |
 | --- | --- |

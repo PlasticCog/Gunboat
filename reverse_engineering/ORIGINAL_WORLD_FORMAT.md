@@ -55,6 +55,9 @@ The first 68 bytes are 34 little-endian offsets, indexed directly by tile ID
 at 0x1173C–0x1174D. Entry 0 points to an empty record at 14880; this value
 was previously mistaken for a payload size. Entries 17 and 18 share an offset.
 
+> **Correction (2026-09-25):** the "collision" entries are **river route waypoints**
+> (`link, x, y`), used by the crew pilot. See `spec/simulation.md` §4.6.
+
 At each offset are four unsigned counts: A, B, objectCount, collisionCount.
 With N=A+B, four N-byte arrays follow: drawing control/color, height, X, Y.
 The original loader copies these at 0x117F5–0x118A0, processing groups A and B

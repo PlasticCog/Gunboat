@@ -1,0 +1,303 @@
+kind,address,name,type,notes
+func,0000:07a8,input_read_key,far void(u16 *key),§3.1 key code -> DS:EE9C; keypad reader; pause; S mute; Ctrl+Q
+func,08e1:006e,demo_next_key,far void(u8 *key),§3.1 recorded demo keys; any real key ends the demo
+func,05bd:000a,mission_run,far void(),§1.1 mission loop (world spec for the screens)
+func,05bd:14d6,mission_load,far void(),§2.1 loads DAT10/11 DATn DATnA/B TILE.BIN cockpit art palettes
+func,0919:038e,key_dispatch,far void(),§3.2 key code DS:EE9C -> CS:0290 (01h-7Fh) / DS:D615 (81h-8Ah)
+func,0919:03c7,key_default,near void(),§3.2 default handler: controls_poll
+func,0919:03cb,panel_switch_toggle,near void(BX entry),§3.3 table CS:0270 -> switch DS:D520+n
+func,0919:043c,key_f10_fire_at_will,near void(),§3.3 B82E toggle: Open fire! / Cease fire.
+func,0919:0465,key_f9_identify,near void(),§6.3 identify target -> D60F
+func,0919:0503,key_minus_control_rate,near void(),§3.3 control rate D52C cycles 0-2
+func,0919:0520,key_f1_panel,near void(),§3.3 pilot: main switch (off stops engines); gun stations: panel switches
+func,0919:056b,key_f3_panel,near void(),§3.3 panel switch per station
+func,0919:05ae,key_f2_panel,near void(),§3.3 pilot: start/stop engines; gun stations: panel switches
+func,0919:0608,engine_switch,near void(SI engine),§4.2 toggle engine switch and start/stop countdown
+func,0919:0649,key_f5_branch_left,near void(),§3.3 D685 = 1
+func,0919:0658,key_f6_branch_right,near void(),§3.3 D685 = 2
+func,0919:0667,key_f4_reverse_course,near void(),§3.3 D684 toggled; route recomputed
+func,0919:06a9,key_f8_faster,near void(),§3.3 D680 += 15
+func,0919:06ee,key_f7_slower,near void(),§3.3 D680 -= 15 (min 8)
+func,0919:0713,pilot_command_reply,near void(),§3.3 queue the crew's answer B802
+func,0919:074a,key_m_map,near void(),§3.3 station 5
+func,0919:0756,key_period_damage,near void(),§3.3 station 8
+func,0919:0762,key_z_pilot_left,near void(),§3.3 pilot station F346 = 0
+func,0919:0769,key_x_pilot_ahead,near void(),§3.3 pilot station F346 = 1
+func,0919:0770,key_c_pilot_right,near void(),§3.3 pilot station F346 = 2
+func,0919:0777,key_pilot_station,near void(BX look),§3.3 checks practice mode and the captain
+func,0919:07b3,station_dead_reply,near void(),§3.3 message 12h
+func,0919:07c0,key_v_bow,near void(),§3.3 station 2
+func,0919:07f6,key_n_midship,near void(),§3.3 station 3
+func,0919:0833,key_b_stern,near void(),§3.3 station 4
+func,0919:0871,key_slash_assignment,near void(),§3.3 station 7
+func,0919:087d,key_plus_time_compression,near void(),§3.3 B7F1 0-2
+func,0919:08be,key_tab_return_to_base,near void(),§3.3 message 7; B545 = 2 when crippled
+func,0919:0906,end_mission,near void(),§9.1 station 9
+func,0919:090d,key_comma_chase_view,near void(),§3.3 chase boat view
+func,0919:0930,key_d_detail,near void(),§3.3 D6BF toggle
+func,0919:0953,controls_poll,near void(),§3.4 held keys DA43|B7F0 -> pilot / aim / fire
+func,0919:0a22,aim_stern,near void(CL keys BX rate),§3.4
+func,0919:0a5b,aim_stern_left,near void(),§3.4
+func,0919:0a83,aim_stern_right,near void(),§3.4
+func,0919:0aab,aim_midship,near void(CL keys BX rate),§3.4
+func,0919:0ae4,aim_midship_left,near void(),§3.4
+func,0919:0b0c,aim_midship_right,near void(),§3.4
+func,0919:0b34,aim_bow,near void(CL keys BX rate),§3.4
+func,0919:0b6d,aim_bow_left,near void(),§3.4
+func,0919:0b95,aim_bow_right,near void(),§3.4
+func,0919:0c6a,throttle_step,near void(SI engine CL keys),§4.1
+func,0919:0e19,pilot_slow_down,near void(),§4.1 Enter at the pilot station
+func,0919:0e48,rotate_headings_minus,near void(BX step index),§4.3 all four headings
+func,0919:0e95,rotate_headings_plus,near void(BX step index),§4.3 all four headings
+func,0919:0f0b,heading_step_plus,near (AL frac AH heading BX step)->AL AH,§4.3 unrolled carry chain (max 8)
+func,0919:0f42,heading_step_minus,near (AL frac AH heading BX step)->AL AH,§4.3
+func,0919:0f77,jet_indicator_draw,far void(),§4.1 hud
+func,0919:1528,message_sequencer,near void(),§9.1 world group
+func,0919:1565,show_message_page0,near void(AL message),§9.1
+func,0919:1589,show_message_far,far void(u16 message),§9.1
+func,0919:1594,show_message,near void(AL message),§9.1
+func,0919:17d4,message_line_draw,near void(),§1.2 hud
+func,0919:18af,crew_gunners,near void(),§6.2
+func,0919:18c7,gunner_bow,near void(),§6.2
+func,0919:190d,gunner_stern,near void(),§6.2
+func,0919:1953,gunner_midship,near void(),§6.2
+func,0919:19a0,gunner_aim,near void(),§6.2
+func,0919:1aa3,gunner_key,near void(BL keys CL rate),§6.2
+func,0919:1ac0,crew_pilot,near void(),§4.5
+func,0919:1b2d,crew_pilot_decide,near void(),§4.5
+func,0919:1c00,route_find,near void(),§4.6
+func,0919:1dd6,time_of_day,near void(),§9.2
+func,0919:1e87,mission_stop,near void(),§5.2 passengers for mission types 2 / 4 / 0Ah
+func,0919:1fc3,move_toward,near void(BX object CX DX target),§5.2 steps D6A2/D6A4
+func,0919:2038,missile_update,near void(),§8.4 homing missile kind 12h
+func,0919:2273,propulsion,near void(),§4.3 wake + engines + acceleration + turning
+func,0919:2a37,boat_hit,near void(AL class),§8.6
+func,0919:2cad,sinking_update,near void(),§8.7
+func,0919:2ce3,window_hit,near void(),§8.6 cockpit cracks
+func,0919:2d0f,boat_destroyed,near void(),§8.7
+func,0919:2ea8,enemy_update,near void(),§8.3 effects animation; spotting; firing; movement
+func,0919:31f1,spawn_enemy_wake,near void(),§8.3
+func,0919:3217,schedule_shot,near void(AL behaviour byte),§8.3
+func,0919:32fb,incoming_fire,near void(),§8.5
+func,0919:3479,evade_incoming,near void(),§4.1 lowers the accuracy of incoming slots 0-7
+func,0919:348e,line_of_sight,near (SI entry*2)->CH,§8.2
+func,0919:3712,atan,near (CX dx DX dy)->AL,§4.6
+func,0919:38ed,projectile_impact,near void(BX slot),§7.2
+func,0919:3948,mark_near_objects,near void(),§7.2
+func,0919:3977,hit_objects,near void(),§7.2
+func,0919:3b51,mission_target_check,near ()->AL message,§7.2
+func,0919:3b9f,score_add,near void(DL index),§7.2
+func,0919:3bbc,hit_test,near (BX entry)->AH,§7.2
+func,0919:3c51,terrain_structure_break,near void(AH old kind SI object),§7.3
+func,0919:6f2a,free_temp_object,near ()->BX,§4.3 objects 1-34; returns 46h when full (quirk)
+func,0919:7158,terrain_frame,near void(),§10 render3d; shore contact
+func,0919:7ebb,boat_motion,near void(),§5.1
+func,0919:8229,camera_position,near ()->CX DX,§5.3
+func,0919:82de,chase_view_collision,near void(),§5.3
+func,0919:8711,route_rotate,near (AL x CL y)->AX CX,§4.6
+func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,§4.6
+func,0919:87e8,route_advance,near void(DH link CL index),§4.6
+cglobal,0919:0270,panel_switch_table,u8[2][],§3.3 switch number / indicator per entry
+cglobal,0919:0290,key_handlers,u16[127],§3.2 codes 01h-7Fh
+cglobal,0919:0feb,message_table,u16[56],§9.1 attribute byte + text ending with a byte >= 80h
+cglobal,0919:1457,component_names,u16[16],§8.6
+cglobal,0919:2e88,salvo_bearing_table,u8[],§8.5
+cglobal,0919:3502,sine_table,u16[],§8.5 polar_small
+cglobal,0919:3606,atan_table,u8[256],§4.6
+cglobal,0919:378f,damage_matrix,u8[32],§7.2 Codex image C91F
+cglobal,121b:093e,scancode_e0_table,u8[20],§3.1
+cglobal,121b:0952,scancode_table,u8[],§3.1
+cglobal,121b:09c2,scancode_shift_table,u8[],§3.1
+global,DS:0070,demo_mode,u16,§3.1
+global,DS:007A,draw_page,u16,graphics library page
+global,DS:007E,sound_muted,u16,§3.1
+global,DS:0086,station,u16,§2.3 1-4 3D stations; 5 map; 7 assignment; 8 damage; 9 quit
+global,DS:0088,rng_state,u32,§11.1
+global,DS:08C0,tick_counter,u16,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
+global,DS:0B49,window_cracks,u8[5],§8.6 per station
+global,DS:4C97,visible_distance,u8[],§8.2 indexed 2*i
+global,DS:4E00,visible_bearing,u8[],§8.2
+global,DS:4EB5,visible_fine_bearing,u8[],§8.2
+global,DS:4F6A,visible_elevation,u8[],§8.2
+global,DS:5189,visible_sprite,u8[],§8.2
+global,DS:523E,visible_object,u16[],§8.2 object offsets
+global,DS:53A8,world_b_data,u8[],§8.1 DATnB.DAT
+global,DS:5401,object_score_index,u8[],§7.2 per kind
+global,DS:541A,object_behaviour,u8[2][],§8.1 per kind (interleaved with object_class)
+global,DS:541B,object_class,u8[2][],§8.1 per kind
+global,DS:547A,object_name_offset,u16[],§9.1 per kind; text at DS:6E54 + offset
+global,DS:6E54,world_a_data,u8[],DATnA.DAT
+global,DS:B3F4,region_fire_phase,u8[4],§8.3
+global,DS:B3F8,fire_rate_mask,u8[4],§8.3
+global,DS:B3FC,enemy_velocity,s8[16][2],§8.3
+global,DS:B41C,region_max_range,u8[4],§8.3
+global,DS:B420,scene_colour_table,u8[],§9.2
+global,DS:B503,region,u16,§2.3
+global,DS:B505,mission_number,u16,§2.3
+global,DS:B509,mission_type,u16,§5.2
+global,DS:B516,easter_egg_counter,u16,§9.2 likely
+global,DS:B52A,score_words,u16[12],§9.3 BCD
+global,DS:B544,objective_progress,u8,§9.3
+global,DS:B545,mission_result,u8,§9.3
+global,DS:B546,friendly_hits,u8,§9.3
+global,DS:B547,deadline_minutes,u8,§9.2
+global,DS:B548,deadline_hours,u8,§9.2
+global,DS:B549,clock_seconds,u8,§9.2
+global,DS:B54A,clock_minutes,u8,§9.2
+global,DS:B54B,clock_hours,u8,§9.2 BCD
+global,DS:B7F0,keypad_bits,u8,§3.1
+global,DS:B7F1,time_compression,u8,§1.2
+global,DS:B7F8,shot_elevation,u8,§6.1
+global,DS:B7FC,daylight,u8,§9.2
+global,DS:B7FD,twilight_stage,u8,§9.2
+global,DS:B7FE,leak_level,u8,§8.7
+global,DS:B7FF,water_level,u8,§8.7
+global,DS:B800,message_state,u8,§9.1 0 idle 1 showing 2 mission ending
+global,DS:B801,message_timer,u8,§9.1
+global,DS:B802,message_reply,u8,§9.1
+global,DS:B804,bow_weapon,u8,§6.1
+global,DS:B806,stern_weapon,u8,§6.1
+global,DS:B807,midship_weapon,u8,§6.1
+global,DS:B808,engine_state,u8[2],§2.3
+global,DS:B80A,fuel,u16[2],§2.3
+global,DS:B816,throttle,u8[2],§2.3
+global,DS:B818,jet_angle,u8,§2.3
+global,DS:B819,speed_band,u8,§2.3
+global,DS:B81C,throttle_max,u8[2],§2.3
+global,DS:B81E,heading,u8[4],§2.3 hull bow midship stern
+global,DS:B822,heading_fraction,u8[4],§2.3
+global,DS:B826,boat_x_fraction,u8,§2.3
+global,DS:B827,boat_y_fraction,u8,§2.3
+global,DS:B828,speed,s8,§2.3
+global,DS:B82A,bob_velocity,s8,§2.3
+global,DS:B82B,bob_position,u16,§2.3
+global,DS:B82D,pitch_reference,u8,§2.3
+global,DS:B82E,fire_at_will,u16,§6.2
+global,DS:B830,reload_stern,u8,§6.1
+global,DS:B831,reload_midship,u8,§6.1
+global,DS:B832,crew_pilot_gate,u8[4],§4.5
+global,DS:B836,elevation_midship,u8,§2.3
+global,DS:B837,elevation_bow,u8,§2.3
+global,DS:B838,elevation_stern,u8,§2.3
+global,DS:B839,flash_midship,u8,§6.1
+global,DS:B83A,flash_bow,u8[2],§6.1
+global,DS:B83C,flash_stern,u8,§6.1
+global,DS:B83D,visible_count,u16,§8.2
+global,DS:B83F,identify_first,u16,§6.3
+global,DS:B841,objective_objects,u16[5],§7.2
+global,DS:B84C,mission_record,u8[6468],§2.1 DATn.DAT
+global,DS:B84E,world_grid,u8[187],§2.1
+global,DS:B909,mission_table,u16[8][5],§2.1
+global,DS:B959,authored_object_count,u16,§2.1
+global,DS:B95D,object_word,u16[1000],§2.1 kind | flags << 8
+global,DS:C12D,object_x,u16[1000],§2.1
+global,DS:C8FD,object_y,u16[1000],§2.1
+global,DS:D0CD,structure_count,u16,§7.3
+global,DS:D0CF,structure_piece,u16[32],§7.3
+global,DS:D10F,structure_x,u16[32],§7.3
+global,DS:D14F,structure_y,u16[32],§7.3
+global,DS:D190,view_heading_low,u8,§1.2
+global,DS:D191,view_heading,u8,§1.2
+global,DS:D192,view_heading_fraction,u8,§1.2
+global,DS:D193,view_pitch,u8,§2.3
+global,DS:D194,hit_thresholds,u8[8],§8.6 byte 0 also holds the last component hit
+global,DS:D19C,component_indicator,u8[16],§8.6
+global,DS:D1AC,component_condition_index,u8[16],§8.6
+global,DS:D1BC,projectile_timer,u8[32],§7.1
+global,DS:D1DC,projectile_record,u8[32][8],§7.1
+global,DS:D502,boat_record,u8[189],§2.2 DAT10/DAT11
+global,DS:D503,engine_indicator,u8[2],§2.2
+global,DS:D505,objective_state,u8,§5.2
+global,DS:D506,fuel_tank_condition,u8[2],§8.6
+global,DS:D508,engine_condition,u8[2],§8.6
+global,DS:D50A,waterjet_condition,u8[2],§10
+global,DS:D50C,spotlight_middle_condition,u8,§8.6
+global,DS:D50D,radar_condition,u8,§8.6
+global,DS:D50E,spotlight_front_condition,u8,§8.6
+global,DS:D50F,spotlight_rear_condition,u8,§8.6
+global,DS:D510,hull_condition,u8,§8.6
+global,DS:D512,seaman_condition,u8,§8.6 midship gunner
+global,DS:D513,gunners_mate_condition,u8,§8.6 bow gunner
+global,DS:D514,captain_condition,u8,§8.6
+global,DS:D515,engineman_condition,u8,§8.6 stern gunner
+global,DS:D520,main_switch,u8,§4.4 panel switch 0; bit 0 set = off
+global,DS:D521,engine_switches,u8[2],§4.2
+global,DS:D525,bow_mount,u8[2],§6.1
+global,DS:D529,midship_mount,u8[2],§6.1
+global,DS:D52B,time_compression_switch,u8,§3.3
+global,DS:D52C,control_rate,u8,§3.4
+global,DS:D52E,stern_mount,u8[2],§6.1
+global,DS:D60F,identified_object,u16,§6.3
+global,DS:D611,identify_candidate,u16,§6.3
+global,DS:D615,fkey_handlers,u16[10],§3.2 odd-aligned
+global,DS:D629,turn_step_table,u8[5],§3.4 slot 4 = propulsion turn amount
+global,DS:D62E,jet_step_table,u8[4],§4.1
+global,DS:D632,jet_indicator_phase,u8,§4.1
+global,DS:D644,bow_barrel,u8,§6.1
+global,DS:D680,crew_throttle_target,u8,§4.5
+global,DS:D681,crew_pilot_state,u8,§4.5
+global,DS:D682,crew_pilot_keys,u8,§4.5
+global,DS:D683,crew_pilot_rate,u8,§4.5
+global,DS:D684,route_direction,u8,§4.6
+global,DS:D685,branch_command,u8,§4.6
+global,DS:D686,route_index,u8,§4.6
+global,DS:D687,route_prev_index,u8,§4.6
+global,DS:D688,route_link,u8,§4.6
+global,DS:D689,route_cell,u16,§4.6
+global,DS:D68B,route_x,u16,§4.6
+global,DS:D68D,route_y,u16,§4.6
+global,DS:D68F,route_cell_step,u16[4],§4.6
+global,DS:D697,route_entry_coord,u16[4],§4.6
+global,DS:D69F,clock_subsecond,u8,§9.2
+global,DS:D6A0,missile_object,u16,§8.4
+global,DS:D6A2,move_step_x,u16,§5.2
+global,DS:D6A4,move_step_y,u16,§5.2
+global,DS:D6A6,missile_source,u16,§8.4
+global,DS:D6A8,missile_age,u8,§8.4
+global,DS:D6A9,missile_target_x,u16,§8.4
+global,DS:D6AB,missile_target_y,u16,§8.4
+global,DS:D6AD,missile_speed,u8,§8.4
+global,DS:D6B4,boat_locked,u8,§5.2
+global,DS:D6B5,passengers_pending,u8,§5.2
+global,DS:D6BA,wake_timer,u8,§4.3
+global,DS:D6BF,detail_low,u8,§3.3
+global,DS:D6F8,salvo_heading,u8,§8.5
+global,DS:D6F9,salvo_speed,u8,§8.5
+global,DS:D6FA,spot_thresholds,u8[18],§8.3
+global,DS:D70C,world_pass_counter,u8,§8.3
+global,DS:D70D,incoming_count,u8,§8.5
+global,DS:D70E,incoming_descriptor,u8[16],§8.5
+global,DS:D71F,incoming_timer,u8[16],§8.5
+global,DS:D749,shot_bearing,u16,§7.2
+global,DS:D74B,shot_range,u8,§7.2
+global,DS:D8BC,scene_rebuild,u8,§11.2
+global,DS:D8FD,boat_lost_pending,u8,§10
+global,DS:D8FE,contact_colour,u8,§10
+global,DS:D8FF,contact,u8,§10
+global,DS:D900,contact_previous,u8,§10
+global,DS:D901,contact_candidate_a,u16,§10
+global,DS:D903,contact_candidate_b,u16,§10
+global,DS:D94F,scene_colours,u8[4],§9.2
+global,DS:D967,bob_countdown,u8,§2.3
+global,DS:D968,bob_period,u8,§2.3
+global,DS:D969,bob_phase,u8,§2.3
+global,DS:D96B,chase_view,u8,§3.3
+global,DS:D96C,chase_heading,u8,§5.3
+global,DS:D96D,chase_distance,u8,§5.3
+global,DS:D96E,camera_x,u16,§5.3
+global,DS:D970,camera_y,u16,§5.3
+global,DS:D972,camera_qx,u16,§5.1 quarter units
+global,DS:D974,camera_qy,u16,§5.1
+global,DS:D976,last_good_x,u16,§5.3
+global,DS:D978,last_good_y,u16,§5.3
+global,DS:D982,pitch_impulse,s16,§2.3
+global,DS:D9AD,terrain_rebuild,u16,§7.3
+global,DS:D9B3,frame_counter,u16,§1.2
+global,DS:D9B5,screen_shake,u8,§8.6
+global,DS:DA39,fast_forward_key,u8,§3.1 Backspace held
+global,DS:DA3A,ctrl_held,u8,§3.1
+global,DS:DA42,isr_key_code,u8,§3.1
+global,DS:DA43,held_keys,u8,§3.1
+global,DS:EE9C,key_code,u8,§3.2
+global,DS:F110,practice_mode,u16,§3.3 0 mission; 1-3 practice types
+global,DS:F346,look_direction,u16,§1.2
