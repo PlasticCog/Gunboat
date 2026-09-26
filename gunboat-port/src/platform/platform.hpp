@@ -65,7 +65,9 @@ void bios_init();                                        // as DOS leaves it: te
 void bios_set_mode(u8 al);                               // INT 10h AH=00h
 u16 bios_get_mode(u8 *bh);                               // INT 10h AH=0Fh: AX
 u16 bios_get_cursor(u8 page);                            // INT 10h AH=03h: DX
-u16 bios_display_combination();                          // INT 10h AX=1A00h: BX
+u16 bios_display_combination(u16 *bx);                   // INT 10h AX=1A00h: AX (AL 1Ah: *bx set)
+void bios_ega_info(u16 *bx, u16 *cx);                    // INT 10h AH=12h BL=10h (unchanged: no EGA)
+void bios_set_active_page(u8 page);                      // INT 10h AH=05h
 void bios_cga_palette(u8 bh, u8 bl);                     // INT 10h AH=0Bh
 void bios_palette_reg(u8 index, u8 value);               // INT 10h AX=1000h
 void bios_overscan(u8 value);                            // INT 10h AX=1001h

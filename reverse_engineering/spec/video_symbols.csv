@@ -51,3 +51,15 @@ global,DS:DD25,copy_dst_y,u16,§2 gfx_copy_rect's destination bottom row
 func,15a4:0006,gfx_copy_rect,far u16(u16 x0 u16 x1 u16 y0 u16 y1 u16 dx u16 dy_bottom u16 src u16 dst),§2 page src -> page dst; destination by its bottom row
 func,14b5:000d,gfx_put_pixel,far u16(s16 x s16 y),§2 clipped to DD05..DD03 / DD09..DD07
 func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),§2 EGA/CGA palette entry; nothing in mode 13h
+global,DS:DD41,gfx_colour_map,u8[32],§1 gfx_set_colour's map of colours 0-1Fh to the mode's (copied by gfx_set_mode from DD61 / DD81 / DDA1)
+global,DS:DD61,colour_map_2,u8[32],§1 the map of the 2-colour modes (6; 0Bh / 0Ch; 11h): colour & 1
+global,DS:DD81,colour_map_4,u8[32],§1 the map of the CGA 4-colour modes 4 / 5: colour & 3
+global,DS:DDA1,colour_map_16,u8[32],§1 the map of the 16-colour modes (Tandy 8-0Ah; EGA 0Dh-10h / 12h): colour & 0Fh; also mode 12h's attribute palette (INT 10h AX=1002h)
+global,DS:DDC1,gfx_dither,u8[64],§2 per colour 0-1Fh: its fill on even rows and on odd rows (CGA / Tandy: a byte of pixels; EGA: a colour each); picture_hline fills with it; copied by gfx_set_mode from DE01 / DE41 / DE81; ega_pal_set sets entries
+global,DS:DE01,dither_2,u8[64],§2 gfx_dither of the 2-colour modes
+global,DS:DE41,dither_4,u8[64],§2 gfx_dither of the CGA 4-colour modes (colour c: c * 55h)
+global,DS:DE81,dither_16,u8[64],§2 gfx_dither of the 16-colour modes (Tandy: c * 11h; EGA: the colour)
+global,DS:DEC1,dac_16,u8[48],§1 mode 12h's DAC colours 0-15 (INT 10h AX=1012h)
+global,DS:E0F4,herc_bda,u8[16],§1 the BIOS data (0040:0049..0058) of the Hercules modes 0Bh / 0Ch
+global,DS:E112,herc_crtc,u16[9],§1 the Hercules CRTC registers of modes 0Bh / 0Ch (index | value << 8)
+global,DS:E126,gfx_bitmap_pattern,u16,§2 the colour's pixel pattern (both bytes) of the CGA / Tandy bitmap paths (gfx_draw_bitmap / gfx_read_bitmap)

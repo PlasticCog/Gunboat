@@ -29,6 +29,9 @@ def bios_init(m, machine='vga'):
         if machine == 'hercules':
             struct.pack_into('<H', m, BDA + 0x63, 0x03B4)
         m[0xFC000] = 0x21 if machine == 'tandy' else 0x00
+    if machine == 'ega':    # the EGA BIOS's information bytes (bios.cpp)
+        m[BDA + 0x87] = 0x60
+        m[BDA + 0x88] = 0x08
     struct.pack_into('<HHHH', m, 8 * 4, 0xFEA5, 0xF000, 0xE987, 0xF000)   # INT 8, INT 9: the BIOS
 
 
@@ -118,8 +121,17 @@ class BiosModel:
             uc.reg_write(UC_X86_REG_DX, self.rd16(BDA + CURSOR + 2 * ((bx >> 8) & 7)))
             uc.reg_write(UC_X86_REG_CX, self.rd16(BDA + CURSOR_SHAPE))
         elif ax == 0x1A00:
-            uc.reg_write(UC_X86_REG_AX, (ax & 0xFF00) | 0x1A)
-            uc.reg_write(UC_X86_REG_BX, 0x0008)
+            if self.machine == 'vga':               # (the older cards' BIOSes do not know it)
+                uc.reg_write(UC_X86_REG_AX, (ax & 0xFF00) | 0x1A)
+                uc.reg_write(UC_X86_REG_BX, 0x0008)
+        elif ah == 0x12 and bx & 0xFF == 0x10:      # the EGA information (EGA and VGA BIOSes)
+            if self.machine in ('ega', 'vga'):
+                info, switches = self.rd8(BDA + 0x87), self.rd8(BDA + 0x88)
+                uc.reg_write(UC_X86_REG_BX, ((info >> 1) & 1) << 8 | ((info >> 5) & 3))
+                uc.reg_write(UC_X86_REG_CX, (switches >> 4) << 8 | (switches & 0x0F))
+        elif ah == 0x05:                            # the active display page
+            uc.mem_write(BDA + PAGE, bytes([al]))
+            self.wr16(BDA + PAGE_START, al * self.rd16(BDA + PAGE_SIZE))
         elif ax == 0x1010:
             self.dac_write(bx & 0xFF, dx >> 8, cx >> 8, cx)
         elif ax == 0x1012:
