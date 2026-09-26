@@ -31,6 +31,13 @@ Gunboat-only helpers in the same range: `1390:0000` (picture draw, all modes; pl
 `1432:0008` (returns `DS:DD2D`), `147c:000f` (EGA/CGA palette register set via INT 10h), `14ae:0005` (EGA palette
 entry, wrapped by `00f2:0f24`), `1469:0008` (returns the mode saved at start-up, `DS:DCFC`).
 
+Used by the cockpit (hud §3), ported (`platform/gfx_lines.cpp`): `gfx_line_to(x, y)` draws from
+the pen to (x, y) and moves the pen there: a horizontal or vertical line is one
+`gfx_fill_rect_clipped` rectangle (ends sorted, signed), any other a Bresenham line of
+`gfx_put_pixel` calls (both ends, its steps and error terms in `DS:E065..E06F`);
+`gfx_fill_rect_clipped(x0, x1, y0, y1)` cuts the rectangle to the clip box `DD03..DD09` (signed;
+nothing if outside) and calls `gfx_fill_rect`.
+
 Used by the front end (game_flow §6), ported: `gfx_copy_rect(x0, x1, y0, y1, dx, dy_bottom, src,
 dst)` copies a rectangle between two explicit pages, the destination given by its **bottom** row
 (rows copied from y1 up to y0; `DD25` = the destination's bottom row, `DD27` = dx; no clipping);
