@@ -36,7 +36,12 @@ bool host_init(const char *dir, int, bool)
     return true;
 }
 void host_shutdown() {}
-void host_set_timer(u16, void (*handler)()) { tick_handler = handler; }
+namespace {
+u16 game_divisor;
+}
+void host_set_timer(u16 divisor, void (*)()) { game_divisor = divisor; }
+void host_stub_set_test_tick(void (*tick)()) { tick_handler = tick; }
+u16 host_stub_timer_divisor() { return game_divisor; }
 void host_set_frame_source(bool (*)(u32 *), int, int) {}
 void host_pump()
 {

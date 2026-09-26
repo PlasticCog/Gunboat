@@ -72,11 +72,27 @@ GB_EXPORT int gb_call(const char *name, Regs *regs, const u16 *stack_args)
 // The timer model of a test (gbdiff.Harness.set_tick): host_pump() runs one tick of this kind.
 namespace {
 void tick_counter() { ds_u16(0x08C0) = u16(ds_u16(0x08C0) + 1); }
+// Keys that arrive during a call: one per tick, into isr_key_code (0 = no key at that tick).
+std::string key_queue;
+int tick_kind;
+void test_tick()
+{
+    if (tick_kind == 1 || tick_kind == 3) tick_counter();
+    if (tick_kind == 2 || tick_kind == 3) bios_tick();
+    if (!key_queue.empty()) {
+        const u8 k = u8(key_queue.front());
+        key_queue.erase(0, 1);
+        if (k) ds_u8(0xDA42) = k;
+    }
+}
 } // namespace
+GB_EXPORT void gb_set_keys(const u8 *keys, int n) { key_queue.assign(reinterpret_cast<const char *>(keys), size_t(n)); }
 GB_EXPORT void gb_set_tick(int kind)
 {
-    host_set_timer(0, kind == 1 ? tick_counter : kind == 2 ? bios_tick : nullptr);
+    tick_kind = kind;
+    host_stub_set_test_tick(kind || !key_queue.empty() ? test_tick : nullptr);
 }
+GB_EXPORT int gb_timer_divisor() { return host_stub_timer_divisor(); }
 
 // The speaker calls (host_speaker) since the last clear: n pairs (divisor, on) into out[2n].
 GB_EXPORT void gb_speaker_clear() { host_stub_speaker_clear(); }

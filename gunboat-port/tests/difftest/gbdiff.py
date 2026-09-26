@@ -368,7 +368,7 @@ class Harness:
         biosmodel.bios_init(m)
         return m
 
-    TICK_KINDS = {None: 0, 'tick_counter': 1, 'bios': 2}
+    TICK_KINDS = {None: 0, 'tick_counter': 1, 'bios': 2, 'both': 3}
 
     def set_tick(self, tick):
         """The timer model of the next check: None (no ticks), or (poll points, kind); kind
@@ -376,19 +376,25 @@ class Harness:
         for h in getattr(self, '_tick_hooks', []):
             self.orig.uc.hook_del(h)
         self._tick_hooks = []
-        points, kind = tick if tick else ((), None)
+        points, kind = tick[:2] if tick else ((), None)
+        keys = list(tick[2]) if tick and len(tick) > 2 else []
+        self.port.dll.gb_set_keys(bytes(keys), len(keys))
         self.port.dll.gb_set_tick(self.TICK_KINDS[kind])
 
         def on_poll(uc, address, size, _):
-            if kind == 'tick_counter':
+            if kind in ('tick_counter', 'both'):
                 a = DS_BASE + 0x08C0
                 v = struct.unpack('<H', uc.mem_read(a, 2))[0]
                 uc.mem_write(a, struct.pack('<H', (v + 1) & 0xFFFF))
-            elif kind == 'bios':                    # the BIOS timer interrupt (bios.cpp bios_tick)
+            if keys:                                # a key arriving at this tick (tick[2])
+                k = keys.pop(0)
+                if k:
+                    uc.mem_write(DS_BASE + 0xDA42, bytes([k]))
+            if kind in ('bios', 'both'):            # the BIOS timer interrupt (bios.cpp bios_tick)
                 t = struct.unpack('<I', uc.mem_read(0x46C, 4))[0] + 1
                 if t >= 0x1800B0:
                     t = 0
-                    uc.mem_write(0x470, b'')
+                    uc.mem_write(0x470, bytes([1]))
                 uc.mem_write(0x46C, struct.pack('<I', t))
         for p in points:
             s, o = (int(x, 16) for x in p.split(':'))

@@ -192,11 +192,13 @@ u16 title_menu()
         engine_sound_on();
         ds_u16(DS_tick_counter) = 0;
         for (s16 x = 0; x < 0x118; x = s16(x + 3)) {
+            // one step per timer tick; random() on every poll that still sees the old tick (the
+            // original tests first, 00f2:0460 -> 03d8, and calls random at 03d0 while it waits)
             const u16 tick = ds_u16(DS_tick_counter);
-            do {  // one step per timer tick; random() on every poll, as the original
-                random();
+            while (tick == ds_u16(DS_tick_counter)) {
                 host_pump();
-            } while (tick == ds_u16(DS_tick_counter));
+                random();
+            }
             gfx_move_to(x, 0x41);
             gfx_set_colour(s16(ds_u16(DS_title_colour_c)));
             gfx_draw_bitmap(DS_sprite_mask_c, 2, 4);
