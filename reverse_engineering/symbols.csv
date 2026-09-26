@@ -878,7 +878,7 @@ global,DS:D7DD,cga_pixel_mask,u8[4],render3d,spec:render3d,§1.2 CGA: pixel 0-3 
 global,DS:D7E1,cga_mask_last,u8[4],render3d,spec:render3d,§1.2 CGA spans: the last 0-3 pixels of a byte (00 03 0F 3F)
 global,DS:D7E5,cga_mask_first,u8[4],render3d,spec:render3d,§1.2 CGA spans: the first 0-3 pixels of a byte (00 C0 F0 FC)
 global,DS:D7E9,cga_colour_byte,u8[4],render3d,spec:render3d,§1.2 CGA: colour 0-3 in all four pixels of a byte (00 55 AA FF)
-global,DS:D816,cga_mark_offsets,s16[5][5],render3d,spec:render3d,§1.2 CGA water marks: per size 0-4 the pixel offsets (x + 140h per row) of its four pixels
+global,DS:D816,water_mark_patterns,s16[5][5],render3d,spec:render3d,§1.2 the water marks of CGA (and EGA/Tandy): per size 0-4 the pixel offsets (x + 140h per row) of its four pixels (read at 0919:4683)
 global,DS:D862,sprite_blit_width,u8,render3d,spec:render3d,§5.7 columns to copy after clipping
 global,DS:D863,sprite_slot,u8,render3d,spec:render3d,§5.7 cache slot of the sprite being built (1-based)
 global,DS:D864,sprite_size,u8,render3d,spec:render3d,§5.7 apparent size (atan of size / distance)

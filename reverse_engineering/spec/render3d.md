@@ -84,7 +84,7 @@ Which routine a mode reaches (the low byte of EED2; each dispatch is its own cod
   draws 0Eh); the horizon line is two rows of colour 2; the water D950 & 3, FFh during a flash.
 * `water_marks_cga` (`4639`, ES, BX = first mark, CL = rows, DI = first row; AX and DX not used,
   SI changed): a mark's size is 0 (CL > 16h or age < 0Bh), 1, 2 (age >= 11h and CL <= 0Eh), 3
-  (age >= 17h) or 4 (age >= 1Bh); its four pixels (`cga_mark_offsets`: x + 140h per row above or
+  (age >= 17h) or 4 (age >= 1Bh); its four pixels (`water_mark_patterns`: x + 140h per row above or
   below, found in the other bank) are ORed with colour 3. It ends at (DI & 1FFFh) >= 13DDh.
 * `span_cga_a` (`46e8`) and `span_cga_b` (`47cf`), ES: the VGA twins' edges, steps and clipping;
   the row D8FC − 40h indexes `view_row_table` (bit 7 set: the row is skipped, which includes

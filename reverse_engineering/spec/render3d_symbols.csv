@@ -132,7 +132,7 @@ global,DS:D7DD,cga_pixel_mask,u8[4],§1.2 CGA: pixel 0-3 of a byte (C0 30 0C 03)
 global,DS:D7E1,cga_mask_last,u8[4],§1.2 CGA spans: the last 0-3 pixels of a byte (00 03 0F 3F)
 global,DS:D7E5,cga_mask_first,u8[4],§1.2 CGA spans: the first 0-3 pixels of a byte (00 C0 F0 FC)
 global,DS:D7E9,cga_colour_byte,u8[4],§1.2 CGA: colour 0-3 in all four pixels of a byte (00 55 AA FF)
-global,DS:D816,cga_mark_offsets,s16[5][5],§1.2 CGA water marks: per size 0-4 the pixel offsets (x + 140h per row) of its four pixels
+global,DS:D816,water_mark_patterns,s16[5][5],§1.2 the water marks of CGA (and EGA/Tandy): per size 0-4 the pixel offsets (x + 140h per row) of its four pixels (read at 0919:4683)
 global,DS:D730,atan_raw,u8,§3.3 raw atan table value of the last projection
 global,DS:D731,octant_negate,u8[8],§3.3 1 = the octant angle is subtracted
 global,DS:D739,octant_base,u8[8],§3.3 octant base angle (atan)

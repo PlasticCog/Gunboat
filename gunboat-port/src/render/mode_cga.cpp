@@ -258,7 +258,7 @@ u16 sky_water_cga(u16 es, u16, u8 bl, u8 cl)
 // 0919:4639 water_marks_cga (render3d.md §3.2): water_marks_vga in mode 4: one mark per row from
 // DI down, CL rows, mark BX (wrapping at 20h) at column D90D[mark]. Its size: 0 (one pixel) for
 // the far rows (CL > 16h) and marks younger than 0Bh, else 1, and for CL <= 0Eh with age >= 11h 2,
-// 3 (age >= 17h) or 4 (age >= 1Bh); the size's four pixel offsets (cga_mark_offsets: x + 140h per
+// 3 (age >= 17h) or 4 (age >= 1Bh); the size's four pixel offsets (water_mark_patterns: x + 140h per
 // row, the row above or below found in the other bank) are ORed with colour 3. AX and DX are not
 // used (the colours are fixed); SI is changed (not used by the callers). A row at or past row pair
 // 3Fh + the column (DI & 1FFFh >= 13DDh) ends it.
@@ -278,7 +278,7 @@ void water_marks_cga(u16 es, u16, u16 bx, u16 cx, u16, u16 di)
         const u16 x = ds_u8(u16(DS_water_mark_x + bx));
         u16 si = u16(u16((bx & 0xFF00) | u8(size * 5)) << 1);
         for (int k = 0; k < 4; k++) {
-            const u16 off = ds_u16(u16(DS_cga_mark_offsets + si));
+            const u16 off = ds_u16(u16(DS_water_mark_patterns + si));
             u16 a = u16(x + off), d = di;
             if (off & 0x8000) {  // the row above
                 d ^= 0x2000;
