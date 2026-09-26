@@ -76,3 +76,19 @@ it; missions copy directly (hud §1).
 Mode 13h only: a 320 × 200 byte frame in the emulated memory at A000:0000 plus the RAM pages,
 the DAC model and presentation from TD3's `platform/vga.c`. EGA, Tandy, CGA and CGA composite
 paths are not ported (`// PORT:` at each mode dispatch).
+
+## Hercules: the picture of the game's CGA memory **verified** (card.cpp)
+
+The Hercules choice (video mode 0Ch in GUNBOAT.CFG) runs the game in CGA mode 4 (`main`, game_flow
+§2; `hercules_mode` DS:0076 = 1, which nothing reads) and `hercules_setup` (`121b:0902`) programs
+the card to show that memory: configuration 3BFh = 3 (graphics allowed, page 1 enabled), mode 3B8h
+= 0 (off), B800:0000-7FFF cleared, the CRTC R0-R11 from `DS:DA2D` = 38 28 2D 0A 7F 06 64 70 02 02
+06 07, then mode 8Ah (graphics, video on, page 1 = B800h). R1 = 28h characters of 16 pixels (640
+pixels, 80 bytes), R6 = 64h character rows of R9 + 1 = 3 scan lines (300 lines). The card reads
+scan line RA of character row r at ((RA & 3) << 13) | ((MA & 0FFFh) << 1) | byte, MA = start
+(R12/R13) + 28h · r + character: line 3r shows CGA row 2r (the even bank), 3r + 1 row 2r + 1 (the
+odd bank) and 3r + 2 bank 2 (B800:4000, cleared and never drawn: black), each CGA byte as eight
+monochrome pixels (colour 0: both dark, 1: the right one lit, 2: the left one, 3: both). `card_compose` builds that 640 × 300 frame.
+The start address is 0 unless the display offset (the screen shake, `gfx_set_display_offset` on the
+BIOS's CRTC port 0040:0063 = 3B4h) moves it.
+

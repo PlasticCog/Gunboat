@@ -76,6 +76,7 @@ u16 view_copy_5_cga(u16 es, u16 ds);
 u16 view_copy_6_cga(u16 es, u16 ds);
 u16 view_copy_7_cga(u16 es, u16 ds);
 u16 view_copy_8_cga(u16 es, u16 ds);
+DiSi view_copy_head_cga(u16 es, u16 ds);       // 0919:4468  returns DI, SI (CX = 0)
 
 // ---- the station screens (screens.cpp), segment 05bd, hud.md §5
 void map_screen();                  // 05bd:19cc  station 5

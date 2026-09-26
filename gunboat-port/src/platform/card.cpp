@@ -262,16 +262,26 @@ bool card_compose(u32 *xrgb, int *w, int *h)
         return true;
     }
     case Machine::Hercules: {
-        if (!(c.herc_mode & 0x02)) break;  // text mode: nothing of the game
-        const u16 seg = (c.herc_mode & 0x80) ? 0xB800 : 0xB000;
-        const int row_bytes = std::clamp(int(c.herc[1]) * 2, 2, 90);
-        const int banks = std::clamp(int(c.herc[9] & 0x1F) + 1, 1, 4);
-        const int rows = std::clamp(int(c.herc[6] & 0x7F) * banks, 1, 348);
-        *w = row_bytes * 8;
+        // Graphics mode (allowed by configuration bit 0) with the video enabled (mode bit 3; page 1
+        // at B800h if configuration bit 1 allows it): a character clock shows two bytes (16
+        // pixels); scan line RA of character row r reads byte ((RA & 3) << 13) | ((MA & 0FFFh) << 1)
+        // | b, MA = start (R12/R13) + r * R1 + character (the 6845's MA0-MA11 and RA0-RA1 as the
+        // card wires them). hercules_setup's CRTC: R1 = 28h (640 pixels), R6 = 64h character rows of
+        // R9 + 1 = 3 scan lines (300 lines: the CGA memory's even and odd banks, then bank 2 at
+        // B800:4000, which it clears and nothing draws); the start moves with the display offset.
+        const bool graphics = (c.herc_mode & 0x02) && (c.herc_config & 0x01);
+        if (!graphics || !(c.herc_mode & 0x08)) break;  // text mode or video off: nothing of the game
+        const u16 seg = ((c.herc_mode & 0x80) && (c.herc_config & 0x02)) ? 0xB800 : 0xB000;
+        const int chars = std::clamp(int(c.herc[1]), 1, 45);
+        const int lines = int(c.herc[9] & 0x1F) + 1;
+        const int rows = std::clamp(int(c.herc[6] & 0x7F) * lines, 1, 348);
+        const u16 start = u16((c.herc[12] & 0x3F) << 8 | c.herc[13]);
+        *w = chars * 16;
         *h = rows;
         for (int y = 0; y < rows; y++)
             for (int x = 0; x < *w; x++) {
-                const u16 off = u16((y % banks) * 0x2000 + (y / banks) * row_bytes + (x >> 3));
+                const u16 ma = u16(start + (y / lines) * chars + (x >> 4));
+                const u16 off = u16(((y % lines) & 3) << 13 | (ma & 0x0FFF) << 1 | ((x >> 3) & 1));
                 xrgb[y * *w + x] = (mem_u8(seg, off) >> (7 - (x & 7)) & 1) ? MONO_ON : 0;
             }
         return true;

@@ -45,6 +45,15 @@ global,DS:D6BB,jet_marker_bitmap,u8[],§3
 global,DS:D6C1,gauge_centres,u8[3][12],§3 by look direction
 global,DS:D9B6,page_segments,u16[3],§1
 func,05bd:2f6a,station_screen_colours,far void(),§5 EGA/Tandy/CGA palette entries of the full-screen stations (ega_pal_entry); nothing in VGA
+func,0919:411f,view_copy_1_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_1_vga (bank-interleaved rows); port hud/views_cga.cpp
+func,0919:41a3,view_copy_2_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_2_vga
+func,0919:41e5,view_copy_3_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_3_vga
+func,0919:427c,view_copy_4_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_4_vga
+func,0919:4366,view_copy_5_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_5_vga
+func,0919:43bc,view_copy_6_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_6_vga
+func,0919:4412,view_copy_7_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_7_vga
+func,0919:4468,view_copy_head_cga,near (ES DS)->DI SI,§6 CGA twin of view_copy_head_vga: nine rows of 52 bytes; leaves DI/SI for the caller and CX = 0
+func,0919:449a,view_copy_8_cga,near SI(ES dst_seg DS src_seg),§6 CGA twin of view_copy_8_vga
 func,0919:8e29,view_copy_head_vga,near (ES DS)->DI SI,§6 nine rows of 208 bytes shared by view_copy_5..8_vga; leaves DI/SI for the caller and CX = 0
 func,0919:5062,view_copy_1_tandy,near void(ES dst_seg DS src_seg),§6 Tandy twin of view_copy_1_vga
 func,0919:5104,view_copy_2_tandy,near void(ES dst_seg DS src_seg),§6 Tandy twin of view_copy_2_vga

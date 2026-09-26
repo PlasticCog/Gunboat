@@ -38,8 +38,15 @@ Routines that touch pixels dispatch on it (`> 0Dh` VGA, `== 0Dh` EGA, `== 9` Tan
 Per-mode helpers: sky/water fill (`74c0` VGA / `4ce2` EGA / `5529` Tandy / `4587` CGA),
 water shimmer (`7458` / `4d64` / `55da` / `4639`), spotlight beam (`7bbd` / `4c18` / `5494` /
 `44f0`), and the row-drawer pair `DS:D8F8`/`D8FA` set at `0919:3fc6..4036` (VGA `788e`/`7943`,
-RE_GUIDE). The VGA routines are specified in the sections below, the EGA ones in §1.4, the Tandy
-ones and the exact dispatch conditions in §11 (all ported); the CGA paths: §1.2.
+RE_GUIDE). The VGA routines are specified in the sections below, the EGA ones in §1.4, the CGA
+ones (Hercules too) in §1.5, the Tandy ones and the exact dispatch conditions in §11 (all ported).
+
+### 1.3 The scene rebuild flag `D8BC` **verified**
+
+Set by `terrain_cells_update` when the terrain window changes, and by view jumps (simulation
+§11.2). While set: the terrain is always re-projected, the terrain draw order is reset (§3.5),
+the visible-object list is rebuilt (§5.1) and fully sorted (§5.3), the enemy AI and projectiles
+skip the frame. `object_frame` clears it after the object update.
 
 ### 1.4 EGA (mode 0Dh) **verified** (ported, differential test)
 
@@ -96,12 +103,49 @@ original's frames reach it (the original run in EGA from main into missions) and
 planes, latches and graphics controller registers, and `terrain_frame` / `object_frame` whole
 (every instruction of 0919:48da-4f96 executed by the tests).
 
-### 1.3 The scene rebuild flag `D8BC` **verified**
+### 1.5 The CGA routines (mode 4; Hercules) **verified** (ported: `src/render/mode_cga.cpp`; `tests/difftest/test_modes_cga.py`)
 
-Set by `terrain_cells_update` when the terrain window changes, and by view jumps (simulation
-§11.2). While set: the terrain is always re-projected, the terrain draw order is reset (§3.5),
-the visible-object list is rebuilt (§5.1) and fully sorted (§5.3), the enemy AI and projectiles
-skip the frame. `object_frame` clears it after the object update.
+Mode 4 memory: 2 bits a pixel, pixel 0 of a byte in bits 7-6, 80 bytes a row, the even rows at
+0000h and the odd rows at 2000h of the page (the screen B800h, or a RAM page of the same layout).
+`video_mode_setup` puts the 64 view rows from 0A0Ah (row 64, byte 10 = column 40) in
+`view_row_table` and D8F8/D8FA = `46e8`/`47cf`. One row down: + 2000h, and − 3FB0h when bit 13 is
+then clear (the even bank, one row pair further). The Hercules game (`hercules_mode` DS:0076 = 1)
+runs the same code: GB.EXE never reads DS:0076 (only `main` writes it).
+
+Which routine a mode reaches (the low byte of EED2; each dispatch is its own code):
+
+| Dispatch | VGA | EGA | Tandy | CGA |
+|---|---|---|---|---|
+| sky and water (`terrain_setup` 73be) | > 0Dh | 0Dh | 9 | any other (0-8, 0Ah-0Ch) |
+| water marks (73e0: 7438) | > 0Dh | 0Dh | 9-0Ch | below 9 |
+| spotlight beam (`spotlight_beam` 7ba0) | > 0Dh | 0Dh | 9-0Ch | below 9 |
+| sprite rows (`blit_place` 5e3f) | 13h | 0Dh | any other | 4 |
+| spans (D8F8/D8FA from `video_mode_setup`) | > 0Dh | 0Dh | 9-0Ch | below 9 |
+| view copies (hud §6) | > 0Dh | 0Dh | 9-0Ch | below 9 |
+
+* `blit_rows_cga` (`4056`, AL = first view row, SI = source, as the VGA twin): screen row B7E2 =
+  AL + 30h, its address AL · 28h (+ 1FD8h for an odd row); the column 2 · B7F7 + D873 (28h and
+  SI + D875 when clipped left) gives the byte (/ 4) and the first pixel B7E3 (& 3). Each source
+  byte that is not zero puts its low two bits in its pixel (`cga_pixel_keep`, rotated by
+  `cga_pixel_shift`). The next row follows the parity of B7E2 (not the address); rows from 80h on
+  end it.
+* `spotlight_beam_cga` (`44f0`, ES, BX = widths, DX = column): the VGA twin's clipping; the row
+  from `view_row_table` − 8 bytes; ORs colour 2 (AAh) into the first byte's last 4 − (x & 3)
+  pixels (`cga_beam_head`), the whole bytes and the last 0-3 (`cga_beam_tail`); nothing when the
+  beam does not pass the first byte.
+* `sky_water_cga` (`4587`, ES, BL = horizon, CL = sky top; returns DI = the horizon line's row):
+  AX is not used: the sky is the colour byte (`cga_colour_byte`) of D94F & 3, AAh while D9B5 is
+  not zero (after terrain_setup's decrement: the flash's last frame keeps the sky colour where VGA
+  draws 0Eh); the horizon line is two rows of colour 2; the water D950 & 3, FFh during a flash.
+* `water_marks_cga` (`4639`, ES, BX = first mark, CL = rows, DI = first row; AX and DX not used,
+  SI changed): a mark's size is 0 (CL > 16h or age < 0Bh), 1, 2 (age >= 11h and CL <= 0Eh), 3
+  (age >= 17h) or 4 (age >= 1Bh); its four pixels (`water_mark_patterns`: x + 140h per row above or
+  below, found in the other bank) are ORed with colour 3. It ends at (DI & 1FFFh) >= 13DDh.
+* `span_cga_a` (`46e8`) and `span_cga_b` (`47cf`), ES: the VGA twins' edges, steps and clipping;
+  the row D8FC − 40h indexes `view_row_table` (bit 7 set: the row is skipped, which includes
+  rows C0h-FFh; 40h-7Fh: the end) and D8FC is advanced per row (VGA leaves it); the colour byte
+  of D954 & 3; the partial first and last bytes through `cga_mask_last` / `cga_mask_first`. A
+  width of 0 draws nothing (VGA draws a byte); `span_cga_b` turns a width of 0 into 1.
 
 ## 2. Terrain window (`terrain_cells_update`, 0919:8408) **verified**
 

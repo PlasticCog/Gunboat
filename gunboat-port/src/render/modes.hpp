@@ -11,8 +11,8 @@ namespace gb {
 // ---- CGA (mode 4), mode_cga.cpp
 void blit_rows_cga(u8 al, u16 si);                                        // 0919:4056
 void spotlight_beam_cga(u16 es, u16 bx, u16 dx);                          // 0919:44f0
-u16 sky_water_cga(u16 es, u16 ax, u8 bl, u8 cl);                          // 0919:4587
-void water_marks_cga(u16 es, u16 ax, u16 bx, u16 cx, u16 dx, u16 di);     // 0919:4639
+u16 sky_water_cga(u16 es, u16 ax, u8 bl, u8 cl);                          // 0919:4587  AX unused
+void water_marks_cga(u16 es, u16 ax, u16 bx, u16 cx, u16 dx, u16 di);     // 0919:4639  AX, DX unused
 void span_cga_a(u16 es);                                                  // 0919:46e8
 void span_cga_b(u16 es);                                                  // 0919:47cf
 
