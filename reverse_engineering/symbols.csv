@@ -643,7 +643,7 @@ global,DS:B54A,clock_minutes,u8,simulation,spec:simulation,§9.2
 global,DS:B54B,clock_hours,u8,simulation,spec:simulation,§9.2 BCD
 global,DS:B54C,commander_slot,u16,game_flow,spec:game_flow,§5
 global,DS:B54E,roster,u8[703],game_flow,spec:game_flow,§5 GBROSTER.DAT image
-global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation+spec:hud,was needle_old_end | §3 needle_draw: the end (dx; dy) to erase; dx FFh = none | was scratch_b7dc | §9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer
+global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation+spec:hud,§3 needle_draw: the end (dx; dy) to erase; dx FFh = none | §9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer | hud §3 needle_draw: the end (dx; dy) to erase (dx FFh = none); radar_scope: the range
 global,DS:B7DE,gauge_row,u16,hud,spec:hud,§3 12 * look direction: the row of gauge_centres
 global,DS:B7E0,needle_centre_x,u16,hud,spec:hud,§3 needle_draw: the gauge centre's x (y in scratch_b7e3)
 global,DS:B7E2,scratch_b7e2,u8,simulation,spec:simulation,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)

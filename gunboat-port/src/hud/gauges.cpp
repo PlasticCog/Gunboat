@@ -30,7 +30,7 @@ void needle(u16 points, u16 index, u16 last, u16 centre, u8 centre_y, u16 &ax)
 {
     const u16 cx = cs_word(CSSEG_throttle_needle_points, u16(points + 2 * index));
     if (cx == ds_u16(last)) return;
-    ds_u16(DS_needle_old_end) = ds_u16(last);
+    ds_u16(DS_scratch_b7dc) = ds_u16(last);
     ds_u16(last) = cx;
     ax = ds_u16(u16(ds_u16(DS_gauge_row) + centre));
     if (ax == 0) return;
@@ -73,7 +73,7 @@ u16 sweep_step()
     const u8 next = u8(at + 1) & 0x7F;
     ds_u8(DS_radar_sweep) = next;
     const u16 cx = cs_word(CSSEG_throttle_needle_points, u16(CS_throttle_needle_points + 2 * next));
-    ds_u16(DS_needle_old_end) = dx;
+    ds_u16(DS_scratch_b7dc) = dx;
     return cx;
 }
 
@@ -152,7 +152,7 @@ void needle_draw(u16 cx)
     const u16 y = u8(ds_u8(DS_scratch_b7e3) + ds_u8(PIVOT_Y));
     gfx_move_to(s16(x), s16(y));
     gfx_set_colour(ds_u8(ERASE_COLOUR));
-    const u16 old = ds_u16(DS_needle_old_end);
+    const u16 old = ds_u16(DS_scratch_b7dc);
     if (u8(old) != 0xFF) {
         gfx_line_to(s16(u16(ds_u16(DS_needle_centre_x) + u8(old))), u8(ds_u8(DS_scratch_b7e3) + (old >> 8)));
         gfx_move_to(s16(x), s16(y));
@@ -217,8 +217,8 @@ u16 radar_scope(u16 ax)
     ds_u8(DS_scratch_b7e3) = u8(u8(ds_u8(DS_radar_sweep) << 1) - 0x6C);
     const u8 range = ds_u8(u16(DS_panel_switches + 3)) & 3;
     ds_u8(DS_scratch_b7e2) = range;
-    ds_u16(DS_needle_old_end) = u16(0x4000 >> range);  // the range
-    ax = ds_u16(DS_needle_old_end);
+    ds_u16(DS_scratch_b7dc) = u16(0x4000 >> range);  // the range
+    ax = ds_u16(DS_scratch_b7dc);
     u16 bx = u16(ds_u16(DS_visible_count) - 1);
     do {
         const u16 b2 = u16(bx << 1);
@@ -226,7 +226,7 @@ u16 radar_scope(u16 ax)
         ax = ds_u16(u16(DS_visible_object + b2));
         bx = u16(b2 >> 1);
         if (ax >= 0x48 && ds_u8(u16(ax + DS_object_word)) != 0) {
-            if (distance > ds_u16(DS_needle_old_end)) return ax;
+            if (distance > ds_u16(DS_scratch_b7dc)) return ax;
             radar_plot(ds_u8(u16(bx + DS_visible_bearing)), distance);
             ax = 0;
         }
