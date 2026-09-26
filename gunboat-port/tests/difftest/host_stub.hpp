@@ -3,6 +3,9 @@
 // one timer interrupt, host_fatal() throws HostFatal back to the bridge.
 #include <stdexcept>
 #include <string>
+#include <vector>
+
+#include "types.hpp"
 
 namespace gb {
 
@@ -17,5 +20,13 @@ struct HostExit : std::runtime_error {
 };
 
 void host_stub_set_game_dir(const char *dir);
+
+// Every host_speaker() call since the last clear: (divisor, on) in order.
+struct SpeakerEvent {
+    u16 divisor;
+    bool on;
+};
+const std::vector<SpeakerEvent> &host_stub_speaker_log();
+void host_stub_speaker_clear();
 
 } // namespace gb

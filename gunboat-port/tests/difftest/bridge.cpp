@@ -75,6 +75,21 @@ void tick_counter() { ds_u16(0x08C0) = u16(ds_u16(0x08C0) + 1); }
 } // namespace
 GB_EXPORT void gb_set_tick(int kind) { host_set_timer(0, kind == 1 ? tick_counter : nullptr); }
 
+// The speaker calls (host_speaker) since the last clear: n pairs (divisor, on) into out[2n].
+GB_EXPORT void gb_speaker_clear() { host_stub_speaker_clear(); }
+GB_EXPORT int gb_speaker_log(u16 *out, int max)
+{
+    const auto &log = host_stub_speaker_log();
+    int n = 0;
+    for (const auto &e : log) {
+        if (n >= max) break;
+        out[2 * n] = e.divisor;
+        out[2 * n + 1] = e.on ? 1 : 0;
+        n++;
+    }
+    return int(log.size());
+}
+
 // DOS files: close everything, open a game file, and the position of a handle (-1 = closed).
 GB_EXPORT void gb_dos_reset() { dos_close_all(); }
 GB_EXPORT int gb_dos_open(const char *name, const char *mode) { return dos_open_name(name, mode, false); }

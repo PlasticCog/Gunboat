@@ -48,7 +48,12 @@ void host_set_kbd_handler(void (*handler)(u8)) { kbd_handler = handler; }
 void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handler; }
 bool host_joy_read(s16 *, s16 *, u8 *) { return false; }
 void host_opl_write(u8, u8) {}
-void host_speaker(u16, bool) {}
+namespace {
+std::vector<SpeakerEvent> speaker_log;
+}
+void host_speaker(u16 divisor, bool on) { speaker_log.push_back({divisor, on}); }
+const std::vector<SpeakerEvent> &host_stub_speaker_log() { return speaker_log; }
+void host_stub_speaker_clear() { speaker_log.clear(); }
 
 char *host_game_path(const char *name, bool create)
 {

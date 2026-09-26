@@ -354,6 +354,9 @@ class Harness:
         self.port = Port(dll)
         self.dos = dosmodel.DosModel(self.orig, GAME_DIR)
         self.bios = biosmodel.BiosModel(self.orig)
+        # Extra comparisons (e.g. a sound model): objects with before(harness) and after(harness) ->
+        # a list of problem strings; they run around every check().
+        self.extensions = []
         self.port.dll.gb_set_game_dir(str(GAME_DIR).encode())
         self.cases = {}
 
@@ -420,6 +423,8 @@ class Harness:
         self.bios.trace = bytearray()
         self.port.dll.gb_dac_trace_start()
         self.set_tick(tick)
+        for ext in self.extensions:
+            ext.before(self)
         if not self.port.has(name):
             raise Mismatch('%s is not in bridge.cpp' % name)
         file_seg, off, far = self.sym.func(name)
@@ -451,6 +456,8 @@ class Harness:
             problems.append('DAC differs at colours %s: original %s, port %s' % (
                 sorted(set(diff))[:8], bytes(self.bios.dac[3 * diff[0]:3 * diff[0] + 3]).hex(),
                 port_dac.raw[3 * diff[0]:3 * diff[0] + 3].hex()))
+        for ext in self.extensions:
+            problems += ext.after(self)
         model_files, port_files = self.files_state()
         if model_files != port_files:
             problems.append('open files (handle: position): original %s, port %s' % (model_files, port_files))
