@@ -35,7 +35,6 @@ src/render/             render3d.md: the 3D renderer (camera, terrain window and
 src/mission/            world.md: the mission (mission_load.cpp: mission_load, mission_setup)
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
-legacy/                 the Codex prototype (reference only)
 ```
 
 CMake builds `gbcore` (everything in `src/` except `main.cpp` and `host.cpp`, no SDL), then

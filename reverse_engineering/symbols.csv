@@ -241,23 +241,23 @@ func,0919:5529,sky_water_tandy,near void(),render3d,spec:render3d,§1.2
 func,0919:55da,water_marks_tandy,near void(),render3d,spec:render3d,§1.2
 func,0919:5a9f,sprite_cache_invalidate,far void(),world,spec:world,§3.3
 func,0919:5acc,sprite_prepare,near void(BX entry),render3d,spec:render3d,§5.7
-func,0919:5aeb,sprite_cache_build,,render3d,codex,NATIVE_PORT.md EC7B: sprite cache
-func,0919:5c71,blit_record,,render3d,codex,"NATIVE_PORT.md EE01: direct VGA blitter, zero = transparent"
+func,0919:5aeb,sprite_cache_build,,render3d,codex,Codex-era note: EC7B: sprite cache
+func,0919:5c71,blit_record,,render3d,codex,"Codex-era note: EE01: direct VGA blitter, zero = transparent"
 func,0919:5d5a,blit_place,near void(),render3d,spec:render3d,§5.7
 func,0919:5e66,blit_rows_vga,near void(),render3d,td3-match+spec:render3d,"§5.7 TD3 match sprite_rows_mirror (wrong role here) | was sprite_rows_mirror | TD3 0e12:2a9e sprite_rows_mirror, score 0.64; low score: confirm in the spec"
 func,0919:5f4b,sprite_scale_rows,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 0: rows kept by the row pattern, columns by the column pattern | TD3 0e12:2d54 sprite_scale_rows, score 0.57; low score: confirm in the spec"
-func,0919:5fc8,sprite_scale_rows_up,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 1: rows 1-2 times, columns 1-2 times | TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:5fc8,sprite_scale_rows_up,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 1: rows 1-2 times, columns 1-2 times | TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | Codex-era note: sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6054,sprite_scale_rows_up2,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 2-3: rows 2-4 times, columns 2-3 times | was sprite_scale_rows_up_b | TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec"
 func,0919:60e0,sprite_view_angle,near void(BX entry DX distance),render3d,spec:render3d,§5.7 -> D864 D86A
 func,0919:6174,sprite_scale_patterns,near void(),render3d,td3-match+spec:render3d,"§5.7 column/row patterns and zoom from D864 | TD3 0e12:2eb6 sprite_scale_patterns, score 0.95"
 func,0919:6244,sprite_row_box,near (ES BX SI CL DI)->DI,render3d,spec:render3d,"§5.7 row type 0: two faces turned by the view, shrunk"
-func,0919:6373,sprite_row_box_up,near (ES BX SI CL DI)->DI,render3d,codex+spec:render3d,"§5.7 row type 0, zoom 1 | was sprite_cache_f503 | NATIVE_PORT.md F503; role to name in the spec"
+func,0919:6373,sprite_row_box_up,near (ES BX SI CL DI)->DI,render3d,codex+spec:render3d,"§5.7 row type 0, zoom 1 | was sprite_cache_f503 | Codex-era note: F503; role to name in the spec"
 func,0919:64ac,sprite_row_box_up2,near (ES BX SI CL DI)->DI,render3d,spec:render3d,"§5.7 row type 0, zoom 2"
 func,0919:65eb,sprite_row_turn,near (ES BX CL DI)->DI,render3d,spec:render3d,"§5.7 row type 80h: a strip scrolled by the view, shrunk"
-func,0919:66a7,sprite_row_turn_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 80h, zoom 1 | was sprite_scale_row_up | TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:66a7,sprite_row_turn_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 80h, zoom 1 | was sprite_scale_row_up | TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | Codex-era note: sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6764,sprite_row_turn_up2,near (ES BX CL DI)->DI,render3d,spec:render3d,"§5.7 row type 80h, zoom 2"
 func,0919:6824,sprite_row_flat,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h: a centred row, shrunk | was sprite_scale_row | TD3 0e12:2f84 sprite_scale_row, score 1.00"
-func,0919:68a4,sprite_row_flat_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h, zoom 1 | was sprite_scale_row_up_b | TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:68a4,sprite_row_flat_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h, zoom 1 | was sprite_scale_row_up_b | TD3 0e12:3004 sprite_scale_row_up, score 1.00 | Codex-era note: sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
 func,0919:6925,sprite_row_flat_up2,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h, zoom 2 | was sprite_scale_row_up_c | TD3 0e12:3004 sprite_scale_row_up, score 0.77; low score: confirm in the spec"
 func,0919:69a9,visible_list_rebuild,near void(),render3d,spec:render3d,§5.1
 func,0919:6af9,object_update,near void(),render3d,spec:render3d,§5.3-5.4 sort and ramming

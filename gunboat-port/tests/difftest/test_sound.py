@@ -104,7 +104,7 @@ def engine_update(h, m, rng):
 
 def test_sfx_effects(h, rng, scale):
     """Every effect through the timer interrupt, 260 interrupts each, with and without the engine
-    note; then a long run with interruptions, mute and engine changes, as the legacy test did."""
+    note; then a long run with interruptions, mute and engine changes, as the Codex-era test did."""
     n = 0
     with sound(h) as model:
         for effect in range(13):

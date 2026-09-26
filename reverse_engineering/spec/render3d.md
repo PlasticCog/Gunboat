@@ -368,7 +368,7 @@ shifted left and back (bit 15 lost), and its caller's loop goes on with it.
 bits 0–2 × 32 (the boat: `B81E + 80h`) + `50D4[i]`; kinds 39h and ≥ 3Fh are not directional;
 apparent size from `DS:53AC[kind] & FCh` × 8 against the distance through the atan table →
 `D864` → `501F[i]`. Then `sprite_cache_build` (`0919:5aeb`) builds the cached image at that
-size and view (Codex: `SpriteBank::decode` in `gunboat-port/legacy/src/assets.cpp`, NATIVE_PORT.md).
+size and view (ported: `src/render/sprites.cpp`).
 `blit_record` (`0919:5c71`) and `0919:5d5a` place it by bearing and inverse distance and call
 the per-mode row copier: VGA `0919:5e66` (the TD3 matcher's name `sprite_rows_mirror` was
 wrong here), EGA `48da`, CGA `4056`, Tandy `4f96`; zero pixels are transparent; kind 39h is

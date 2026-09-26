@@ -25,7 +25,6 @@ layer, and never change the faithful core.
 | --- | --- |
 | `gunboat-port/` | The C++ port (CMake + SDL3). **`gunboat-port/PORTING.md`**: code layout, memory API, how to port and test a function |
 | `gunboat-port/tests/difftest/` | Differential tests: `gbdiff.py` harness, `bridge.cpp`, `test_*.py` |
-| `gunboat-port/legacy/` | The Codex prototype (invented patrol mode + verified translations), reference only |
 | `reverse_engineering/RE_GUIDE.md` | **Read first**: addresses, segment map, files, how to regenerate |
 | `reverse_engineering/symbols.csv` | The single name list for functions and globals |
 | `reverse_engineering/map/` | Function index and TD3 matches (generated, tracked) |
@@ -34,7 +33,6 @@ layer, and never change the faithful core.
 | `reverse_engineering/out/` | Generated: unpacked EXE, Ghidra project, decompilation `decomp/gb_ds.c` (ignored) |
 | `Original DOS version/` | The original game (ignored). `SteelThunder/` is the predecessor game, for reference. |
 | `test-drive-3-sdl3/` | Reference port (MIT, separate git repo, ignored): specs, tools, `td3port/` skeleton |
-| `archive/` | Local only (git-ignored): abandoned prototypes, old research notes and tools. Don't build on them. |
 | `_tools/` | Ghidra install (ignored) |
 
 ## Porting rules (adapted from `test-drive-3-sdl3/td3port/PORTING.md`)
@@ -63,20 +61,19 @@ layer, and never change the faithful core.
 
 1. **Differential test**: run the original function in Unicorn and the C++ function on the same
    randomized memory, then compare all memory and the return registers:
-   `Harness.check` in `gunboat-port/tests/difftest/gbdiff.py` (PORTING.md). The Codex tests in
-   `gunboat-port/legacy/tests/` compare hand-picked bytes only; new tests compare all memory.
+   `Harness.check` in `gunboat-port/tests/difftest/gbdiff.py` (PORTING.md).
 2. **Scene checks**: compare frames against DOSBox captures of the original
-   (`reverse_engineering/out/dosbox_captures`) and headless snapshots (`SDL_VIDEO_DRIVER=dummy`).
+   (`reverse_engineering/out/dosbox_captures`) and headless snapshots (`SDL_VIDEO_DRIVER=dummy`):
+   `gunboat-port/tests/scenes/scene_check.py` (title), `scene_mission.py` (cockpit, map).
 3. Report results honestly, with numbers. A test that was skipped or narrowed must be stated.
 
 ## Commands (Windows; PowerShell 5.1 or Git Bash)
 
 ```text
 # toolchain: MSYS2 UCRT64 (GCC 15, CMake, Ninja) at C:\msys64\ucrt64\bin; Python 3.13 with capstone, unicorn, pillow
-powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (5 tests)
+powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
 gunboat-port/build/gunboat.exe --game-dir "Original DOS version" --check
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
-python gunboat-port/legacy/tests/verify_assets.py              # Codex tests (and the other verify_*.py)
 python reverse_engineering/tools/merge_symbols.py              # spec/*_symbols.csv -> symbols.csv
 python reverse_engineering/tools/symbols.py                    # validate symbols.csv after editing it
 python reverse_engineering/tools/gen_symbols.py                # symbols.csv -> gunboat-port/src/symbols.hpp
@@ -118,4 +115,5 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Next: phase 5**, enhancements in a separate layer (resolution, widescreen, 60 fps, a
   launcher), never changing the faithful core; and optionally the parked video modes and sound
   devices.
-* `gunboat-port/legacy/` is the Codex prototype (an invented patrol mode), reference only.
+* The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
+  were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

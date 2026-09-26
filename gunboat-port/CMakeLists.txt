@@ -54,10 +54,6 @@ if(NOT MSVC)
 endif()
 
 enable_testing()
-option(GB_LEGACY "Also build the Codex prototype (legacy/, gunboat_legacy)" ON)
-if(GB_LEGACY)
-  add_subdirectory(legacy)
-endif()
 
 add_test(NAME load_exe COMMAND gunboat --game-dir "${GB_GAME_DIR}" --check)
 add_test(NAME host_timer COMMAND gunboat --host-test)

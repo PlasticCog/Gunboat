@@ -247,7 +247,7 @@ block in regions 0–2.
 | 59h | 5401 + kind | score word index per kind 0..18h (simulation §7.2) |
 | 72h | 541A + 2·kind | behaviour byte, class byte per kind 0..2Fh (simulation §8.1) |
 | D2h | 547A + 2·kind | name text offset per kind, relative to DS:6E54 with 16-bit wrap (points into the B data) |
-| … | | name texts; sprite data B (NATIVE_PORT.md; the A data's row pointers can reach into it) |
+| … | | name texts; sprite data B (render3d §5.7; the A data's row pointers can reach into it) |
 
 Kind names (region 0 / 1 / 2 / 3 where they differ):
 
@@ -293,9 +293,8 @@ give the tanks weapon class 6 and higher accuracy.
 
 Header words: `[0]` offset of the animation byte whose bit 20h `enemy_update` toggles once per
 frame and time compression holds (simulation §8.3); `[2]`, `[4]` colour-remap range; `[6]` the
-composite-parts table for sprites (NATIVE_PORT.md); further words: sprite descriptors. The mission
-text blocks (§6.2) are inside it. Sprite decoding: `gunboat-port/legacy/src/assets.cpp`
-(`SpriteBank`), verified.
+composite-parts table for sprites (render3d §5.7); further words: sprite descriptors. The mission
+text blocks (§6.2) are inside it. Sprite decoding: `src/render/sprites.cpp`, verified.
 
 ### 6.5 Other files loaded for a mission
 

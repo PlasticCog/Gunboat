@@ -19,9 +19,7 @@ format, LZW decompressor, graphics library and Microsoft C 5.1 runtime.
 | `tools/x86dis.py out/GB_unp.exe dis SSSS:OOOO LEN` | Ground-truth disassembly when the decompiler looks wrong |
 | `tools/adlib_dis.py [--fn OOOO ...] [--data]` | Disassembly of the user's `ADLIB.COM` (the Ad Lib driver GB.EXE calls through INT 65h; spec `spec/adlib_driver.md`) |
 | `/gunboat-port/tests/difftest/` | Differential tests: original x86 in Unicorn against the port's C++, all memory compared (`gunboat-port/PORTING.md`) |
-| `/gunboat-port/legacy/tests/verify_*.py` | The Codex-era Unicorn tests (hand-picked bytes) |
 | `ORIGINAL_WORLD_FORMAT.md`, `OBJECT_FORMAT.md` | Decoded world, tile and object formats |
-| `/gunboat-port/legacy/ORIGINAL_*.md` | Codex-era translations of physics, weapons and PC-speaker audio |
 
 Everything under `out/` is generated and git-ignored (much of it is derived from the original
 game data). `map/` and `symbols.csv` are tracked.

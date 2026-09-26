@@ -1,4 +1,4 @@
-# Gunboat — faithful C++ / SDL3 source port (work in progress)
+# Gunboat — faithful C++ / SDL3 source port
 
 A reimplementation of Accolade's **Gunboat: River Combat Simulation** (DOS, 1990), rebuilt
 function by function from the original `GB.EXE` in C++ on SDL3. It reads the original game files
@@ -13,11 +13,10 @@ original function and check it against the original machine code.
 
 | Phase | State |
 | --- | --- |
-| Executable map | Done: 597 functions indexed, 468 named (`reverse_engineering/RE_GUIDE.md`) |
+| Executable map | Done: 597 functions indexed, 504 named (`reverse_engineering/RE_GUIDE.md`) |
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
 | Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
 | Porting | Done for VGA: the whole game runs natively and matches the original (433 functions of GB.EXE and the Ad Lib driver's 52, each verified; `gunboat-port/Run Port.cmd`). Next: enhancements in a separate layer |
-| Playable build | `gunboat-port/legacy/`: an earlier *non-faithful* patrol mode on the original assets, kept as a reference until the port replaces it |
 
 ## Layout
 
@@ -27,11 +26,11 @@ original function and check it against the original machine code.
 | `reverse_engineering/` | Executable map, symbols, specs, format notes and Python tools |
 | `gunboat-port/` | C++ / SDL3 code (CMake) and differential tests against the original code |
 
-## Building the current build (Windows)
+## Building and playing (Windows)
 
 MSYS2 UCRT64 (GCC, CMake, Ninja) and SDL3: `powershell -File gunboat-port/Build.ps1` builds
-and tests everything. `gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE> --check`
-checks the original executable; the prototype runs as `gunboat_legacy.exe` (`gunboat-port/legacy/README.md`).
+and tests everything. `gunboat-port/Run Port.cmd` plays the game from `Original DOS version/` next to
+`gunboat-port/`, or run `gunboat-port/build/gunboat.exe --game-dir <folder with GB.EXE>`.
 
 ## Credits
 

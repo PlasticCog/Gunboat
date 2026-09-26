@@ -17,11 +17,6 @@ Converted to C++ for the port (each file says so in its header):
 Adapted tools: `reverse_engineering/tools/unexepack.py`, `x86dis.py`, `gbindex.py`,
 `gen_symbols.py`, `merge_symbols.py` and the Ghidra scripts (each says so in its header).
 
-The Codex prototype keeps its unmodified C copies of `host.c`, `host.h`, `types.h`,
-`platform/vga.*` (with Gunboat captions) and a small `mem.h` adapter in `legacy/vendor/td3`, with
-the license. `legacy/src/assets.cpp` adapts the EXEPACK method of `mem.c` and the LZW dictionary
-semantics of `platform/pic.c`.
-
 ## Nuked-OPL3
 
 Unmodified `opl3.c` / `opl3.h` in [`vendor/nuked-opl3`](vendor/nuked-opl3), with its license.

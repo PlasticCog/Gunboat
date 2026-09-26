@@ -5,8 +5,7 @@ layout (see `/CLAUDE.md` for the method and `PORTING.md` for how the code is org
 **The whole game runs natively** in VGA: the title and its music, the menu and the demo, the
 practice missions, the headquarters, the front end, every campaign mission with its stations, map
 and damage report, the debrief and the roster. `Run Port.cmd` starts it (`--fps N` sets the 3D
-stations' frame rate, default 15; `--sound adlib|speaker`); `Run Gunboat.cmd` starts the earlier
-Codex prototype.
+stations' frame rate, default 15; `--sound adlib|speaker`).
 
 | Part | State |
 | --- | --- |
@@ -22,7 +21,6 @@ Codex prototype.
 | Ported functions | 433 GB.EXE functions and 52 ADLIB.COM routines, each matching the original on all memory (not ported by design: the EGA/CGA/Tandy/Hercules paths, MT-32/CMS, the text console) |
 | Differential tests (`tests/difftest/`) | 214 tests, 174,770 cases, 0 mismatches: memory, registers, DAC writes, speaker, timer and OPL events, open and written files; whole missions and front-end runs |
 | Scene checks (`tests/scenes/`) | the title screens match DOSBox captures on 100% of pixels, the pilot's cockpit on 99.47% and the map on 99.97% (`scene_mission.py`: the rest is the moment: water marks, clock, boat marker) |
-| Codex prototype (`legacy/`) | The earlier playable patrol mode, kept as a reference |
 
 ## Build and test (Windows)
 
@@ -42,7 +40,7 @@ ctest --test-dir gunboat-port/build --output-on-failure
 
 The tests: `load_exe` (`gunboat --check`), `host_timer` (`gunboat --host-test`, headless),
 `difftest` (`tests/difftest/run_all.py`, needs Python 3 with `unicorn` and `capstone` and
-`reverse_engineering/out/GB_unp.exe` from `unexepack.py`), and the prototype's `legacy_*`.
+`reverse_engineering/out/GB_unp.exe` from `unexepack.py`).
 `python gunboat-port/tests/scenes/scene_check.py` runs the port headless and compares its frames
 with the DOSBox captures in `reverse_engineering/out/dosbox_captures`.
 `GB_GAME_DIR` points the tests at the original files (default `../Original DOS version`).

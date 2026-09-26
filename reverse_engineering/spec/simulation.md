@@ -331,10 +331,8 @@ but the fire bit is dropped.
 
 ## 4. Pilot, engines and propulsion
 
-The kernels in this section were translated by the Codex sessions and differential-tested
-against the original (`gunboat-port/legacy/src/original_physics.cpp`, `ORIGINAL_PHYSICS.md`: 20,400
-cases, 0 mismatches). This section places them in the frame and adds the parts those tests
-skipped.
+The kernels in this section are ported (`src/game/sim_motion.cpp`) and differential-tested against
+the original on all memory (`test_core.py`, `test_frame.py`).
 
 ### 4.1 Pilot controls **verified**
 
