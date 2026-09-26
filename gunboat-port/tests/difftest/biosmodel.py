@@ -23,10 +23,15 @@ def bios_init(m):
     struct.pack_into('<H', m, BDA + COLS, 80)
     struct.pack_into('<H', m, BDA + PAGE_SIZE, 0x1000)
     struct.pack_into('<H', m, BDA + CURSOR_SHAPE, 0x0607)
+    struct.pack_into('<H', m, BDA + 0x63, 0x03D4)                           # the CRTC's port (colour)
     struct.pack_into('<HHHH', m, 8 * 4, 0xFEA5, 0xF000, 0xE987, 0xF000)   # INT 8, INT 9: the BIOS
 
 
 class BiosModel:
+    def _in3da(self, uc):
+        self.retrace ^= 1
+        return 0x08 if self.retrace else 0x00
+
     def __init__(self, orig):
         self.orig = orig
         self.uc = orig.uc
@@ -34,7 +39,11 @@ class BiosModel:
         self.trace = bytearray()              # every DAC write in order: index, r, g, b
         orig.ints[0x10] = self.int10
         orig.ints[0x1A] = self.int1a
-        orig.ins[0x3DA] = lambda uc: 0x08           # always in the vertical retrace (see gbdiff)
+        # the input status: the vertical retrace bit alternates on each read, starting in the
+        # retrace, so a wait for the retrace ends at once and a wait for its end at the next read
+        self.retrace = 0
+        orig.ins[0x3DA] = self._in3da
+        orig.outs[0x3D4] = lambda uc, value: None     # the CRTC (the display start: gbdiff compares memory)
         for port in (0x3CE, 0x3C4, 0x3B4, 0x3B5, 0x3B8, 0x3BF):
             orig.outs[port] = lambda uc, value: None  # graphics/sequencer/Hercules registers
         # system port B (61h): bit 7 keyboard acknowledge, bits 0-1 the speaker gate (read back as

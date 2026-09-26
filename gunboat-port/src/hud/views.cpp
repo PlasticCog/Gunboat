@@ -27,41 +27,44 @@ void movsw(u16 es, u16 &di, u16 ds, u16 &si, u16 cx)
 }
 
 // The dispatch every view_copy_N shares (0919:8a32 ...): AL = the video mode's low byte; above 0Dh
-// (VGA) the VGA routine runs with ES = page_segments[dst], DS = page_segments[src].
-void dispatch(u16 src_page, u16 dst_page, void (*vga)(u16 es, u16 ds))
+// (VGA) the VGA routine runs with ES = page_segments[dst], DS = page_segments[src]. The far routine
+// keeps DS and ES but not SI: the copy's source offset at its end reaches the callers (mission_run's
+// SI, caller_si), so it is returned.
+u16 dispatch(u16 src_page, u16 dst_page, u16 (*vga)(u16 es, u16 ds), u16 si)
 {
     const u8 mode = u8(ds_u16(DS_video_mode));
     const u16 es = ds_u16(u16(DS_page_segments + 2 * dst_page));
     const u16 ds = ds_u16(u16(DS_page_segments + 2 * src_page));
-    if (mode > 0x0D) vga(es, ds);
-    // PORT: not ported (EGA/Tandy/CGA parked): mode 0Dh, 9-0Ch, and below 9.
+    if (mode > 0x0D) return vga(es, ds);
+    // PORT: not ported (EGA/Tandy/CGA parked): mode 0Dh, 9-0Ch, and below 9 (SI then unchanged).
+    return si;
 }
 
 } // namespace
 
 // 0919:8a32 view_copy_1 (hud.md §6)
-void view_copy_1(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_1_vga); }
+u16 view_copy_1(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_1_vga, si); }
 // 0919:8ad5 view_copy_2
-void view_copy_2(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_2_vga); }
+u16 view_copy_2(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_2_vga, si); }
 // 0919:8b43 view_copy_3
-void view_copy_3(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_3_vga); }
+u16 view_copy_3(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_3_vga, si); }
 // 0919:8bf9 view_copy_4
-void view_copy_4(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_4_vga); }
+u16 view_copy_4(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_4_vga, si); }
 // 0919:8cd3 view_copy_5
-void view_copy_5(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_5_vga); }
+u16 view_copy_5(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_5_vga, si); }
 // 0919:8d45 view_copy_6
-void view_copy_6(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_6_vga); }
+u16 view_copy_6(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_6_vga, si); }
 // 0919:8db7 view_copy_7
-void view_copy_7(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_7_vga); }
+u16 view_copy_7(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_7_vga, si); }
 // 0919:8e47 view_copy_8
-void view_copy_8(u16 src_page, u16 dst_page) { dispatch(src_page, dst_page, view_copy_8_vga); }
+u16 view_copy_8(u16 src_page, u16 dst_page, u16 si) { return dispatch(src_page, dst_page, view_copy_8_vga, si); }
 
 // 0919:8a72 view_copy_1_vga: 8 rows from DS:9678 to ES:6480, each a run of BL words and, while BH
 // is above 0, a run of BH words after a gap (20h bytes growing by 20h per row at the destination,
 // 10h growing by 20h at the source); BL and BH drop by 8 per row (60 and 20 words at first). Then
 // 64 source rows of 80 bytes from DS:5028, each copied as 5 pieces of 16 bytes to 5 successive rows
 // going up from one row above ES:26D8 + 320 * row, each piece 16 bytes further right.
-void view_copy_1_vga(u16 es, u16 ds)
+u16 view_copy_1_vga(u16 es, u16 ds)
 {
     u16 di = 0x6480, si = 0x9678;
     u8 bl = 0x3C, bh = 0x14;
@@ -91,11 +94,12 @@ void view_copy_1_vga(u16 es, u16 ds)
         di = u16(di + 0x730);
         si = u16(si + 0xF0);
     }
+    return si;
 }
 
 // 0919:8b15 view_copy_2_vga: 8 rows from DS:9628 to ES:6418, each two runs of BL words (60, then 8
 // fewer per row) with a gap of 20h (destination) / 10h (source) bytes growing by 20h per row.
-void view_copy_2_vga(u16 es, u16 ds)
+u16 view_copy_2_vga(u16 es, u16 ds)
 {
     u16 di = 0x6418, si = 0x9628;
     u8 bl = 0x3C;
@@ -111,6 +115,7 @@ void view_copy_2_vga(u16 es, u16 ds)
         dx = u16(dx + 0x20);
         bl = u8(bl - 8);
     } while (!(bl & 0x80));
+    return si;
 }
 
 // 0919:8b83 view_copy_3_vga: 8 rows from DS:9628 to ES:6400: a run of BL words while BL is above 0
@@ -118,7 +123,7 @@ void view_copy_2_vga(u16 es, u16 ds)
 // row while BL stays positive, by 18h in the row where BL reaches -4, by 10h after. Then 64 source
 // rows of 80 bytes from DS:50D8, each as 5 pieces of 16 bytes to 5 successive rows going down from
 // ES:2158, each piece 16 bytes further right; the next source row goes one row further down.
-void view_copy_3_vga(u16 es, u16 ds)
+u16 view_copy_3_vga(u16 es, u16 ds)
 {
     u16 di = 0x6400, si = 0x9628;
     u8 bl = 0x14, bh = 0x3C;
@@ -154,12 +159,13 @@ void view_copy_3_vga(u16 es, u16 ds)
         di = u16(di - 0x550);
         si = u16(si + 0xF0);
     }
+    return si;
 }
 
 // 0919:8c39 view_copy_4_vga: a fixed pattern of runs from DS:8728 to ES:4620 (same offsets on both
 // pages): 8, 60h, 8 and 60h words with gaps, 9 rows of 58h words, 4 rows of 48h words, a row of 4,
 // 30h and 4 words, 4 rows of 30h words.
-void view_copy_4_vga(u16 es, u16 ds)
+u16 view_copy_4_vga(u16 es, u16 ds)
 {
     u16 di = 0x4620, si = 0x8728;
     auto gap = [&](u16 n) {
@@ -194,6 +200,7 @@ void view_copy_4_vga(u16 es, u16 ds)
         movsw(es, di, ds, si, 0x30);
         gap(0xE0);
     }
+    return si;
 }
 
 // 0919:8e29 view_copy_head_vga: 9 rows of 68h words from DS:8880 to ES:4778 (same row stride on
@@ -213,7 +220,7 @@ namespace {
 
 // The body view_copy_5..8_vga share after view_copy_head_vga: `rows_a` rows of 18h words, then
 // `rows_b` rows of two runs of `run` words separated by `gap` bytes (both pages alike).
-void view_copy_tail(u16 es, u16 ds, u8 rows_a, u8 rows_b, u16 run, u16 gap)
+u16 view_copy_tail(u16 es, u16 ds, u8 rows_a, u8 rows_b, u16 run, u16 gap)
 {
     DiSi p = view_copy_head_vga(es, ds);
     for (u8 dl = rows_a; dl; dl--) {
@@ -229,22 +236,23 @@ void view_copy_tail(u16 es, u16 ds, u8 rows_a, u8 rows_b, u16 run, u16 gap)
         p.si = u16(p.si + 0x110);
         p.di = u16(p.di + 0x110);
     }
+    return p.si;
 }
 
 } // namespace
 
 // 0919:8d13 view_copy_5_vga: view_copy_head_vga, 4 rows of 18h words, 6 rows of 4 + 4 words 20h
 // bytes apart.
-void view_copy_5_vga(u16 es, u16 ds) { view_copy_tail(es, ds, 4, 6, 4, 0x20); }
+u16 view_copy_5_vga(u16 es, u16 ds) { return view_copy_tail(es, ds, 4, 6, 4, 0x20); }
 
 // 0919:8d85 view_copy_6_vga: view_copy_head_vga, 4 rows of 18h words, 6 rows of 8 + 8 words 10h
 // bytes apart.
-void view_copy_6_vga(u16 es, u16 ds) { view_copy_tail(es, ds, 4, 6, 8, 0x10); }
+u16 view_copy_6_vga(u16 es, u16 ds) { return view_copy_tail(es, ds, 4, 6, 8, 0x10); }
 
 // 0919:8df7 view_copy_7_vga: view_copy_head_vga, 6 rows of 18h words, 4 rows of 8 + 8 words.
-void view_copy_7_vga(u16 es, u16 ds) { view_copy_tail(es, ds, 6, 4, 8, 0x10); }
+u16 view_copy_7_vga(u16 es, u16 ds) { return view_copy_tail(es, ds, 6, 4, 8, 0x10); }
 
 // 0919:8e87 view_copy_8_vga: view_copy_head_vga, 2 rows of 18h words, 2 rows of 8 + 8 words.
-void view_copy_8_vga(u16 es, u16 ds) { view_copy_tail(es, ds, 2, 2, 8, 0x10); }
+u16 view_copy_8_vga(u16 es, u16 ds) { return view_copy_tail(es, ds, 2, 2, 8, 0x10); }
 
 } // namespace gb

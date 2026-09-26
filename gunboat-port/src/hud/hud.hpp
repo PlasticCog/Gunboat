@@ -27,22 +27,23 @@ void radar_plot(u8 ah, u16 cx);     // 0919:2932  AH = bearing, CX = distance; A
 
 // ---- the view copies of view_present (views.cpp), hud.md §6. The far routines take the source
 // and destination page numbers (pages from page_segments); the VGA routines the segments (ES, DS).
-void view_copy_1(u16 src_page, u16 dst_page);  // 0919:8a32
-void view_copy_2(u16 src_page, u16 dst_page);  // 0919:8ad5
-void view_copy_3(u16 src_page, u16 dst_page);  // 0919:8b43
-void view_copy_4(u16 src_page, u16 dst_page);  // 0919:8bf9
-void view_copy_5(u16 src_page, u16 dst_page);  // 0919:8cd3
-void view_copy_6(u16 src_page, u16 dst_page);  // 0919:8d45
-void view_copy_7(u16 src_page, u16 dst_page);  // 0919:8db7
-void view_copy_8(u16 src_page, u16 dst_page);  // 0919:8e47
-void view_copy_1_vga(u16 es, u16 ds);          // 0919:8a72
-void view_copy_2_vga(u16 es, u16 ds);          // 0919:8b15
-void view_copy_3_vga(u16 es, u16 ds);          // 0919:8b83
-void view_copy_4_vga(u16 es, u16 ds);          // 0919:8c39
-void view_copy_5_vga(u16 es, u16 ds);          // 0919:8d13
-void view_copy_6_vga(u16 es, u16 ds);          // 0919:8d85
-void view_copy_7_vga(u16 es, u16 ds);          // 0919:8df7
-void view_copy_8_vga(u16 es, u16 ds);          // 0919:8e87
+// They return the SI the copy leaves (the far routines keep DS and ES only).
+u16 view_copy_1(u16 src_page, u16 dst_page, u16 si);  // 0919:8a32
+u16 view_copy_2(u16 src_page, u16 dst_page, u16 si);  // 0919:8ad5
+u16 view_copy_3(u16 src_page, u16 dst_page, u16 si);  // 0919:8b43
+u16 view_copy_4(u16 src_page, u16 dst_page, u16 si);  // 0919:8bf9
+u16 view_copy_5(u16 src_page, u16 dst_page, u16 si);  // 0919:8cd3
+u16 view_copy_6(u16 src_page, u16 dst_page, u16 si);  // 0919:8d45
+u16 view_copy_7(u16 src_page, u16 dst_page, u16 si);  // 0919:8db7
+u16 view_copy_8(u16 src_page, u16 dst_page, u16 si);  // 0919:8e47
+u16 view_copy_1_vga(u16 es, u16 ds);          // 0919:8a72
+u16 view_copy_2_vga(u16 es, u16 ds);          // 0919:8b15
+u16 view_copy_3_vga(u16 es, u16 ds);          // 0919:8b83
+u16 view_copy_4_vga(u16 es, u16 ds);          // 0919:8c39
+u16 view_copy_5_vga(u16 es, u16 ds);          // 0919:8d13
+u16 view_copy_6_vga(u16 es, u16 ds);          // 0919:8d85
+u16 view_copy_7_vga(u16 es, u16 ds);          // 0919:8df7
+u16 view_copy_8_vga(u16 es, u16 ds);          // 0919:8e87
 struct DiSi {
     u16 di, si;
 };

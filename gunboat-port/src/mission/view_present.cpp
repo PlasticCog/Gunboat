@@ -113,7 +113,7 @@ void gun_pieces_16x3()
 }
 
 // 05bd:219c: station 3 (midship).
-void present_midship(u16 src_page, u16 dst_page)
+u16 present_midship(u16 src_page, u16 dst_page, u16 si)
 {
     draw_page(src_page);
     gun_frame_draw(u16(ds_u8(u16(DS_heading + 2)) - ds_u8(DS_heading) + 0x20));
@@ -146,12 +146,12 @@ void present_midship(u16 src_page, u16 dst_page)
     draw_page(dst_page);
     if (ds_u8(DS_view_sky_top) > 0x21) ds_u8(DS_view_sky_top) = 0x21;
     view_rows_copy(0x6C, 0x38, src_page, dst_page);
-    if (ds_u8(DS_midship_weapon) == 1) view_copy_5(src_page, dst_page);
-    else view_copy_6(src_page, dst_page);
+    if (ds_u8(DS_midship_weapon) == 1) return view_copy_5(src_page, dst_page, si);
+    return view_copy_6(src_page, dst_page, si);
 }
 
 // 05bd:252c: station 4 (stern).
-void present_stern(u16 src_page, u16 dst_page)
+u16 present_stern(u16 src_page, u16 dst_page, u16 si)
 {
     draw_page(src_page);
     gun_frame_draw(u16(ds_u8(u16(DS_heading + 3)) - ds_u8(DS_heading) + 0x20));
@@ -176,8 +176,8 @@ void present_stern(u16 src_page, u16 dst_page)
     draw_page(dst_page);
     if (ds_u8(DS_view_sky_top) > 0x21) ds_u8(DS_view_sky_top) = 0x21;
     view_rows_copy(0x6C, 0x38, src_page, dst_page);
-    if (ds_u8(DS_stern_weapon) != 0) view_copy_6(src_page, dst_page);
-    else view_copy_8(src_page, dst_page);
+    if (ds_u8(DS_stern_weapon) != 0) return view_copy_6(src_page, dst_page, si);
+    return view_copy_8(src_page, dst_page, si);
 }
 
 // One barrel of the bow weapon 0 (05bd:28bd, 29e8): the muzzle flash while its counter runs (the
@@ -211,7 +211,7 @@ void bow_barrel_draw(u16 flash_counter, u16 flash_x, u16 flash_white, u16 flash_
 }
 
 // 05bd:2836: station 2 (bow).
-void present_bow(u16 src_page, u16 dst_page)
+u16 present_bow(u16 src_page, u16 dst_page, u16 si)
 {
     draw_page(src_page);
     gun_frame_draw(u16(ds_u8(u16(DS_heading + 1)) - ds_u8(DS_heading) - 0x60));
@@ -256,8 +256,8 @@ void present_bow(u16 src_page, u16 dst_page)
         if (top <= 0x6C) gfx_copy_rect(0x28, 0x127, ds_u8(DS_view_sky_top_prev), 0x6C, 0x20, 0x38, src_page, dst_page);
     }
     ds_u8(DS_view_sky_top_prev) = ds_u8(DS_view_sky_top);
-    if (ds_u8(DS_bow_weapon) == 0) view_copy_4(src_page, dst_page);
-    else view_copy_7(src_page, dst_page);
+    if (ds_u8(DS_bow_weapon) == 0) return view_copy_4(src_page, dst_page, si);
+    return view_copy_7(src_page, dst_page, si);
 }
 
 } // namespace
@@ -266,31 +266,28 @@ void present_bow(u16 src_page, u16 dst_page)
 // pilot (1) gets the view through the windscreen of the look direction (0 left, 1 ahead, 2 right);
 // the gun stations first draw the gun frame and their weapon's sprites (sight, barrels, muzzle
 // flashes by the flash counters) on the source page, then copy. Other stations and look directions:
-// nothing.
-void view_present(u16 src_page, u16 dst_page)
+// nothing. Returns SI: the view copy's end offset (the copies do not keep SI), else the caller's.
+u16 view_present(u16 src_page, u16 dst_page, u16 si)
 {
     switch (ds_u16(DS_station)) {
     case 1:
         switch (ds_u16(DS_look_direction)) {
         case 0:
             pilot_rows_copy(0x78, 0xF7, 0x80, 0xF8, 0x127, 0x110, src_page, dst_page);
-            view_copy_1(src_page, dst_page);
-            return;
+            return view_copy_1(src_page, dst_page, si);
         case 1:
             pilot_rows_copy(0x28, 0xA7, 0x18, 0xA8, 0x127, 0xA8, src_page, dst_page);
-            view_copy_2(src_page, dst_page);
-            return;
+            return view_copy_2(src_page, dst_page, si);
         case 2:
             pilot_rows_copy(0x28, 0x57, 0x00, 0x58, 0xD7, 0x40, src_page, dst_page);
-            view_copy_3(src_page, dst_page);
-            return;
+            return view_copy_3(src_page, dst_page, si);
         default:
-            return;
+            return si;
         }
-    case 2: present_bow(src_page, dst_page); return;
-    case 3: present_midship(src_page, dst_page); return;
-    case 4: present_stern(src_page, dst_page); return;
-    default: return;
+    case 2: return present_bow(src_page, dst_page, si);
+    case 3: return present_midship(src_page, dst_page, si);
+    case 4: return present_stern(src_page, dst_page, si);
+    default: return si;
     }
 }
 

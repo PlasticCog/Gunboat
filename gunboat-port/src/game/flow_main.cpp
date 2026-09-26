@@ -1,7 +1,7 @@
 // main and the ways out (game_flow.md §1-§2).
 #include "game/flow.hpp"
 
-#include "game/pending.hpp"
+#include "mission/mission.hpp"
 #include "host.hpp"
 #include "mem.hpp"
 #include "platform/gfx.hpp"

@@ -36,6 +36,7 @@ void bios_init()
     mem_u16(BDA, BDA_COLS) = 80;
     mem_u16(BDA, BDA_PAGE_SIZE) = 0x1000;
     mem_u16(BDA, BDA_CURSOR_SHAPE) = 0x0607;
+    mem_u16(BDA, 0x0063) = 0x03D4;  // the CRTC's port (a colour adapter; gfx_set_display_offset reads it)
     // the BIOS timer and keyboard handlers (the IBM PC entry points)
     mem_u16(0, 8 * 4) = 0xFEA5;
     mem_u16(0, 8 * 4 + 2) = 0xF000;

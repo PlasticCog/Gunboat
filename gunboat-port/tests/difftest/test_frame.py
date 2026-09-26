@@ -8,7 +8,11 @@ captured where the original's game_frame enters each routine (test_render.captur
 where the routine branches."""
 import struct
 
-from gbdiff import DS_BASE, put8, put16
+from unicorn import UC_HOOK_CODE
+
+import mission_states
+from gbdiff import DS_BASE, MEM_SIZE, REGS, UC_REGS, Mismatch, lin, put8, put16, seg_of
+from test_sound import sound
 from test_render import BIG, capture, frame_states
 from test_sim2 import combat, visible_state
 from test_w2b import DivideStop
@@ -167,5 +171,157 @@ def test_key_f4(h, rng, scale):
     return n
 
 
+# ---------------------------------------------------------------- the mission loop
+
+LOOP_POLLS = None
+
+
+def loop_polls():
+    if mission_states.MISSION_POLL == '05bd:0000':
+        mission_states.MISSION_POLL = mission_states._find_mission_poll()
+    return mission_states.POLLS + [mission_states.MISSION_POLL, mission_states.STATION_WAIT_POLL]
+
+
+def main_state(h, demo=False, ctrl=False, **kw):
+    """main's memory when it calls mission_run (mission_states._base), optionally as the title's
+    demo sets it up (title_flow: DS:0080 = 1, F110 = 1, B505 = 1, DS:0070 = 1, script 0C68 = 8) and
+    with Ctrl held (so that a Q quits to DOS)."""
+    args = dict(practice=None, region=0, mission=1, rank=1, station=1, weapons=(0, 0, 1), engines=1, sea=1,
+                night=False, targets=0)
+    args.update(kw)
+    m = mission_states._base(h, **args)
+    if demo:
+        put16(m, 0x0080, 1)
+        put16(m, 0xF110, 1)
+        put16(m, 0xB505, 1)
+        put16(m, 0x0070, 1)
+        put8(m, 0x0C68, 8)
+        put8(m, 0x0C6A, 0)
+        put8(m, 0x0C6B, 0)
+    if ctrl:
+        put8(m, 0xDA3A, 1)
+    return m
+
+
+def loop_capture(h, m, keys, targets, per_target=4, max_calls=400):
+    """Runs the original's mission_run from m with the tick model and keys (one per tick) and returns
+    [(target, call number, registers, memory)] at the entries of `targets`: the first per_target
+    calls of each, then every 25th, until mission_run ends or max_calls entries of game_frame."""
+    out, counts, frames = [], {}, [0]
+    hooks = []
+
+    def make(name):
+        def hook(uc, address, size, _):
+            k = counts.get(name, 0)
+            counts[name] = k + 1
+            if k < per_target or k % 25 == 0:
+                r = {n: uc.reg_read(UC_REGS[n]) for n in REGS}
+                out.append((name, k, r, bytearray(uc.mem_read(0, MEM_SIZE))))
+            if name == 'game_frame':
+                frames[0] += 1
+                if frames[0] > max_calls:
+                    h.orig.fail('stop')
+        return hook
+    for name in targets:
+        fs, off, _ = h.sym.func(name)
+        at = lin(seg_of(fs), off)
+        hooks.append(h.orig.uc.hook_add(UC_HOOK_CODE, make(name), None, at, at))
+    try:
+        with sound(h):
+            h.set_tick((loop_polls(), 'both', keys))
+            h.orig.set_memory(m)
+            fs, off, far = h.sym.func('mission_run')
+            h.orig.call(fs, off, far, {}, (), max_insns=4_000_000_000)
+    except Mismatch as e:
+        if str(e) not in ('original: stop', 'original: exit(0)'):
+            raise
+    finally:
+        for k in hooks:
+            h.orig.uc.hook_del(k)
+        h.set_tick(None)
+    return out
+
+
+def spaced(keys, gap=30, lead=40):
+    out = [0] * lead
+    for k in keys:
+        out += [k] + [0] * gap
+    return out
+
+
+# Station changes and actions: v bow, n midship, b stern, z/x/c pilot looks, m map, / damage report,
+# . assignment, , chase view, F1 main switch, F2 engines, F8 faster, F10 fire at will.
+TOUR = [0x81, 0x82, 0x88, 0x88, ord('v'), 0x8A, ord('n'), ord('b'), ord('z'), ord('x'), ord('c'), ord('m'),
+        ord('/'), ord('.'), ord(','), ord(','), ord('x')]
+LOOP_CASES = [
+    ('gunnery practice', dict(practice=1)),
+    ('grenade practice', dict(practice=2)),
+    ('pilot practice', dict(practice=3)),
+    ('Vietnam 3', dict(region=0, mission=3, rank=5, weapons=(1, 0, 1))),
+    ('Colombia 2 (night)', dict(region=1, mission=2, rank=9, weapons=(0, 1, 2))),
+    ('Panama 5', dict(region=2, mission=5, rank=9, weapons=(1, 1, 0))),
+]
+
+
+def loop_snapshots(h, targets, tour=True, per_target=4):
+    cache = h.__dict__.setdefault('_loop_snapshots', {})
+    key = (tuple(targets), tour, per_target)
+    if key not in cache:
+        res = []
+        for label, kw in LOOP_CASES:
+            m = main_state(h, ctrl=True, **kw)
+            keys = spaced(TOUR + [ord('q')]) if tour else spaced([ord('q')], lead=300)
+            for name, k, regs, snap in loop_capture(h, m, keys, targets, per_target):
+                res.append(('%s, %s call %d' % (label, name, k), name, regs, snap))
+        cache[key] = res
+    return cache[key]
+
+
+def test_game_frame(h, rng, scale):
+    n = 0
+    for label, name, regs, snap in loop_snapshots(h, ['game_frame']):
+        h.check('game_frame', snap, regs=regs, label=label, max_insns=BIG)
+        n += 1
+        if rng.random() < 0.3:
+            m = bytearray(snap)
+            put8(m, 0xB7F1, rng.choice([1, 2]))                  # time compression
+            put8(m, 0xDA39, rng.choice([0, 0, 1]))                # fast forward
+            h.check('game_frame', m, regs=regs, label=label + ' (compressed)', max_insns=BIG)
+            n += 1
+    return n
+
+
+def test_station_screens(h, rng, scale):
+    n = 0
+    names = ['pilot_screen', 'bow_screen', 'stern_screen', 'midship_screen', 'chase_view_screen', 'view_restore']
+    seen = set()
+    for label, name, regs, snap in loop_snapshots(h, names):
+        h.check(name, snap, regs=regs, outputs=['si'], label=label, max_insns=BIG)
+        seen.add(name)
+        n += 1
+    missing = set(names) - seen
+    if missing:
+        raise Mismatch('station screens never reached: %s' % sorted(missing))
+    return n
+
+
+def test_mission_run(h, rng, scale):
+    """Whole missions from main's state: the title's demo (it ends at a real key, station 9) and
+    missions with a tour of the stations ended by Ctrl+Q (quit_to_dos, exit 0)."""
+    n = 0
+    m = main_state(h, demo=True, practice=1)
+    with sound(h):
+        h.check('mission_run', m, tick=(loop_polls(), 'both', [0] * 400 + [0x20]), max_insns=8_000_000_000,
+                label='demo')
+    n += 1
+    for label, kw in LOOP_CASES[:3 * scale]:
+        m = main_state(h, ctrl=True, **kw)
+        with sound(h):
+            h.check('mission_run', m, tick=(loop_polls(), 'both', spaced(TOUR + [ord('q')])), max_insns=8_000_000_000,
+                    label=label, exit_code=0)
+        n += 1
+    return n
+
+
 TESTS = [test_boat_motion, test_crew_pilot, test_incoming_fire, test_object_update, test_object_frame,
-         test_key_f4]
+         test_key_f4, test_game_frame, test_station_screens, test_mission_run]

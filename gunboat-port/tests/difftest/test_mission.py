@@ -184,7 +184,7 @@ def test_view_present(h, rng, scale):
             if i:
                 shake(m, rng)
                 src, dst = pages(m, rng)
-            h.check('view_present', m, stack_args=[src, dst], max_insns=BIG,
+            h.check('view_present', m, stack_args=[src, dst], outputs=['si'], regs={'si': 0x5A5A}, max_insns=BIG,
                     label='%s, case %d: %s' % (label, i, describe(m, src, dst)))
             n += 1
     return n
@@ -207,7 +207,7 @@ def test_view_present_branches(h, rng, scale):
             put8(m, SKY_TOP, sky)
             put8(m, SKY_TOP_PREV, prev)
             shake_pages(m, rng)
-            h.check('view_present', m, stack_args=[1, 0], max_insns=BIG,
+            h.check('view_present', m, stack_args=[1, 0], outputs=['si'], regs={'si': 0x5A5A}, max_insns=BIG,
                     label='%s sky %02X/%02X' % (where, sky, prev))
             n += 1
     fits = {'bow': [0, 1, 2, 0xFF], 'midship': [0, 1, 2, 3, 0x80], 'stern': [0, 1, 2, 0xFF]}
@@ -229,19 +229,19 @@ def test_view_present_branches(h, rng, scale):
                         else:
                             put8(m, 0xF10B, latch)
                             put8(m, 0xEA86, prev)
-                        h.check('view_present', m, stack_args=[1, 0], max_insns=BIG,
+                        h.check('view_present', m, stack_args=[1, 0], outputs=['si'], regs={'si': 0x5A5A}, max_insns=BIG,
                                 label='%s weapon %d latch %d prev %d pass %02X' % (
                                     where, weapon, latch, prev, world_pass))
                         n += 1
     for station in (0, 5, 6, 7, 8, 9, 0x0101, 0xFFFF):
         m = bytearray(states['pilot'])
         put16(m, STATION, station)
-        h.check('view_present', m, stack_args=[1, 0], label='station %X' % station)
+        h.check('view_present', m, stack_args=[1, 0], outputs=['si'], regs={'si': 0x5A5A}, label='station %X' % station)
         n += 1
     for look in (3, 0x0100, 0xFFFF):
         m = bytearray(states['pilot'])
         put16(m, LOOK, look)
-        h.check('view_present', m, stack_args=[1, 0], label='look %X' % look)
+        h.check('view_present', m, stack_args=[1, 0], outputs=['si'], regs={'si': 0x5A5A}, label='look %X' % look)
         n += 1
     return n
 
@@ -252,7 +252,7 @@ def test_view_present_frames(h, rng, scale):
     for where in STATION_KEYS:
         m = present_state(h, where, 3)
         for k in range(3):
-            h.check('view_present', m, stack_args=[1, 0], max_insns=BIG, label='%s, call %d' % (where, k))
+            h.check('view_present', m, stack_args=[1, 0], outputs=['si'], regs={'si': 0x5A5A}, max_insns=BIG, label='%s, call %d' % (where, k))
             m = bytearray(h.orig.memory())
             put8(m, SKY_TOP, rng.randrange(0x40))
             n += 1

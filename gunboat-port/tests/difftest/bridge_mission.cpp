@@ -5,4 +5,4 @@
 using namespace gb;
 
 // the present: C arguments (source page, destination page); AX is not compared (both callers ignore it)
-BRIDGE(view_present) { view_present(a[0], a[1]); }
+BRIDGE(view_present) { r.si = view_present(a[0], a[1], r.si); }

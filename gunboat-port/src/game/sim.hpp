@@ -9,6 +9,7 @@ u16 vec_scale(u8 al);          // 0919:3706  returns AX
 u16 heading_vector(u8 angle);  // 0919:7e5f  AL = angle, returns AX
 u16 boat_move(u16 si);         // 0919:7ee8  returns SI
 u16 boat_motion(u16 si);       // 0919:7ebb  returns SI (mission_stop)
+void game_frame(u16 si);       // 0919:8930  far; SI = the caller's (kept)
 
 // ---- controls (sim_controls.cpp): key actions, aiming, throttles, headings, fire keys
 void end_mission();                     // 0919:0906

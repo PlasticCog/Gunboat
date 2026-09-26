@@ -34,22 +34,22 @@ BRIDGE(radar_plot)
 
 // the view copies: the far routines take (src_page, dst_page); the VGA routines run with ES = the
 // destination and DS = the source segment (the harness calls them with DS = DGROUP)
-BRIDGE(view_copy_1) { view_copy_1(a[0], a[1]); }
-BRIDGE(view_copy_2) { view_copy_2(a[0], a[1]); }
-BRIDGE(view_copy_3) { view_copy_3(a[0], a[1]); }
-BRIDGE(view_copy_4) { view_copy_4(a[0], a[1]); }
-BRIDGE(view_copy_5) { view_copy_5(a[0], a[1]); }
-BRIDGE(view_copy_6) { view_copy_6(a[0], a[1]); }
-BRIDGE(view_copy_7) { view_copy_7(a[0], a[1]); }
-BRIDGE(view_copy_8) { view_copy_8(a[0], a[1]); }
-BRIDGE(view_copy_1_vga) { view_copy_1_vga(r.es, DGROUP); }
-BRIDGE(view_copy_2_vga) { view_copy_2_vga(r.es, DGROUP); }
-BRIDGE(view_copy_3_vga) { view_copy_3_vga(r.es, DGROUP); }
-BRIDGE(view_copy_4_vga) { view_copy_4_vga(r.es, DGROUP); }
-BRIDGE(view_copy_5_vga) { view_copy_5_vga(r.es, DGROUP); }
-BRIDGE(view_copy_6_vga) { view_copy_6_vga(r.es, DGROUP); }
-BRIDGE(view_copy_7_vga) { view_copy_7_vga(r.es, DGROUP); }
-BRIDGE(view_copy_8_vga) { view_copy_8_vga(r.es, DGROUP); }
+BRIDGE(view_copy_1) { r.si = view_copy_1(a[0], a[1], r.si); }
+BRIDGE(view_copy_2) { r.si = view_copy_2(a[0], a[1], r.si); }
+BRIDGE(view_copy_3) { r.si = view_copy_3(a[0], a[1], r.si); }
+BRIDGE(view_copy_4) { r.si = view_copy_4(a[0], a[1], r.si); }
+BRIDGE(view_copy_5) { r.si = view_copy_5(a[0], a[1], r.si); }
+BRIDGE(view_copy_6) { r.si = view_copy_6(a[0], a[1], r.si); }
+BRIDGE(view_copy_7) { r.si = view_copy_7(a[0], a[1], r.si); }
+BRIDGE(view_copy_8) { r.si = view_copy_8(a[0], a[1], r.si); }
+BRIDGE(view_copy_1_vga) { r.si = view_copy_1_vga(r.es, DGROUP); }
+BRIDGE(view_copy_2_vga) { r.si = view_copy_2_vga(r.es, DGROUP); }
+BRIDGE(view_copy_3_vga) { r.si = view_copy_3_vga(r.es, DGROUP); }
+BRIDGE(view_copy_4_vga) { r.si = view_copy_4_vga(r.es, DGROUP); }
+BRIDGE(view_copy_5_vga) { r.si = view_copy_5_vga(r.es, DGROUP); }
+BRIDGE(view_copy_6_vga) { r.si = view_copy_6_vga(r.es, DGROUP); }
+BRIDGE(view_copy_7_vga) { r.si = view_copy_7_vga(r.es, DGROUP); }
+BRIDGE(view_copy_8_vga) { r.si = view_copy_8_vga(r.es, DGROUP); }
 BRIDGE(view_copy_head_vga)
 {
     const DiSi p = view_copy_head_vga(r.es, DGROUP);

@@ -420,7 +420,7 @@ def test_view_copies(h, rng, scale):
             for src, dst in [(1, get16(base, VIEW_PAGE)), (1, 0), (0, 1), (1, 1), (2, 0)][:5 if key == '' else 2]:
                 m = bytearray(base)
                 shake_pages(m, rng)
-                h.check('view_copy_%d' % k, m, stack_args=[src, dst],
+                h.check('view_copy_%d' % k, m, stack_args=[src, dst], outputs=['si'],
                         label='station key %r pages %d -> %d' % (key, src, dst))
                 n += 1
     # the VGA routines by themselves (the harness runs them with DS = DGROUP): ES = the screen, page 1,
@@ -432,7 +432,7 @@ def test_view_copies(h, rng, scale):
             randomize(m, DS_BASE, 0xF640, rng)
             h.check(name, m, regs={'es': es, 'ax': rng.randrange(0x10000), 'cx': rng.randrange(0x10000),
                                    'dx': rng.randrange(0x10000), 'bx': rng.randrange(0x10000)},
-                    outputs=['di', 'si', 'cx'] if name == 'view_copy_head_vga' else [], label='ES %04X' % es)
+                    outputs=['di', 'si', 'cx'] if name == 'view_copy_head_vga' else ['si'], label='ES %04X' % es)
             n += 1
     return n
 
