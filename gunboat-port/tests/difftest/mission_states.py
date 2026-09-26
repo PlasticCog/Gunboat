@@ -4,7 +4,11 @@ it enters game_frame for the k-th time; the memory there is the state a test sta
 
     m = mission_state(h, practice=1)                 # gunnery practice, at the first game_frame
     m = mission_state(h, region=0, mission=3, frames=40, keys=[...])
-    m = mission_state(h, region=1, mission=5, rank=9, station=1, night=True)
+    m = mission_state(h, region=1, mission=5, rank=9, station=1)
+
+`night` only presets DS:B7FC: mission_setup recomputes day and night from the mission's start time,
+so for a night state choose a mission that starts at night (both practice missions; region 0
+missions 1, 4, 5; region 1 missions 1, 2, 4, 7; region 2 missions 1, 3, 5, 7).
 
 frames = the number of game_frame calls the original completes before the stop (0 = the state
 after mission_run's set-up, when it calls game_frame the first time). keys: one key per mission
