@@ -103,10 +103,12 @@ func,0919:2273,propulsion,near void(),simulation,spec:simulation,§4.3 wake + en
 func,0919:2529,engine_thrust,,simulation,codex,"ORIGINAL_PHYSICS.md B6B9: one engine thrust, fuel, leaks, startup; propulsion body is inside 0919:2273 at +4E (B451)"
 func,0919:29f9,accelerate_speed,,simulation,codex,"ORIGINAL_PHYSICS.md BB89: one unit toward target, pitch impulse +-5"
 func,0919:2a37,boat_hit,near void(AL class),simulation,spec:simulation,§8.6
+func,0919:2a69,boat_hit_component,near void(AL component CL message),simulation,spec:render3d+spec:simulation,§8.6 entry of boat_hit with a chosen component (ramming: render3d §5.4) | simulation §8.6 entry of boat_hit with a chosen component (ramming)
+func,0919:2c35,palette_flash,near void(),render3d,spec:render3d,§7.1 DAC register 8 by D9B5 level
 func,0919:2cad,sinking_update,near void(),simulation,spec:simulation,§8.7
 func,0919:2ce3,window_hit,near void(),simulation,spec:simulation,§8.6 cockpit cracks
 func,0919:2d0f,boat_destroyed,near void(),simulation,spec:simulation,§8.7
-func,0919:2e57,screen_shake_step,,render3d,td3-match,"TD3 0e12:0fa1 screen_shake_step, score 0.69; low score: confirm in the spec"
+func,0919:2e57,screen_shake_step,near void(),render3d,td3-match+spec:render3d,"§7.2 display offset by B7F2; not in VGA | TD3 0e12:0fa1 screen_shake_step, score 0.69; low score: confirm in the spec"
 func,0919:2ea8,enemy_update,near void(),simulation,spec:simulation,§8.3 effects animation; spotting; firing; movement
 func,0919:31f1,spawn_enemy_wake,near void(),simulation,spec:simulation,§8.3
 func,0919:3217,schedule_shot,near void(AL behaviour byte),simulation,spec:simulation,§8.3
@@ -125,22 +127,61 @@ func,0919:3b9f,score_add,near void(DL index),simulation,spec:simulation,§7.2
 func,0919:3bbc,hit_test,near (BX entry)->AH,simulation,spec:simulation,§7.2
 func,0919:3c51,terrain_structure_break,near void(AH old kind SI object),simulation,spec:simulation,§7.3
 func,0919:3cc9,engine_sound_update,,sound,codex,ORIGINAL_AUDIO.md CE59: live engine effect program
+func,0919:4056,blit_rows_cga,near void(),render3d,spec:render3d,§5.7
+func,0919:44f0,spotlight_beam_cga,near void(),render3d,spec:render3d,§1.2
+func,0919:4587,sky_water_cga,near void(),render3d,spec:render3d,§1.2
+func,0919:4639,water_marks_cga,near void(),render3d,spec:render3d,§1.2
+func,0919:48da,blit_rows_ega,near void(),render3d,spec:render3d,§5.7
 func,0919:4989,ega_gc_setup,,video,td3-match,"TD3 0c1c:1b6f ega_gc_setup, score 1.00"
+func,0919:4c18,spotlight_beam_ega,near void(),render3d,spec:render3d,§1.2
+func,0919:4ce2,sky_water_ega,near void(),render3d,spec:render3d,§1.2
+func,0919:4d64,water_marks_ega,near void(),render3d,spec:render3d,§1.2
+func,0919:4f96,blit_rows_tandy,near void(),render3d,spec:render3d,§5.7
+func,0919:5494,spotlight_beam_tandy,near void(),render3d,spec:render3d,§1.2
+func,0919:5529,sky_water_tandy,near void(),render3d,spec:render3d,§1.2
+func,0919:55da,water_marks_tandy,near void(),render3d,spec:render3d,§1.2
+func,0919:5acc,sprite_prepare,near void(BX entry),render3d,spec:render3d,§5.7
 func,0919:5aeb,sprite_cache_build,,render3d,codex,NATIVE_PORT.md EC7B: sprite cache
 func,0919:5c71,blit_record,,render3d,codex,"NATIVE_PORT.md EE01: direct VGA blitter, zero = transparent"
-func,0919:5e66,sprite_rows_mirror,,render3d,td3-match,"TD3 0e12:2a9e sprite_rows_mirror, score 0.64; low score: confirm in the spec"
+func,0919:5d5a,blit_place,near void(),render3d,spec:render3d,§5.7
+func,0919:5e66,blit_rows_vga,near void(),render3d,td3-match+spec:render3d,"§5.7 TD3 match sprite_rows_mirror (wrong role here) | was sprite_rows_mirror | TD3 0e12:2a9e sprite_rows_mirror, score 0.64; low score: confirm in the spec"
 func,0919:5f4b,sprite_scale_rows,,render3d,td3-match,"TD3 0e12:2d54 sprite_scale_rows, score 0.57; low score: confirm in the spec"
 func,0919:5fc8,sprite_scale_rows_up,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
 func,0919:6054,sprite_scale_rows_up_b,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec"
+func,0919:60e0,sprite_view_angle,near void(BX entry DX distance),render3d,spec:render3d,§5.7 -> D864 D86A
 func,0919:6174,sprite_scale_patterns,,render3d,td3-match,"TD3 0e12:2eb6 sprite_scale_patterns, score 0.95"
 func,0919:6373,sprite_cache_f503,,render3d,codex,NATIVE_PORT.md F503; role to name in the spec
 func,0919:66a7,sprite_scale_row_up,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
 func,0919:6824,sprite_scale_row,,render3d,td3-match,"TD3 0e12:2f84 sprite_scale_row, score 1.00"
 func,0919:68a4,sprite_scale_row_up_b,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/src/assets.cpp)"
 func,0919:6925,sprite_scale_row_up_c,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.77; low score: confirm in the spec"
+func,0919:69a9,visible_list_rebuild,near void(),render3d,spec:render3d,§5.1
+func,0919:6af9,object_update,near void(),render3d,spec:render3d,§5.3-5.4 sort and ramming
+func,0919:6c23,list_bubble,near void(),render3d,spec:render3d,§5.3 descending distance; slot array not swapped
+func,0919:6cad,sprite_lod_update,near void(),render3d,spec:render3d,§5.6
+func,0919:6cfa,sprite_lod_entry,near void(SI entry DL class BX object),render3d,spec:render3d,§5.6
+func,0919:6d92,visible_project,near void(),render3d,spec:render3d,§5.2
+func,0919:6e5c,object_frame,near void(),render3d,spec:render3d,§5
 func,0919:6f2a,free_temp_object,near ()->BX,simulation,spec:simulation,§4.3 objects 1-34; returns 46h when full (quirk)
+func,0919:7017,sprite_slot_alloc,near void(AH level SI entry),render3d,spec:render3d,§5.6
 func,0919:7158,terrain_frame,near void(),simulation,spec:simulation,§10 render3d; shore contact
+func,0919:728c,terrain_save_view,near void(),render3d,spec:render3d,§3
+func,0919:72a9,order_reset,near void(),render3d,spec:render3d,§3.5
+func,0919:72c0,order_sort,near void(),render3d,spec:render3d,§3.5
+func,0919:736c,terrain_setup,near void(),render3d,spec:render3d,§3.1-3.2
+func,0919:7458,water_marks_vga,near void(),render3d,spec:render3d,§3.2
+func,0919:74c0,sky_water_vga,near void(),render3d,spec:render3d,§3.1
+func,0919:7523,project,near void(SI first AX end),render3d,spec:render3d,§3.3 Codex verified
+func,0919:763f,draw_group_b,near void(),render3d,spec:render3d,§3.4
+func,0919:767a,draw_primitive,near void(AX colour DL mode BX vertex),render3d,spec:render3d,§3.4 Codex verified
+func,0919:7802,fill_triangle,near void(),render3d,spec:render3d,§3.4 Codex verified
+func,0919:788e,span_vga_a,near void(),render3d,spec:render3d,§3.4 DS:D8F8 in VGA
+func,0919:7909,edge_setup,near void(),render3d,spec:render3d,§3.4
+func,0919:7943,span_vga_b,near void(),render3d,spec:render3d,§3.4 DS:D8FA in VGA
 func,0919:79e1,shore_contact_test,,simulation,codex,ORIGINAL_PHYSICS.md 10B71: edge bearings of projection candidates D901/D903
+func,0919:7a89,spotlights,near void(),render3d,spec:render3d,§6
+func,0919:7b17,spotlight_beam,near void(AX bearing BL elevation),render3d,spec:render3d,§6
+func,0919:7bbd,spotlight_beam_vga,near void(),render3d,spec:render3d,§6
 func,0919:7e5f,heading_vector,,simulation,codex,ORIGINAL_PHYSICS.md 10FEF: integer heading lookup
 func,0919:7ebb,boat_motion,near void(),simulation,spec:simulation,§5.1
 func,0919:7ee8,boat_move,,simulation,codex,ORIGINAL_PHYSICS.md 11078: fractional XY motion and map-edge clipping
@@ -149,10 +190,15 @@ func,0919:81f8,muzzle_flash_tick,,simulation,codex,ORIGINAL_WEAPONS.md 11388: on
 func,0919:8229,camera_position,near ()->CX DX,simulation,spec:simulation,§5.3
 func,0919:82de,chase_view_collision,near void(),simulation,spec:simulation,§5.3
 func,0919:8331,polar_small,,render3d,td3-match,"TD3 0e12:6f9c polar_small, score 1.00"
+func,0919:8408,terrain_cells_update,near void(),render3d,spec:render3d,§2
+func,0919:858f,tile_load,near void(AL cell byte),render3d,spec:render3d,§2
+func,0919:8665,vertex_load,near void(BX count ptr DI base CX count),render3d,spec:render3d,§2 Codex verified
 func,0919:8711,route_rotate,near (AL x CL y)->AX CX,simulation,spec:simulation,§4.6
 func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,simulation,spec:simulation,§4.6
 func,0919:87e8,route_advance,near void(DH link CL index),simulation,spec:simulation,§4.6
 func,0919:8930,game_frame,,engine,codex,"ORIGINAL_PHYSICS.md 11AC0: main update; simulation iteration loop at +AF (11B6F), outer loop at +ED (11BAD); motion before propulsion"
+func,0919:8eb9,list_quicksort,near void(),render3d,spec:render3d,§5.3
+func,0919:8ece,list_quicksort_range,near void(u16 first u16 last),render3d,spec:render3d,§5.3
 func,121b:0380,far_normalize,,platform,td3-match,"TD3 0c1c:071c far_normalize, score 1.00"
 func,121b:0397,text_set_colours,,platform,td3-match,"TD3 0c1c:0733 text_set_colours, score 1.00"
 func,121b:050a,dos_seek,,platform,td3-match,"TD3 0c1c:084e dos_seek, score 1.00"
@@ -242,10 +288,16 @@ cglobal,0919:0270,panel_switch_table,u8[2][],simulation,spec:simulation,§3.3 sw
 cglobal,0919:0290,key_handlers,u16[127],simulation,spec:simulation,§3.2 codes 01h-7Fh
 cglobal,0919:0feb,message_table,u16[56],simulation,spec:simulation,§9.1 attribute byte + text ending with a byte >= 80h
 cglobal,0919:1457,component_names,u16[16],simulation,spec:simulation,§8.6
+cglobal,0919:2e47,shake_offsets,u8[][2],render3d,spec:render3d,§7.2
 cglobal,0919:2e88,salvo_bearing_table,u8[],simulation,spec:simulation,§8.5
 cglobal,0919:3502,sine_table,u16[],simulation,spec:simulation,§8.5 polar_small
 cglobal,0919:3606,atan_table,u8[256],simulation,spec:simulation,§4.6
 cglobal,0919:378f,damage_matrix,u8[32],simulation,spec:simulation,§7.2 Codex image C91F
+cglobal,0919:6f5f,sprite_slot_level,u8[],render3d,spec:render3d,§5.6
+cglobal,0919:709a,spotlight_widths,u8[],render3d,spec:render3d,§6
+cglobal,0919:8399,neighbour_records,u8[][5],render3d,spec:render3d,§2
+cglobal,0919:83c6,tile_visibility,u8[34],render3d,spec:render3d,§2
+cglobal,0919:83e4,neighbour_order,u8[4][9],render3d,spec:render3d,§2
 cglobal,121b:093e,scancode_e0_table,u8[20],simulation,spec:simulation,§3.1
 cglobal,121b:0952,scancode_table,u8[],simulation,spec:simulation,§3.1
 cglobal,121b:09c2,scancode_shift_table,u8[],simulation,spec:simulation,§3.1
@@ -256,13 +308,26 @@ global,DS:0086,station,u16,simulation,spec:simulation,§2.3 1-4 3D stations; 5 m
 global,DS:0088,rng_state,u32,simulation,spec:simulation,§11.1
 global,DS:08C0,tick_counter,u16,simulation,spec:simulation,§1.1 72.83 Hz (PC speaker driver) / 89.63 Hz
 global,DS:0B49,window_cracks,u8[5],simulation,spec:simulation,§8.6 per station
+global,DS:1096,vertex_control,u8[1024],render3d,spec:render3d,§8
+global,DS:1496,vertex_height,u16[1024],render3d,spec:render3d,§8
+global,DS:1C96,vertex_x,u16[1024],render3d,spec:render3d,§8
+global,DS:2496,vertex_y,u16[1024],render3d,spec:render3d,§8
+global,DS:2C96,vertex_bearing,u16[1024],render3d,spec:render3d,§8
+global,DS:3496,vertex_row,u16[1024],render3d,spec:render3d,§8
+global,DS:3C96,group_a_order,u16[512],render3d,spec:render3d,§8
+global,DS:4096,group_a_key,u16[512],render3d,spec:render3d,§8
+global,DS:4496,vertex_scale,u16[1024],render3d,spec:render3d,§8
+global,DS:4C96,visible_distance_word,u16[181],render3d,spec:render3d,§5.2 high byte = distance class (4C97)
 global,DS:4C97,visible_distance,u8[],simulation,spec:simulation,§8.2 indexed 2*i
 global,DS:4E00,visible_bearing,u8[],simulation,spec:simulation,§8.2
 global,DS:4EB5,visible_fine_bearing,u8[],simulation,spec:simulation,§8.2
 global,DS:4F6A,visible_elevation,u8[],simulation,spec:simulation,§8.2
+global,DS:501F,visible_size,u8[181],render3d,spec:render3d,§5.2
+global,DS:50D4,visible_neg_bearing,u8[181],render3d,spec:render3d,§5.2
 global,DS:5189,visible_sprite,u8[],simulation,spec:simulation,§8.2
 global,DS:523E,visible_object,u16[],simulation,spec:simulation,§8.2 object offsets
 global,DS:53A8,world_b_data,u8[],simulation,spec:simulation,§8.1 DATnB.DAT
+global,DS:53AC,kind_sprite_info,u8[],render3d,spec:render3d,§5.6 bits 0-1 scale levels; bits 2-7 size
 global,DS:5401,object_score_index,u8[],simulation,spec:simulation,§7.2 per kind
 global,DS:541A,object_behaviour,u8[2][],simulation,spec:simulation,§8.1 per kind (interleaved with object_class)
 global,DS:541B,object_class,u8[2][],simulation,spec:simulation,§8.1 per kind
@@ -402,6 +467,8 @@ global,DS:D6B4,boat_locked,u8,simulation,spec:simulation,§5.2
 global,DS:D6B5,passengers_pending,u8,simulation,spec:simulation,§5.2
 global,DS:D6BA,wake_timer,u8,simulation,spec:simulation,§4.3
 global,DS:D6BF,detail_low,u8,simulation,spec:simulation,§3.3
+global,DS:D6E5,flash_level,u8,render3d,spec:render3d,§7.1
+global,DS:D6EA,flash_colours,u8[3][3],render3d,spec:render3d,§7.1
 global,DS:D6F8,salvo_heading,u8,simulation,spec:simulation,§8.5
 global,DS:D6F9,salvo_speed,u8,simulation,spec:simulation,§8.5
 global,DS:D6FA,spot_thresholds,u8[18],simulation,spec:simulation,§8.3
@@ -412,13 +479,28 @@ global,DS:D71F,incoming_timer,u8[16],simulation,spec:simulation,§8.5
 global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
 global,DS:D8BC,scene_rebuild,u8,simulation,spec:simulation,§11.2
+global,DS:D8BD,far_object_mask,u16,render3d,spec:render3d,§5.1
+global,DS:D8BF,visible_count_previous,u16,render3d,spec:render3d,§5.1
+global,DS:D8F8,span_routine_a,u16,render3d,spec:render3d,§1.2 per-mode near code pointer
+global,DS:D8FA,span_routine_b,u16,render3d,spec:render3d,§1.2 per-mode near code pointer
 global,DS:D8FD,boat_lost_pending,u8,simulation,spec:simulation,§10
 global,DS:D8FE,contact_colour,u8,simulation,spec:simulation,§10
 global,DS:D8FF,contact,u8,simulation,spec:simulation,§10
 global,DS:D900,contact_previous,u8,simulation,spec:simulation,§10
 global,DS:D901,contact_candidate_a,u16,simulation,spec:simulation,§10
 global,DS:D903,contact_candidate_b,u16,simulation,spec:simulation,§10
+global,DS:D905,spotlight_on,u8,render3d,spec:render3d,§6
+global,DS:D906,saved_camera_qx,u16,render3d,spec:render3d,§3
+global,DS:D908,saved_camera_qy,u16,render3d,spec:render3d,§3
+global,DS:D90A,saved_view_heading,u16,render3d,spec:render3d,§3
+global,DS:D90C,saved_horizon,u8,render3d,spec:render3d,§3
+global,DS:D90D,water_mark_x,u8[32],render3d,spec:render3d,§3.2
+global,DS:D92D,water_mark_age,u8[32],render3d,spec:render3d,§3.2
+global,DS:D94E,last_view_heading,u8,render3d,spec:render3d,§3.2
 global,DS:D94F,scene_colours,u8[4],simulation,spec:simulation,§9.2
+global,DS:D953,horizon_row,u8,render3d,spec:render3d,§3.1
+global,DS:D960,group_a_count,u16,render3d,spec:render3d,§8
+global,DS:D962,group_b_count,u16,render3d,spec:render3d,§8
 global,DS:D967,bob_countdown,u8,simulation,spec:simulation,§2.3
 global,DS:D968,bob_period,u8,simulation,spec:simulation,§2.3
 global,DS:D969,bob_phase,u8,simulation,spec:simulation,§2.3
@@ -432,13 +514,25 @@ global,DS:D974,camera_qy,u16,simulation,spec:simulation,§5.1
 global,DS:D976,last_good_x,u16,simulation,spec:simulation,§5.3
 global,DS:D978,last_good_y,u16,simulation,spec:simulation,§5.3
 global,DS:D982,pitch_impulse,s16,simulation,spec:simulation,§2.3
+global,DS:D9A4,scenery_count,u8,render3d,spec:render3d,§2
+global,DS:D9A5,window_quadrant,u8,render3d,spec:render3d,§2
+global,DS:D9A6,window_overflow,u8,render3d,spec:render3d,§2
+global,DS:D9A9,tile_origin_x,u16,render3d,spec:render3d,§2 also route_point
+global,DS:D9AB,tile_origin_y,u16,render3d,spec:render3d,§2 also route_point
 global,DS:D9AD,terrain_rebuild,u16,simulation,spec:simulation,§7.3
+global,DS:D9B0,shade_mask_a,u8,render3d,spec:render3d,§2
+global,DS:D9B1,shade_mask_b,u8,render3d,spec:render3d,§2
+global,DS:D9B2,window_visibility,u8,render3d,spec:render3d,§2
 global,DS:D9B3,frame_counter,u16,simulation,spec:simulation,§1.2
 global,DS:D9B5,screen_shake,u8,simulation,spec:simulation,§8.6
+global,DS:D9B8,draw_page_segment,u16,render3d,spec:render3d,§1.1
 global,DS:DA39,fast_forward_key,u8,simulation,spec:simulation,§3.1 Backspace held
 global,DS:DA3A,ctrl_held,u8,simulation,spec:simulation,§3.1
 global,DS:DA42,isr_key_code,u8,simulation,spec:simulation,§3.1
 global,DS:DA43,held_keys,u8,simulation,spec:simulation,§3.1
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
+global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F110,practice_mode,u16,simulation,spec:simulation,§3.3 0 mission; 1-3 practice types
+global,DS:F280,tile_bin_offset,u16,render3d,spec:render3d,§2 far pointer offset of TILE.BIN
+global,DS:F282,tile_bin_segment,u16,render3d,spec:render3d,§2
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2

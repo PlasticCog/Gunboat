@@ -1,0 +1,96 @@
+kind,address,name,type,notes
+func,0919:2c35,palette_flash,near void(),§7.1 DAC register 8 by D9B5 level
+func,0919:2e57,screen_shake_step,near void(),§7.2 display offset by B7F2; not in VGA
+func,0919:4056,blit_rows_cga,near void(),§5.7
+func,0919:4587,sky_water_cga,near void(),§1.2
+func,0919:4639,water_marks_cga,near void(),§1.2
+func,0919:44f0,spotlight_beam_cga,near void(),§1.2
+func,0919:48da,blit_rows_ega,near void(),§5.7
+func,0919:4c18,spotlight_beam_ega,near void(),§1.2
+func,0919:4ce2,sky_water_ega,near void(),§1.2
+func,0919:4d64,water_marks_ega,near void(),§1.2
+func,0919:4f96,blit_rows_tandy,near void(),§5.7
+func,0919:5494,spotlight_beam_tandy,near void(),§1.2
+func,0919:5529,sky_water_tandy,near void(),§1.2
+func,0919:55da,water_marks_tandy,near void(),§1.2
+func,0919:5acc,sprite_prepare,near void(BX entry),§5.7
+func,0919:5d5a,blit_place,near void(),§5.7
+func,0919:5e66,blit_rows_vga,near void(),§5.7 TD3 match sprite_rows_mirror (wrong role here)
+func,0919:60e0,sprite_view_angle,near void(BX entry DX distance),§5.7 -> D864 D86A
+func,0919:69a9,visible_list_rebuild,near void(),§5.1
+func,0919:6af9,object_update,near void(),§5.3-5.4 sort and ramming
+func,0919:6c23,list_bubble,near void(),§5.3 descending distance; slot array not swapped
+func,0919:6cad,sprite_lod_update,near void(),§5.6
+func,0919:6cfa,sprite_lod_entry,near void(SI entry DL class BX object),§5.6
+func,0919:6d92,visible_project,near void(),§5.2
+func,0919:6e5c,object_frame,near void(),§5
+func,0919:7017,sprite_slot_alloc,near void(AH level SI entry),§5.6
+func,0919:728c,terrain_save_view,near void(),§3
+func,0919:72a9,order_reset,near void(),§3.5
+func,0919:72c0,order_sort,near void(),§3.5
+func,0919:736c,terrain_setup,near void(),§3.1-3.2
+func,0919:7458,water_marks_vga,near void(),§3.2
+func,0919:74c0,sky_water_vga,near void(),§3.1
+func,0919:7523,project,near void(SI first AX end),§3.3 Codex verified
+func,0919:763f,draw_group_b,near void(),§3.4
+func,0919:767a,draw_primitive,near void(AX colour DL mode BX vertex),§3.4 Codex verified
+func,0919:7802,fill_triangle,near void(),§3.4 Codex verified
+func,0919:788e,span_vga_a,near void(),§3.4 DS:D8F8 in VGA
+func,0919:7909,edge_setup,near void(),§3.4
+func,0919:7943,span_vga_b,near void(),§3.4 DS:D8FA in VGA
+func,0919:7a89,spotlights,near void(),§6
+func,0919:7b17,spotlight_beam,near void(AX bearing BL elevation),§6
+func,0919:7bbd,spotlight_beam_vga,near void(),§6
+func,0919:8408,terrain_cells_update,near void(),§2
+func,0919:858f,tile_load,near void(AL cell byte),§2
+func,0919:8665,vertex_load,near void(BX count ptr DI base CX count),§2 Codex verified
+func,0919:8eb9,list_quicksort,near void(),§5.3
+func,0919:8ece,list_quicksort_range,near void(u16 first u16 last),§5.3
+cglobal,0919:2e47,shake_offsets,u8[][2],§7.2
+cglobal,0919:6f5f,sprite_slot_level,u8[],§5.6
+cglobal,0919:709a,spotlight_widths,u8[],§6
+cglobal,0919:8399,neighbour_records,u8[][5],§2
+cglobal,0919:83c6,tile_visibility,u8[34],§2
+cglobal,0919:83e4,neighbour_order,u8[4][9],§2
+global,DS:1096,vertex_control,u8[1024],§8
+global,DS:1496,vertex_height,u16[1024],§8
+global,DS:1C96,vertex_x,u16[1024],§8
+global,DS:2496,vertex_y,u16[1024],§8
+global,DS:2C96,vertex_bearing,u16[1024],§8
+global,DS:3496,vertex_row,u16[1024],§8
+global,DS:3C96,group_a_order,u16[512],§8
+global,DS:4096,group_a_key,u16[512],§8
+global,DS:4496,vertex_scale,u16[1024],§8
+global,DS:4C96,visible_distance_word,u16[181],§5.2 high byte = distance class (4C97)
+global,DS:501F,visible_size,u8[181],§5.2
+global,DS:50D4,visible_neg_bearing,u8[181],§5.2
+global,DS:53AC,kind_sprite_info,u8[],§5.6 bits 0-1 scale levels; bits 2-7 size
+global,DS:D6E5,flash_level,u8,§7.1
+global,DS:D6EA,flash_colours,u8[3][3],§7.1
+global,DS:D8BD,far_object_mask,u16,§5.1
+global,DS:D8BF,visible_count_previous,u16,§5.1
+global,DS:D8F8,span_routine_a,u16,§1.2 per-mode near code pointer
+global,DS:D8FA,span_routine_b,u16,§1.2 per-mode near code pointer
+global,DS:D905,spotlight_on,u8,§6
+global,DS:D906,saved_camera_qx,u16,§3
+global,DS:D908,saved_camera_qy,u16,§3
+global,DS:D90A,saved_view_heading,u16,§3
+global,DS:D90C,saved_horizon,u8,§3
+global,DS:D90D,water_mark_x,u8[32],§3.2
+global,DS:D92D,water_mark_age,u8[32],§3.2
+global,DS:D94E,last_view_heading,u8,§3.2
+global,DS:D953,horizon_row,u8,§3.1
+global,DS:D960,group_a_count,u16,§8
+global,DS:D962,group_b_count,u16,§8
+global,DS:D9A4,scenery_count,u8,§2
+global,DS:D9A5,window_quadrant,u8,§2
+global,DS:D9A6,window_overflow,u8,§2
+global,DS:D9A9,tile_origin_x,u16,§2 also route_point
+global,DS:D9AB,tile_origin_y,u16,§2 also route_point
+global,DS:D9B0,shade_mask_a,u8,§2
+global,DS:D9B1,shade_mask_b,u8,§2
+global,DS:D9B2,window_visibility,u8,§2
+global,DS:D9B8,draw_page_segment,u16,§1.1
+global,DS:EED2,video_mode,u16,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
+global,DS:F280,tile_bin_offset,u16,§2 far pointer offset of TILE.BIN
+global,DS:F282,tile_bin_segment,u16,§2

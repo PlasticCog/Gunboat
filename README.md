@@ -13,8 +13,8 @@ original function and check it against the original machine code.
 
 | Phase | State |
 | --- | --- |
-| Executable map | Done: 597 functions indexed, 239 named (`reverse_engineering/RE_GUIDE.md`) |
-| Subsystem specs | Simulation done (`reverse_engineering/spec/simulation.md`); render3d next |
+| Executable map | Done: 597 functions indexed, 285 named (`reverse_engineering/RE_GUIDE.md`) |
+| Subsystem specs | Simulation and 3D renderer done (`reverse_engineering/spec/`); world next |
 | Faithful port | Not started. Verified translations of the boat physics, weapons, PC-speaker effects, sprites and terrain loading already exist in `gunboat-port/src/original_*.cpp` and `assets.cpp`. |
 | Playable build | `gunboat-port/` contains an earlier *non-faithful* patrol mode on the original assets, kept as a reference until the port replaces it |
 

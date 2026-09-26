@@ -677,7 +677,8 @@ Built while drawing (`0919:6e5c` tree, render3d spec) and read by the simulation
 frame: `B83D` entries; per entry `i`: object offset `DS:523E[2i]`, distance class
 `DS:4C97[2i]` (small = near), bearing `DS:4E00[i]` and fine bearing `DS:4EB5[i]` (screen
 angle, relative to the view heading `D191`:`D192`), elevation `DS:4F6A[i]`, sprite index
-`DS:5189[i]`. `B83F` is the first entry used by identification. The gunners (§6.2), hit tests
+`DS:5189[i]`. `B83F` is the first entry used by identification (list building, projection and
+sorting: render3d §5.1–5.3; object 35 is never listed). The gunners (§6.2), hit tests
 (§7.2), spotting and firing (§8.3) only see objects in this list, so **a faithful port must
 reproduce the renderer's list exactly**. `line_of_sight` (`0919:348e`, SI = 2·entry) returns
 CH = 0 when no nearer listed object (index ≥ 48h, not kind 35h or 10h, with a sprite) covers the
@@ -960,7 +961,8 @@ for one frame.
 2. `game_frame`: world group ×2ⁿ (missile, incoming fire, sinking, enemy AI and effects,
    messages) → message line → boat group ×2ⁿ (reload, motion/mission stop/camera, bob,
    propulsion, crew pilot, clock) → crew gunners → cockpit → terrain and shore contact → objects
-   (builds the next visible list, clears `D8BC`) → projectiles → muzzle flashes.
+   (builds the next visible list, **ramming** test against the nearest object ahead,
+   render3d §5.4, clears `D8BC`) → projectiles → muzzle flashes.
 
 ## 12. Function table
 

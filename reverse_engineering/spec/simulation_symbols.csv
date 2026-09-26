@@ -301,3 +301,4 @@ global,DS:DA43,held_keys,u8,§3.1
 global,DS:EE9C,key_code,u8,§3.2
 global,DS:F110,practice_mode,u16,§3.3 0 mission; 1-3 practice types
 global,DS:F346,look_direction,u16,§1.2
+func,0919:2a69,boat_hit_component,near void(AL component CL message),§8.6 entry of boat_hit with a chosen component (ramming: render3d §5.4)

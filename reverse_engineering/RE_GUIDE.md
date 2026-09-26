@@ -120,8 +120,8 @@ function that contains them:
 
 ## Subsystem specs
 
-Status: **simulation** — done (`spec/simulation.md`, 2026-09-25). platform, video, game_flow,
-world, render3d, hud, sound — to do.
+Status: **simulation** and **render3d** — done (`spec/simulation.md`, `spec/render3d.md`,
+2026-09-25). world, game_flow, hud, platform, video, sound — to do.
 
 As TD3: one spec per subsystem in `reverse_engineering/spec/<owner>.md`, each with an overview
 and call graph, a function table, a globals table, pseudocode, file formats, the DOS/hardware
