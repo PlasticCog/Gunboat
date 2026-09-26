@@ -10,7 +10,7 @@ func,00f2:1044,music_start,far void(),§3.1 VALKPC/VALK12/VALK3V
 func,00f2:119c,music_stop,far void(),§3.1
 func,020d:0008,hq_quiz,far int(),§4 copy protection (PORT: always right)
 func,020d:064a,menu_cursor_init,far void(),§3 PENCIL.MPP
-func,020d:0824,choice_menu,far int(...),§6.1 "# a # b" menus
+func,020d:0824,choice_menu,far int(...),"§6.1 ""# a # b"" menus"
 func,020d:0b28,roster_load,far void(),§5 703 bytes + check byte
 func,020d:0bdc,roster_save,far void(),§5 TD3 match name hi_write
 func,02d2:0008,front_end,far void(),§6 state machine DS:0084
@@ -32,7 +32,7 @@ func,02d2:2b72,bcd_add,far u16(u16 u16),§6.5
 func,02d2:2c9e,office_draw,far void(),§6 GENA.LZ
 global,DS:0070,demo_mode,u16,§3 simulation §3.1
 global,DS:0074,view_page,u16,§2 0 in VGA else 2
-global,DS:0076,cga_special,u16,§2
+global,DS:0076,hercules_mode,u16,§2 1 when the Hercules choice runs on CGA mode 4 (byte writes)
 global,DS:0078,single_page_mode,u16,§2 1 in VGA
 global,DS:0082,phase,u16,§1 FFh config 0 title 1 HQ 2 front end 3 mission
 global,DS:0084,front_end_state,u16,§6
@@ -67,3 +67,24 @@ global,DS:0C6A,demo_countdown,u8,§3 calls left before demo_next is returned
 global,DS:0C6B,demo_next,u8,§3 key of the loaded pair
 cglobal,08e1:0008,demo_script,u8[102],§3 (count; key) pairs of the demo; key >= E0h sets held_keys = key - E0h; 00 00 restarts at 08e1:0008
 func,00f2:103e,kbd_flush_key,far void(),§3 isr_key_code = 0
+global,DS:F134,title_colour_a,u16,§3 the title sprite's first colour layer; the pencil's; then the menu text colour (0 in VGA)
+global,DS:F144,title_colour_b,u16,§3 the sprite's second layer / the pencil's second
+global,DS:F26A,title_colour_c,u16,§3 the sprite's third layer / the pencil's third
+global,DS:F26E,title_colour_d,u16,§3 set with the others (1 in VGA)
+global,DS:F27C,pencil_colour_tip,u16,§3 the pencil tip colour (0Fh in VGA)
+global,DS:E9E0,pencil_colour,u16,§3 title_colour_a saved for the menu cursor drawer 020d:09cc
+global,DS:ECB0,menu_idle,u16,§3 menu loop iterations without a key; 113h starts the demo
+global,DS:F14A,sprite_mask_a,u8[63],§3 the title sprite (8x4) and the pencil (24x21) colour masks
+global,DS:F152,sprite_mask_b,u8[8],§3 the title sprite 16x4 mask (colour b)
+global,DS:F15A,sprite_mask_c,u8[8],§3 the title sprite 16x4 mask (colour c)
+global,DS:F189,pencil_mask_b,u8[63],§3
+global,DS:F1C8,pencil_mask_c,u8[63],§3
+global,DS:F207,pencil_mask_tip,u8[8],§3
+global,DS:F210,pencil_mask_point,u8[7],§3
+func,00f2:000e,title_menu,far u16(),§3 the intro and the main menu; returns the choice (0 duty; 1-3 practice)
+func,020d:064a,menu_cursor_init,far void(),§3 PENCIL.MPP on page 1 captured as colour masks
+func,00f2:1044,music_start,far void(),§3.1 the title music
+global,DS:F10C,flow_file,u16,§1 FILE* of main's disk checks and config_load
+global,DS:F270,name_buffer,char[10],§2 the .MUS file name of music_start; config_load's Y/N answer
+func,0000:05fc,config_print_mode,far void(u16 n),§2 the chosen mode digit at text row 0Ah col 20h (text mode)
+func,0000:0620,config_print_yn,far void(u16 c),§2 the Y/N answer at text row 0Bh col 20h (text mode)

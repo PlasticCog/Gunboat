@@ -22,3 +22,6 @@ BRIDGE(pal_fade_out_vga) { pal_fade_out_vga(); }
 BRIDGE(ega_pal_apply) { ega_pal_apply(); }
 BRIDGE(ega_pal_init) { ega_pal_init(); }
 BRIDGE(music_stop) { music_stop(); }
+BRIDGE(menu_cursor_init) { menu_cursor_init(); }
+BRIDGE(title_menu) { r.ax = title_menu(); }
+BRIDGE(config_load) { config_load(); }

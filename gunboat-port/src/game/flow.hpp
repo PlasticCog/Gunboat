@@ -7,6 +7,10 @@
 namespace gb {
 
 // ---- program (flow_main.cpp)
+[[noreturn]] void game_main();           // 0000:0000 main
+void config_load();                      // 0000:02fe
+void config_print_mode(u16 n);           // 0000:05fc
+void config_print_yn(u16 c);             // 0000:0620
 [[noreturn]] void quit_to_dos();         // 0000:021e
 [[noreturn]] void fatal_exit(s16 code);  // 0000:0276
 
@@ -39,5 +43,10 @@ void ega_pal_entry(u16 index, u16 value);  // 00f2:0f24
 void ega_pal_apply();                  // 00f2:0f46
 void ega_pal_init();                   // 00f2:0fea
 void music_stop();                     // 00f2:119c
+void music_start();                    // 00f2:1044
+
+// ---- title (flow_title.cpp)
+void menu_cursor_init();  // 020d:064a
+u16 title_menu();         // 00f2:000e
 
 } // namespace gb

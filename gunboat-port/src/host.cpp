@@ -481,6 +481,12 @@ void host_fatal(const char *fmt, ...)
     std::exit(3);
 }
 
+void host_error_box(const char *text)
+{
+    std::fprintf(stderr, "%s\n", text);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Gunboat", text, window);
+}
+
 void host_exit(int code)
 {
     host_shutdown();

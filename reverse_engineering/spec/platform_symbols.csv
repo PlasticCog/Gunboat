@@ -8,7 +8,7 @@ func,121b:0804,pal_fade_in,far void(),video §3
 func,121b:085d,pal_black,far void(),video §3
 func,121b:087f,pal_apply,far void(),video §3
 func,121b:08a8,picture_draw_vga,far void(u16 src u16 size u16 rows),§6
-func,121b:0902,cga_composite_setup,far void(),§8 parked
+func,121b:0902,hercules_setup,far void(),§2 the Hercules choice (video mode 0Ch) on CGA mode 4: programs the Hercules CRTC (parked)
 func,121b:0ce2,menu_timer_isr,interrupt,§1 89.63 Hz
 func,12ed:00a3,sfx_timer_isr,interrupt,§1 236.695 Hz (continues at 12ed:00b1)
 func,146a:000b,joystick_axis,far u16(u16 axis),§3 port 201h

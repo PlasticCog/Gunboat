@@ -42,8 +42,8 @@ void dos_close(s16 fh);                  // 121b:0575
 // ---- MSC 5.1 runtime (dos.cpp; PORT models of the runtime, see each function)
 u16 crt_getstream();                                    // 15ee:16d0
 u16 crt_fopen(u16 name_ds, u16 mode_ds);                // 15ee:0306  FILE* (DGROUP offset) or 0
-u16 crt_fread(FarPtr buf, u16 size, u16 count, u16 f);  // 15ee:0332
-u16 crt_fwrite(FarPtr buf, u16 size, u16 count, u16 f); // 15ee:0524
+u16 crt_fread(u16 buf_ds, u16 size, u16 count, u16 f);  // 15ee:0332
+u16 crt_fwrite(u16 buf_ds, u16 size, u16 count, u16 f); // 15ee:0524
 s16 crt_fclose(u16 f);                                  // 15ee:023e
 FarPtr crt_fmalloc(u16 size);                           // 15ee:06c1
 void crt_ffree(FarPtr p);                               // 15ee:06ac

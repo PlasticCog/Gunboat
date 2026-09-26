@@ -34,7 +34,7 @@ global,DS:D74D,view_row_table,u16[64],§5 row start offsets for the span drawers
 global,DS:D883,sprite_segment_a,u16,§5
 global,DS:D885,sprite_segment_b,u16,§5
 global,DS:ECB4,mission_text,u8[480],§6.2
-global,DS:F13A,copy_counter,u16,§3.3 shared with the front end
+global,DS:F13A,flow_scratch,u16,"§1 scratch of main and config_load: the title choice, the page allocation result"
 global,DS:F396,world_b_size,u16,§4
 global,DS:F5D4,world_b_far,u16[2],§4 far pointer to the B data copy
 func,0919:0000,panel_redraw_all,far void(),§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380

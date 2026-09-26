@@ -147,3 +147,33 @@ def test_screens(h, rng, scale):
 
 TESTS = [test_bios_wait_ticks, test_demo_next_key, test_input_read_key, test_wait_key, test_text_records,
          test_credits, test_screens]
+
+
+def test_menu_cursor_init(h, rng, scale):
+    from test_pictures import base_memory
+    n = 0
+    for mode in (0x13, 0x13, 0x13):
+        m = base_memory(h, rng)
+        m[DS_BASE + 0xB000:DS_BASE + 0xC000] = bytes(0x1000)
+        seg1 = struct.unpack_from('<H', m, DS_BASE + 0xDD33)[0]
+        put16(m, 0xD9B6, 0xA000)
+        put16(m, 0xD9B8, seg1)
+        put16(m, 0xEED2, mode)
+        data = (h.dos.dir / 'DATAC.DAT').read_bytes()
+        m[DS_BASE + 0x027C:DS_BASE + 0x027C + len(data)] = data
+        h.check('menu_cursor_init', m, label='mode %X' % mode)
+        n += 1
+    return n
+
+
+TESTS.append(test_menu_cursor_init)
+
+
+def test_config_load(h, rng, scale):
+    """Start-up: GUNBOAT.CFG (the shipped one: VGA, no joystick) read, the mode set, page 1."""
+    m = h.fresh_memory()
+    h.check('config_load', m, label='GUNBOAT.CFG')
+    return 1
+
+
+TESTS.append(test_config_load)

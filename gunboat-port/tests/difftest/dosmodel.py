@@ -288,7 +288,8 @@ class DosModel:
         return fh if fh in self.files else None
 
     def _rt_rw(self, args, write):
-        off, seg, size, count, f = (args(i) for i in range(5))
+        off, size, count, f = (args(i) for i in range(4))   # medium model: a near buffer
+        seg = DGROUP
         fh = self._stream_handle(f)
         if fh is None or size == 0 or count == 0:
             return 0, None

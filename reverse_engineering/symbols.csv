@@ -3,6 +3,8 @@ func,0000:0000,main,far void(),game_flow,index+spec:game_flow,§1 phases DS:0082
 func,0000:021e,quit_to_dos,far void(),game_flow,spec:game_flow,§1
 func,0000:0276,fatal_exit,far void(int code),game_flow,spec:game_flow,§1
 func,0000:02fe,config_load,far void(),game_flow,spec:game_flow,§2 GUNBOAT.CFG or text-mode questions
+func,0000:05fc,config_print_mode,far void(u16 n),game_flow,spec:game_flow,§2 the chosen mode digit at text row 0Ah col 20h (text mode)
+func,0000:0620,config_print_yn,far void(u16 c),game_flow,spec:game_flow,§2 the Y/N answer at text row 0Bh col 20h (text mode)
 func,0000:0648,file_load_near,,game_flow,td3-match,"TD3 0000:0e74 file_load_near, score 1.00"
 func,0000:06b4,file_load_far,,game_flow,td3-match,"TD3 0000:0ee0 file_load_far, score 1.00"
 func,0000:072c,far_to_near_copy,far void(u8 far *src u8 *dst u16 count),world,spec:world,§3.3 loop counter is the global DS:F13A
@@ -15,7 +17,7 @@ func,0000:0d74,archive_open,far int(char *name),game_flow,spec:game_flow,§1 dis
 func,0000:0e62,name_hash_h1,,game_flow,td3-match,"TD3 0000:16d0 name_hash_h1, score 1.00"
 func,0000:0eac,name_hash_h2,,game_flow,td3-match,"TD3 0000:171a name_hash_h2, score 1.00"
 func,0000:0ef2,name_hash,,game_flow,td3-match,"TD3 0000:1760 name_hash, score 0.70; low score: confirm in the spec"
-func,00f2:000e,title_menu,far int(),game_flow,spec:game_flow,§3 returns 0 report for duty / 1-3 practice
+func,00f2:000e,title_menu,far u16(),game_flow,spec:game_flow,§3 the intro and the main menu; returns the choice (0 duty; 1-3 practice) | §3 returns 0 report for duty / 1-3 practice
 func,00f2:0d3e,credits_text,far void(u16 records),game_flow,spec:game_flow,§3
 func,00f2:0dbc,print_records,,game_flow,td3-match,"TD3 01f4:1a82 print_records, score 1.00"
 func,00f2:0e10,print_text,,game_flow,td3-match,"TD3 01f4:1ad6 print_text, score 1.00"
@@ -30,10 +32,10 @@ func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),video,spec:video,§3 
 func,00f2:0f46,ega_pal_apply,far void(),video,spec:video,§3 parked
 func,00f2:0fea,ega_pal_init,,game_flow,td3-match,"TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
 func,00f2:103e,kbd_flush_key,far void(),game_flow,spec:game_flow,§3 isr_key_code = 0
-func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 VALKPC/VALK12/VALK3V
+func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 the title music | §3.1 VALKPC/VALK12/VALK3V
 func,00f2:119c,music_stop,far void(),game_flow,spec:game_flow,§3.1
 func,020d:0008,hq_quiz,far int(),game_flow,spec:game_flow,§4 copy protection (PORT: always right)
-func,020d:064a,menu_cursor_init,far void(),game_flow,spec:game_flow,§3 PENCIL.MPP
+func,020d:064a,menu_cursor_init,far void(),game_flow,spec:game_flow,§3 PENCIL.MPP on page 1 captured as colour masks | §3 PENCIL.MPP
 func,020d:0824,choice_menu,far int(...),game_flow,spec:game_flow,"§6.1 ""# a # b"" menus"
 func,020d:0b28,roster_load,far void(),game_flow,spec:game_flow,§5 703 bytes + check byte
 func,020d:0bdc,roster_save,far void(),game_flow,td3-match+spec:game_flow,"§5 TD3 match name hi_write | was hi_write | TD3 01f4:2e66 hi_write, score 0.50; low score: confirm in the spec"
@@ -306,7 +308,7 @@ func,121b:0804,pal_fade_in,far void(),platform,spec:platform,video §3
 func,121b:085d,pal_black,far void(),platform,spec:platform,video §3
 func,121b:087f,pal_apply,far void(),platform,spec:platform,video §3
 func,121b:08a8,picture_draw_vga,far void(u16 src u16 size u16 rows),platform,spec:platform,§6
-func,121b:0902,cga_composite_setup,far void(),platform,spec:platform,§8 parked
+func,121b:0902,hercules_setup,far void(),platform,spec:platform,§2 the Hercules choice (video mode 0Ch) on CGA mode 4: programs the Hercules CRTC (parked) | was cga_composite_setup | §8 parked
 func,121b:0a4d,kbd_install,,platform,td3-match,"TD3 0c1c:0e2d kbd_install, score 0.55; low score: confirm in the spec"
 func,121b:0a88,kbd_restore,,platform,td3-match,"TD3 0c1c:0e7d kbd_restore, score 0.55; low score: confirm in the spec"
 func,121b:0a9c,kbd_isr,,platform,td3-match,"TD3 0c1c:0e98 kbd_isr, score 0.89"
@@ -447,7 +449,7 @@ global,DS:006A,data_file_bank,u8,platform,spec:platform,§4 bank letter of data_
 global,DS:0070,demo_mode,u16,simulation,spec:simulation+spec:game_flow,§3 simulation §3.1 | §3.1
 global,DS:0072,disk_prompt,u8,game_flow,spec:game_flow,§1 a disk prompt is up: input_read_key reads the real keyboard even in the demo
 global,DS:0074,view_page,u16,game_flow,spec:game_flow,§2 0 in VGA else 2
-global,DS:0076,cga_special,u16,game_flow,spec:game_flow,§2
+global,DS:0076,hercules_mode,u16,game_flow,spec:game_flow,§2 1 when the Hercules choice runs on CGA mode 4 (byte writes) | was cga_special | §2
 global,DS:0078,single_page_mode,u16,game_flow,spec:game_flow,§2 1 in VGA
 global,DS:007A,draw_page,u16,simulation,spec:simulation,graphics library page
 global,DS:007E,sound_muted,u16,sound,spec:simulation+spec:sound,§2 | §3.1
@@ -774,7 +776,7 @@ global,DS:DCF5,gfx_colour,u8,video,spec:video,§2 colour used by the drawing rou
 global,DS:DCF6,gfx_colour_raw,u8,video,spec:video,§2
 global,DS:DCF7,gfx_copy_page,u8,video,spec:video,§1
 global,DS:DCF8,gfx_mode_x2,u16,video,spec:video,§1 library mode * 2 (dispatch index)
-global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
+global,DS:DCFC,gfx_mode,s8,video,spec:platform+spec:video,was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | was gfx_saved_mode_byte | was gfx_mode | §1 FFh until gfx_set_mode | was gfx_saved_mode_byte | §8
 global,DS:DCFD,gfx_visible_page,u8,video,spec:video,§1
 global,DS:DCFF,gfx_pen_x,u16,video,spec:video,§2
 global,DS:DD01,gfx_pen_y,u16,video,spec:video,§2
@@ -806,6 +808,8 @@ global,DS:DFC3,mode_width,u16[21],video,spec:video,§1 0 in text modes
 global,DS:DFED,mode_height,u16[21],video,spec:video,§1
 global,DS:E124,gfx_e124,u16,video,spec:video,§1 cleared by gfx_set_mode
 global,DS:E16F,mode_text_rows,u8,video,spec:video,§1 19h; 1Eh in modes 11h/12h
+global,DS:E9E0,pencil_colour,u16,game_flow,spec:game_flow,§3 title_colour_a saved for the menu cursor drawer 020d:09cc
+global,DS:ECB0,menu_idle,u16,game_flow,spec:game_flow,§3 menu loop iterations without a key; 113h starts the demo
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
@@ -813,9 +817,23 @@ global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
 global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
 global,DS:F0FC,bd1_far,u16[2],platform,spec:platform,§5 1784h bytes
 global,DS:F102,bd2_far,u16[2],platform,spec:platform,§5 0CC6h bytes
+global,DS:F10C,flow_file,u16,game_flow,spec:game_flow,§1 FILE* of main's disk checks and config_load
 global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
-global,DS:F13A,copy_counter,u16,world,spec:world,§3.3 shared with the front end
+global,DS:F134,title_colour_a,u16,game_flow,spec:game_flow,§3 the title sprite's first colour layer; the pencil's; then the menu text colour (0 in VGA)
+global,DS:F13A,flow_scratch,u16,world,spec:world,"§1 scratch of main and config_load: the title choice, the page allocation result | was copy_counter | §3.3 shared with the front end"
+global,DS:F144,title_colour_b,u16,game_flow,spec:game_flow,§3 the sprite's second layer / the pencil's second
+global,DS:F14A,sprite_mask_a,u8[63],game_flow,spec:game_flow,§3 the title sprite (8x4) and the pencil (24x21) colour masks
+global,DS:F152,sprite_mask_b,u8[8],game_flow,spec:game_flow,§3 the title sprite 16x4 mask (colour b)
+global,DS:F15A,sprite_mask_c,u8[8],game_flow,spec:game_flow,§3 the title sprite 16x4 mask (colour c)
+global,DS:F189,pencil_mask_b,u8[63],game_flow,spec:game_flow,§3
+global,DS:F1C8,pencil_mask_c,u8[63],game_flow,spec:game_flow,§3
+global,DS:F207,pencil_mask_tip,u8[8],game_flow,spec:game_flow,§3
+global,DS:F210,pencil_mask_point,u8[7],game_flow,spec:game_flow,§3
+global,DS:F26A,title_colour_c,u16,game_flow,spec:game_flow,§3 the sprite's third layer / the pencil's third
 global,DS:F26C,front_end_running,u16,game_flow,spec:game_flow,§6
+global,DS:F26E,title_colour_d,u16,game_flow,spec:game_flow,§3 set with the others (1 in VGA)
+global,DS:F270,name_buffer,char[10],game_flow,spec:game_flow,§2 the .MUS file name of music_start; config_load's Y/N answer
+global,DS:F27C,pencil_colour_tip,u16,game_flow,spec:game_flow,§3 the pencil tip colour (0Fh in VGA)
 global,DS:F280,tile_bin_offset,u16,render3d,spec:render3d,§2 far pointer offset of TILE.BIN
 global,DS:F282,tile_bin_segment,u16,render3d,spec:render3d,§2
 global,DS:F292,music_voices,u16,sound,spec:sound,§3

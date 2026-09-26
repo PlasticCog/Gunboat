@@ -8,8 +8,8 @@
 //   --host-test  developer check of the SDL host: runs the three timer rates for a moment and
 //                compares the interrupts counted with the PIT rates (use SDL_VIDEO_DRIVER=dummy)
 //
-// Start-up follows main (0000:0000, game_flow.md §1) once it is ported (phase 4); until then only
-// the checks run.
+// Without --check / --host-test it runs the game: main (0000:0000, game_flow.md §1) as far as it
+// is ported (phase 4: the start-up, the title and the menu).
 #include <cctype>
 #include <chrono>
 #include <cstdio>
@@ -18,8 +18,10 @@
 #include <filesystem>
 #include <string>
 
+#include "game/flow.hpp"
 #include "host.hpp"
 #include "mem.hpp"
+#include "platform/platform.hpp"
 #include "platform/vga.hpp"
 
 using namespace gb;
@@ -111,8 +113,13 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    std::fprintf(stderr, "The game code is not ported yet (phase 3: the core only). Try --check, or the Codex "
-                         "prototype gunboat_legacy.\n");
-    (void)fullscreen;
-    return 1;
+    // The machine as DOS leaves it to GB.EXE, then the program (it ends through the runtime's exit).
+    dos_heap_init();
+    bios_init();
+    if (!host_init(dir.c_str(), scale, fullscreen)) return 1;
+    vga_init();
+    host_set_kbd_handler(kbd_byte);
+    host_set_focus_lost_handler(kbd_focus_lost);
+    host_set_timer(PIT_DIV_BIOS, timer_interrupt);
+    game_main();
 }

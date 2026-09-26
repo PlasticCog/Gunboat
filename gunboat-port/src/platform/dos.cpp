@@ -293,11 +293,11 @@ u16 crt_fopen(u16 name_ds, u16 mode_ds)
     return s;
 }
 
-// 15ee:0332 fread
-u16 crt_fread(FarPtr buf, u16 size, u16 count, u16 f) { return crt_rw(buf, size, count, f, false); }
+// 15ee:0332 fread (medium model: the buffer is a DGROUP offset)
+u16 crt_fread(u16 buf_ds, u16 size, u16 count, u16 f) { return crt_rw({buf_ds, DGROUP}, size, count, f, false); }
 
 // 15ee:0524 fwrite
-u16 crt_fwrite(FarPtr buf, u16 size, u16 count, u16 f) { return crt_rw(buf, size, count, f, true); }
+u16 crt_fwrite(u16 buf_ds, u16 size, u16 count, u16 f) { return crt_rw({buf_ds, DGROUP}, size, count, f, true); }
 
 // 15ee:023e fclose
 s16 crt_fclose(u16 f)

@@ -16,7 +16,12 @@ void speaker_reset();       // 1b37:0002
 void music_tick();          // 1af5:0006
 void speaker_music_tick();  // 1b37:00c0
 
-// cockpit messages (simulation.md §9): not ported yet; reached only in a mission
+// not ported yet (fatal if reached): the cockpit messages (a mission only), the HQ, the front end,
+// the mission
 void show_message_far(u16 id);  // 0919:1589
+u16 hq_quiz();                  // 020d:0008
+void front_end();               // 02d2:0008
+void mission_run();             // 05bd:000a
+void joystick_calibrate(u16 stick);  // 146e:000e (with a joystick enabled)
 
 } // namespace gb

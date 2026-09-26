@@ -64,6 +64,9 @@ void host_free(void *p);
 [[noreturn]] void host_fatal(const char *fmt, ...);
 // Shuts down and ends the program with this exit code (the runtime's exit()).
 [[noreturn]] void host_exit(int code);
+// Shows a message (stderr and a message box) and returns: the text a DOS program prints on its way
+// out, which the port has no text screen for.
+void host_error_box(const char *text);
 
 // Developer aids (environment variables):
 //   GB_SNAPSHOT_DIR=dir   every presented frame >= 2 s after the previous one is saved as
