@@ -442,12 +442,11 @@ void terrain_setup()
         if (ds_u8(DS_screen_shake) != 0) sky = 0x0F;
     }
     const u8 mode = u8(ds_u16(DS_video_mode));
-    // The mode's sky and water: VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below.
-    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    // The mode's sky and water (0919:73be): VGA above 0Dh, EGA 0Dh, Tandy 9, CGA any other mode.
     u16 di;
     if (mode > 0x0D) di = sky_water_vga(es, u16(sky << 8 | sky), bl, cl);
     else if (mode == 0x0D) di = sky_water_ega(es, u16(sky << 8 | sky), bl, cl);
-    else if (mode >= 9) di = sky_water_tandy(es, u16(sky << 8 | sky), bl, cl);
+    else if (mode == 9) di = sky_water_tandy(es, u16(sky << 8 | sky), bl, cl);
     else di = sky_water_cga(es, u16(sky << 8 | sky), bl, cl);
 
     u16 fresh = ds_u16(DS_rng_state);
@@ -469,7 +468,7 @@ void terrain_setup()
     const u16 first = (ds_u8(DS_water_phase) >> 2) & 0x1F;
     const u8 water = ds_u8(u16(DS_scene_colours + 1));
     // DX = mode (DH = 0): water_marks_vga replaces DL before it adds DX.
-    // TODO(verify): the dispatch of the other modes' marks (render/modes.hpp).
+    // The mode's marks (0919:7438): VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below 9.
     const u16 marks = u16(water << 8 | u8(water | 7));
     if (mode > 0x0D) water_marks_vga(es, marks, first, 0x20, mode, di);
     else if (mode == 0x0D) water_marks_ega(es, marks, first, 0x20, mode, di);

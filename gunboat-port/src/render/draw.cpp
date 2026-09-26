@@ -350,8 +350,7 @@ void spotlight_beam(u16 ax, u8 bl)
     ds_u8(BEAM_ROW) = first;
     ds_u8(BEAM_ROWS) = 10;
     const u16 table = u16(u8(bl * 10) + CS_spotlight_widths);
-    // The mode's beam: VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below.
-    // TODO(verify): the dispatch of the other modes (render/modes.hpp).
+    // The mode's beam (0919:7ba0): VGA above 0Dh, EGA 0Dh, Tandy 9-0Ch, CGA below 9.
     const u8 mode = u8(ds_u16(DS_video_mode));
     if (mode > 0x0D) spotlight_beam_vga(es, table, dx);
     else if (mode == 0x0D) spotlight_beam_ega(es, table, dx);

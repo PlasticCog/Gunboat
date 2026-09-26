@@ -46,6 +46,15 @@ global,DS:D6C1,gauge_centres,u8[3][12],§3 by look direction
 global,DS:D9B6,page_segments,u16[3],§1
 func,05bd:2f6a,station_screen_colours,far void(),§5 EGA/Tandy/CGA palette entries of the full-screen stations (ega_pal_entry); nothing in VGA
 func,0919:8e29,view_copy_head_vga,near (ES DS)->DI SI,§6 nine rows of 208 bytes shared by view_copy_5..8_vga; leaves DI/SI for the caller and CX = 0
+func,0919:5062,view_copy_1_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_1_vga
+func,0919:5104,view_copy_2_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_2_vga
+func,0919:514a,view_copy_3_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_3_vga
+func,0919:51f2,view_copy_4_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_4_vga
+func,0919:52e6,view_copy_5_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_5_vga
+func,0919:5344,view_copy_6_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_6_vga
+func,0919:53a2,view_copy_7_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_7_vga
+func,0919:5436,view_copy_8_tandy,near void(ES dst_seg DS src_seg),§6.1 Tandy twin of view_copy_8_vga
+func,0919:5400,view_copy_head_tandy,near (ES DS)->DI SI,§6.1 nine rows of 104 bytes shared by view_copy_5..8_tandy; leaves DI/SI for the caller and CX = 0
 cglobal,0919:213b,fuel_needle_pivot,u16,§3 (x; y) added to the gauge centre for the fuel needles' pivot
 cglobal,0919:213d,fuel_needle_points,u16[32],§3 needle end (dx; dy) by fuel >> 11
 cglobal,0919:2171,needle_pivot,u16,§3 (x; y) added to the gauge centre for the throttle needles and the radar sweep
