@@ -7,17 +7,21 @@ the Test Drive III port's `td3port/PORTING.md`.
 ## Architecture
 
 ```text
-src/main.cpp            arguments, mem_load_exe, host checks; later main (0000:0000)
+src/main.cpp            arguments, mem_load_exe, the machine set-up, then game_main (main 0000:0000)
 src/mem.hpp/.cpp        mem[]: GB.EXE at 1000:0000, DGROUP 2B73h, VGA A000h; accessors; exact division;
                         the EXEPACK loader
 src/host.hpp/.cpp       SDL3, the only file that includes it: window, PIT timer, retrace, XT keys,
                         gamepad, OPL2 + speaker, game files, fatal errors
 src/symbols.hpp         generated from reverse_engineering/symbols.csv (never edit)
-src/platform/           platform.md and video.md: vga (DAC/CRTC model), helpers (random ...), later
-                        timers, keyboard ISR, files, LZW/pictures, text, graphics library
-src/game/               the game: sim_*.cpp (simulation.md), later render_*, world_*, flow_*, hud_*
-src/sound/              (later) sound.md
-tests/difftest/         gbdiff.py (harness), bridge.cpp (the core as a DLL), host_stub.cpp, test_*.py
+src/platform/           platform.md and video.md: dos (DOS memory, files, the C runtime models),
+                        bios (INT 10h / 1Ah model), gfx (graphics library, pictures), pal (palette,
+                        RLE pictures, dissolve), text, lzw, kbd (INT 9), timer (INT 8, the host's
+                        timer dispatch, BIOS waits), joystick, vga (DAC/CRTC model), helpers
+src/game/               the game: flow_* (game_flow.md: main, files, keys, screens, title, music),
+                        sim_* (simulation.md); pending.cpp: placeholders for calls not ported yet
+src/sound/              sound.md: effects and music
+tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
+                        bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
 legacy/                 the Codex prototype (reference only)
 ```
 
@@ -63,29 +67,49 @@ helper when the first such function is ported.
 
 ## The differential test harness (`tests/difftest/gbdiff.py`)
 
-* **Same memory.** The harness builds one 1 MB + 64 KB memory image (the Python loader's, which
-  `test_loader` checks against the C++ loader) and gives a copy to each side.
-* **The original** runs in Unicorn: the function is called as the game calls it (far C functions
-  with their stack arguments, near routines with registers; SS = DS = DGROUP, SP = FF00h) and runs
-  until it returns to a sentinel address. `INT`, `IN` and `OUT` stop the run unless the test
-  installs a handler (`h.orig.ints[0x21] = ...`), so a function never silently depends on
-  hardware.
-* **The port** runs through `gb_difftest.dll` on its own copy.
-* **Compared:** every byte of memory except the original's stack below the call's SP (the port
-  has no emulated stack), and the listed return registers. A mismatch names each differing range
-  with its symbol and the before / original / port bytes.
-* **Callees** run for real on both sides: the original executes its callees, the port calls its
-  ports of them. A function whose callees are not ported yet waits for them, or the test stubs the
-  callee identically on both sides.
-* The harness was checked by planting six bugs in the port (a wrong clip limit, a missing sign
-  flip, a wrong mask, a stray write, a short loop, a missing store); each was reported.
+* **Same memory.** Each case starts from one 1 MB + 64 KB image: the Python loader's GB.EXE
+  (`test_loader` checks it against the C++ loader), the DOS heap and the BIOS data area as at
+  start-up (`h.fresh_memory()`), plus whatever the test sets. Both sides get a copy.
+* **The original** runs in Unicorn, called as the game calls it: a far or near C function with its
+  stack arguments, an assembly routine with registers, an interrupt handler with FLAGS/CS/IP (the
+  convention is read from the code: RETF, RET or IRET). SS = DS = DGROUP, SP = FF00h; it runs
+  until it returns to a sentinel address.
+* **The machine models** (`dosmodel.py`, `biosmodel.py`) give the original the same machine the
+  port has: INT 21h (files on the real game folder, memory on the MCB chain), INT 10h and INT 1Ah
+  on the BIOS data area, a VGA DAC, the ports the code touches (3DAh reads "in retrace", 61h, the
+  graphics registers). Anything else (`INT`, `IN`, `OUT`) stops the run with an error, so a
+  function never silently depends on hardware. The C runtime functions the port replaces with
+  models (`crt_fopen`, `crt_fmalloc`, ...) are replaced on the Unicorn side too, by
+  `Original.stub()` running the Python mirror of the port's model.
+* **Compared** after each call: every byte of memory except the original's stack below the call's
+  SP; the listed return registers; every DAC write in order (a fade's steps, not only its end);
+  the open DOS files and their positions; and whatever `h.extensions` add (the sound model's
+  speaker events). A mismatch names each differing range with its symbol and the before /
+  original / port bytes.
+* **Time**: `tick=(poll_points, kind[, keys])`. The original gets one timer tick each time it
+  executes a poll point (the instruction where it re-reads the tick counter or the BIOS clock),
+  the port one per `host_pump()`. `kind` is `tick_counter` (DS:08C0 + 1), `bios` (the BIOS clock)
+  or `both`; `keys` (a byte list) delivers one key per tick into isr_key_code. The game's own timer
+  programming (`host_set_timer`) is recorded but does not drive the test.
+* **Callees** run for real on both sides. A port that calls a function not ported yet goes through
+  `src/game/pending.cpp`: a placeholder that is exact in the tested states (and says so), or a
+  fatal "not ported yet" error if it could be reached otherwise.
+* **Bridge entries** live in `tests/difftest/bridge_<subsystem>.cpp` (`BRIDGE(name) { ... }`, see
+  `bridge.hpp`); a test calls `h.check(name, m, regs=..., stack_args=[...], outputs=[...])`.
+* The tests were checked by planting bugs (a wrong clip limit, a missing sign flip, a wrong mask, a
+  stray write, a short loop, a missing store, an unsigned character, a size off by one, a fade
+  rounding): each is reported. The fade rounding was only caught once DAC writes were logged.
 
 ## Timing and host rules
 
-* The host runs the active timer interrupt at the PIT rate the game programs (89.63 Hz menus,
-  236.695 Hz missions, 18.2 Hz BIOS; `host_set_timer`). Every busy-wait loop of the original calls
-  `host_pump()` once per iteration; port 3DAh polls become `host_wait_vretrace()`.
-* Keys arrive as the XT byte stream for the ported INT 9 handler (`host_set_kbd_handler`); port
-  201h reads become `host_joy_read`; OPL and speaker writes go to `host_opl_write`/`host_speaker`.
-* In the test DLL, `host_pump()` runs exactly one timer interrupt and `host_fatal()` returns an
+* The host calls `timer_interrupt()` at the PIT rate the game programs (89.63 Hz menus, 236.695 Hz
+  effects, 18.2 Hz BIOS); it runs the handler that the INT 8 vector in mem[] points at, so a game
+  handler chaining to the vector it saved works as on the machine. The keyboard likewise goes to
+  kbd_isr only while INT 9 points at it (`kbd_byte`).
+* Every busy-wait loop of the original calls `host_pump()` once per iteration, in the same place
+  relative to its test as the original's poll (see the title sprite loop); port 3DAh polls become
+  `host_wait_vretrace()`.
+* Keys arrive as the XT byte stream (`host_set_kbd_handler`); port 201h reads become
+  `host_joy_read`; OPL and speaker writes go to `host_opl_write`/`host_speaker`.
+* In the test DLL, `host_pump()` runs the test's tick, `host_fatal()` and `host_exit()` return an
   error to the harness.
