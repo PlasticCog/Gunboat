@@ -26,7 +26,9 @@ src/sound/              sound.md: effects and music; adlib_driver.cpp: the resid
                         ADLIB.COM (adlib_driver.md), not part of GB.EXE
 src/render/             render3d.md: the 3D renderer (camera, terrain window and projection, terrain
                         primitives and VGA spans, visible-object list, sprite cache and blitter,
-                        spotlights, flash); platform/gfx_display.cpp: gfx_set_display_offset
+                        spotlights, flash; terrain_frame.cpp the terrain pass with the shore contact);
+                        platform/gfx_display.cpp: gfx_set_display_offset
+src/mission/            world.md: the mission (mission_load.cpp: mission_load, mission_setup)
 tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
                         bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
 legacy/                 the Codex prototype (reference only)

@@ -38,3 +38,11 @@ global,DS:F13A,flow_scratch,u16,"§1 scratch of main and config_load: the title 
 global,DS:F396,world_b_size,u16,§4
 global,DS:F5D4,world_b_far,u16[2],§4 far pointer to the B data copy
 func,0919:0000,panel_redraw_all,far void(),§3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
+global,DS:EE9A,stern_art1_runs,u16,§4 run count of B61.LZ / BGR1.LZ (the stern gun art at DS:F616)
+global,DS:EE9E,bow_art2_runs,u16,§4 run count of BG2.LZ / BF2.LZ
+global,DS:EED4,midship_art2_runs,u16,§4 run count of BM2.LZ / BR2.LZ / B62.LZ
+global,DS:EED8,stern_art2_runs,u16,§4 run count of B62.LZ / BGR2.LZ
+global,DS:F0F8,bd5_runs,u16,§4 run count of BD5.LZ
+global,DS:F136,bd1_runs,u16,§4 run count of BD1.LZ
+global,DS:F138,bd2_runs,u16,§4 run count of BD2.LZ
+global,DS:F142,tile_bin_size,u16,§4 size of TILE.BIN (low word of the archive entry size)

@@ -65,4 +65,15 @@ void muzzle_flash_tick();                                   // 0919:81f8
 // ---- camera (sim_camera.cpp)
 void camera_pitch_bob();  // 0919:80e0
 
+// ---- the crew pilot and the river routes (sim_routes.cpp)
+struct RoutePoint {
+    u16 ax, cx;  // the waypoint (world X, Y), or AX = 2 * tile and CX unchanged when there is none
+    u16 dx;      // DH = its link (rotated with the tile), FFh when there is none; DL = 28h - 4 * row
+    u16 si;      // where the record read stopped (unused by the callers)
+};
+RoutePoint route_point(u16 cx, u16 bx);     // 0919:8754  CL = index, BX = grid cell
+u16 route_advance(u16 dx, u16 cx, u16 bx);  // 0919:87e8  DH = link, CL = index, BX = cell; returns DX
+void route_find();                          // 0919:1c00
+void crew_pilot_decide();                   // 0919:1b2d
+
 } // namespace gb
