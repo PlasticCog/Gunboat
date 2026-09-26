@@ -308,7 +308,7 @@ bool launcher_run(Settings &s)
         text(r, 16 / 3.0f, 12 / 3.0f, "GUNBOAT", 255, 196, 64);
         SDL_SetRenderScale(r, scale, scale);
         text(r, 16 + 8 * 8 * 3 + 16, 16, "Accolade, 1990", 200, 200, 210);
-        text(r, 16 + 8 * 8 * 3 + 16, 28, "The faithful C++ / SDL3 port", 130, 140, 160);
+        text(r, 16 + 8 * 8 * 3 + 16, 28, std::string("The faithful C++ / SDL3 port, version ") + GB_VERSION, 130, 140, 160);
         for (int i = 0; i < ITEMS; i++) {
             const float y = item_y(i);
             if (i == sel) {

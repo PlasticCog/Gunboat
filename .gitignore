@@ -21,6 +21,7 @@
 /gunboat-port/build/
 /gunboat-port/build-*/
 /gunboat-port/out/
+/gunboat-port/release/
 /gunboat-port/deps/
 __pycache__/
 *.pyc

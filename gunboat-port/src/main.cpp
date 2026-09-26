@@ -4,7 +4,7 @@
 //                [--fps N] [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]
 //                [--motion original|smooth] [--draw-distance original|extended]
 //                [--widescreen off|world|cockpit] [--aspect 4:3|square]
-//                [--filter sharp|nearest|smooth|crt] [--check] [--host-test]
+//                [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]
 //   The player's settings (gunboat.ini, src/enhanced/settings.hpp) give the defaults; the options
 //   override them for this run. The launcher (src/enhanced/launcher.cpp) shows first unless the
 //   settings say not to or --no-launcher is given; it saves the settings when the game starts.
@@ -62,7 +62,7 @@ int usage(const char *prog)
                  "          [--sound adlib|speaker] [--original | --enhanced] [--view original|hires]\n"
                  "          [--motion original|smooth] [--draw-distance original|extended]\n"
                  "          [--widescreen off|world|cockpit] [--aspect 4:3|square]\n"
-                 "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test]\n",
+                 "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]\n",
                  prog);
     return 2;
 }
@@ -159,6 +159,10 @@ int main(int argc, char **argv)
         else if (is("--no-launcher")) no_launcher = true;
         else if (is("--check")) check = true;
         else if (is("--host-test")) host_test = true;
+        else if (is("--version")) {
+            std::printf("Gunboat port %s\n", GB_VERSION);
+            return 0;
+        }
         else if (is("--help") || is("-h")) {
             usage(argv[0]);
             return 0;

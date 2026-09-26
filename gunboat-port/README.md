@@ -67,6 +67,11 @@ with the DOSBox captures in `reverse_engineering/out/dosbox_captures`;
 `scene_enhanced.py` checks the enhancements (see the table).
 `GB_GAME_DIR` points the tests at the original files (default `../Game`).
 
+`powershell -File gunboat-port/Release.ps1` makes the release package
+`gunboat-port/release/Gunboat-<version>-win64.zip` (the stripped `gunboat.exe`, `SDL3.dll`, an empty
+`Game` folder with its README, `dist/README.txt` for the players, the licenses; no game file) for a
+GitHub release. The version is the one in `CMakeLists.txt` (`gunboat.exe --version`).
+
 `python gunboat-port/tests/difftest/run_all.py [--scale N] [--seed N] [-k name]` runs the
 differential tests alone (it builds `gb_difftest` first) and writes `out/difftest-report.json`.
 

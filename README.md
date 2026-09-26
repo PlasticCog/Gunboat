@@ -9,6 +9,28 @@ The method follows the finished Test Drive III port by Krzysztof Kania
 from the same year: map the executable, write one specification per subsystem, then port each
 original function and check it against the original machine code.
 
+## How to play (Windows)
+
+You need the files of the original DOS *Gunboat* (`GB.EXE`, `DATAA.DAT`, `DATAB.DAT`, `DATAC.DAT`,
+the `.MUS` music and, for AdLib music, `ADLIB.COM`). They are not included.
+
+1. Open the [latest release](https://github.com/PlasticCog/Gunboat/releases/latest) and download
+   `Gunboat-…-win64.zip`.
+2. Unzip it somewhere you can write to (Documents or the Desktop, not Program Files).
+3. Copy your original game files into its `Game` folder:
+
+   ```text
+   Gunboat\
+   ├── Game\          <- your original game files (GB.EXE, DATAA.DAT, ...)
+   ├── gunboat.exe
+   ├── SDL3.dll
+   └── README.txt     <- the options and the controls
+   ```
+
+4. Double-click `gunboat.exe`, check that the launcher says "Game found", choose **Original** or
+   **Enhanced** (or each option) and press **Play**. If Windows says "Windows protected your PC",
+   click **More info**, then **Run anyway** (the program is not signed).
+
 ## Status
 
 | Phase | State |
@@ -28,7 +50,7 @@ original function and check it against the original machine code.
 | `reverse_engineering/` | Executable map, symbols, specs, format notes and Python tools |
 | `gunboat-port/` | C++ / SDL3 code (CMake) and differential tests against the original code |
 
-## Building and playing (Windows)
+## Building from source (Windows)
 
 1. Copy the files of your original DOS *Gunboat* into the folder `Game` (`Game/README.md` lists
    the ones the port reads). They are never committed: Git ignores that folder.

@@ -39,5 +39,6 @@ not linked into the game.
 
 ## Original Gunboat resources
 
-`GB.EXE`, the data files, pictures, palettes and music stay in the user's own `Original DOS
-version` folder. The port reads them at run time; nothing here relicenses or redistributes them.
+`GB.EXE`, the data files, pictures, palettes and music stay in the player's own `Game` folder.
+The port reads them at run time; nothing here or in the release packages relicenses or
+redistributes them.

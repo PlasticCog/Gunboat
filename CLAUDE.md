@@ -82,6 +82,7 @@ core.
 ```text
 # toolchain: MSYS2 UCRT64 (GCC 15, CMake, Ninja) at C:\msys64\ucrt64\bin; Python 3.13 with capstone, unicorn, pillow
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
+powershell -File gunboat-port/Release.ps1                      # release zip (exe, SDL3.dll, empty Game/)
 gunboat-port/build/gunboat.exe --check                         # finds Game/ by itself
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
 python gunboat-port/tests/scenes/scene_enhanced.py             # the enhancements, headless (needs the game)
@@ -162,6 +163,8 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     itself, one or two folders up (a build in `gunboat-port/build`), then in the current folder;
     the launcher or `--game-dir` can point elsewhere. The files were copied there from the local
     `Original DOS version/`.
+* **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
+  `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
 * **Next:** optionally the parked video modes and sound devices; more enhancements only as
   player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
