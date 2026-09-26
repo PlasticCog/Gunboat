@@ -166,6 +166,7 @@ func,0919:1558,print_colon,near void(),simulation,spec:simulation,§9.1 prints t
 func,0919:1565,show_message_page0,near void(AL message),simulation,spec:simulation,§9.1
 func,0919:1589,show_message_far,far void(u16 message),simulation,spec:simulation,§9.1
 func,0919:1594,show_message,near void(AL message),simulation,spec:simulation,§9.1
+func,0919:16e3,heading_readout,near void(AL heading AH fraction),simulation,spec:simulation,§9.1 compass letters (compass_points) and ':' then the heading in degrees (heading:fraction * 360 / 65536 via DIV 5B00h)
 func,0919:174e,print_bcd_2digits,near void(AL bcd),simulation,spec:simulation,§9.1 BCD byte as binary; two digits (B7E3 = 1)
 func,0919:1769,print_3digits,near void(AL CF),simulation,spec:simulation,§9.1 CF*256 + AL as three digits with leading blanks (B7E3 = 0)
 func,0919:176e,print_digits_hundreds,near void(AL CF),simulation,spec:simulation,§9.1 hundreds digit into D64B (CF adds 256 without a second carry: quirk)
@@ -176,12 +177,12 @@ func,0919:18c7,gunner_bow,near void(),simulation,spec:simulation,§6.2
 func,0919:190d,gunner_stern,near void(),simulation,spec:simulation,§6.2
 func,0919:1953,gunner_midship,near void(),simulation,spec:simulation,§6.2
 func,0919:19a0,gunner_aim,near void(),simulation,spec:simulation,§6.2
-func,0919:1aa3,gunner_key,near void(BL keys CL rate),simulation,spec:simulation,§6.2
+func,0919:1aa3,gunner_key,near void(BL keys CL rate),simulation,spec:simulation,§6.2 aim routine of gun scratch_b7e2 (0 bow 1 stern 2 midship) | §6.2
 func,0919:1ac0,crew_pilot,near void(),simulation,spec:simulation,§4.5
 func,0919:1b2d,crew_pilot_decide,near void(),simulation,spec:simulation,§4.5
 func,0919:1c00,route_find,near void(),simulation,spec:simulation,§4.6
-func,0919:1cf9,reload_tick,,simulation,codex,ORIGINAL_WEAPONS.md AE89; called in the simulation iteration loop
-func,0919:1d30,mission_clock_tick,,simulation,codex,ORIGINAL_PHYSICS.md AEC0: +1 s every 15 simulation passes
+func,0919:1cf9,reload_tick,near void(),simulation,codex+spec:simulation,§6.1 reload counters count down to 0 then back to 30h / 8; lamps 19h / 1Ch | ORIGINAL_WEAPONS.md AE89; called in the simulation iteration loop
+func,0919:1d30,mission_clock_tick,near void(),simulation,codex+spec:simulation,§9.2 clock; easter egg busy-wait of 300h ticks; deadline | ORIGINAL_PHYSICS.md AEC0: +1 s every 15 simulation passes
 func,0919:1dd6,time_of_day,near void(),simulation,spec:simulation,§9.2
 func,0919:1e87,mission_stop,near void(),simulation,spec:simulation,§5.2 passengers for mission types 2 / 4 / 0Ah
 func,0919:1fc3,move_toward,near void(BX object CX DX target),simulation,spec:simulation,§5.2 steps D6A2/D6A4
@@ -196,6 +197,7 @@ func,0919:2932,radar_plot,near void(AH bearing CX distance),hud,spec:hud,§3 BX 
 func,0919:29f9,accelerate_speed,near void(CH target),simulation,codex+spec:simulation,"§4.3 one unit toward the target unless the boat is locked; pitch impulse -+5 | ORIGINAL_PHYSICS.md BB89: one unit toward target, pitch impulse +-5"
 func,0919:2a37,boat_hit,near void(AL class),simulation,spec:simulation,§8.6
 func,0919:2a69,boat_hit_component,near void(AL component CL message),simulation,spec:render3d+spec:simulation,§8.6 entry of boat_hit with a chosen component (ramming: render3d §5.4) | simulation §8.6 entry of boat_hit with a chosen component (ramming)
+func,0919:2bbd,damage_panel_refresh,near void(AL condition index),simulation,spec:simulation,§8.6 spotlight hit at the gun station that shows it: gun_panel_copy(condition) on page 0
 func,0919:2c35,palette_flash,near void(),render3d,spec:render3d,§7.1 DAC register 8 by D9B5 level
 func,0919:2cad,sinking_update,near void(),simulation,spec:simulation,§8.7
 func,0919:2ce3,window_hit,near void(),simulation,spec:simulation,§8.6 cockpit cracks
@@ -211,7 +213,7 @@ func,0919:3706,vec_scale,near AX(AL),simulation,spec:simulation,§5.1 AX = AL * 
 func,0919:3712,atan,near (CX dx DX dy)->AL,simulation,spec:simulation,§4.6
 func,0919:37af,projectile_alloc,near ()->BX slot CX slot*8,simulation,codex+spec:simulation,"§7.1 highest free slot; 0 when full | ORIGINAL_WEAPONS.md C93F: free slot, descending from 31"
 func,0919:37c7,projectile_aim,near void(AL elevation AH weapon BX slot CX heading:fraction SI record),simulation,codex+spec:simulation,"§7.1 flight time; impact point | ORIGINAL_WEAPONS.md C957: integer aim, flight time, impact XY"
-func,0919:38cc,projectile_tick,,simulation,codex,ORIGINAL_WEAPONS.md CA5C: countdown and impact dispatch; object damage CB8C is inside 0919:3977 at +85
+func,0919:38cc,projectile_tick,near void(SI),simulation,codex+spec:simulation,§7.1 flight countdowns; projectile_impact at 0 (SI goes to caller_si) | ORIGINAL_WEAPONS.md CA5C: countdown and impact dispatch; object damage CB8C is inside 0919:3977 at +85
 func,0919:38ed,projectile_impact,near void(BX slot),simulation,spec:simulation,§7.2
 func,0919:3948,mark_near_objects,near void(),simulation,spec:simulation,§7.2
 func,0919:3977,hit_objects,near void(),simulation,spec:simulation,§7.2
@@ -649,10 +651,13 @@ global,DS:B7E0,needle_centre_x,u16,hud,spec:hud,§3 needle_draw: the gauge centr
 global,DS:B7E2,scratch_b7e2,u8,simulation,spec:simulation,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)
 global,DS:B7E3,scratch_b7e3,u8,simulation,spec:simulation,§5.1 shared scratch byte (step fraction here)
 global,DS:B7E5,vec_factor,u8,simulation,spec:simulation,§5.1 multiplicand of vec_scale
+global,DS:B7E6,scratch_b7e6,u8,simulation,spec:simulation,§8.3 enemy_update: bearing of the shooter relative to the view - 48h (also B7E7); hud: needle pivot y
 global,DS:B7E7,vec_angle,u8,simulation,spec:simulation,§5.1 angle of the last heading_vector; bit 7 flipped in reverse
 global,DS:B7E8,vec_sin,u8,simulation,spec:simulation,§5.1 second component of the last heading_vector
 global,DS:B7E9,vec_product_lo,u8,simulation,spec:simulation,§5.1
 global,DS:B7EA,vec_product_hi,u8,simulation,spec:simulation,§5.1
+global,DS:B7EB,enemy_behaviour,u8,simulation,spec:simulation,§8.3 behaviour byte of the object enemy_update is processing (saved around the missile message)
+global,DS:B7EC,enemy_class,u8,simulation,spec:simulation,§8.3 class byte of the object enemy_update is processing
 global,DS:B7ED,radar_steps,u8,hud,spec:hud,§3 radar_scope: sweep steps left in this frame
 global,DS:B7F0,joystick_bits,u8,simulation,spec:simulation,was keypad_bits | §3.1
 global,DS:B7F1,time_compression,u8,simulation,spec:simulation,§1.2
@@ -779,11 +784,13 @@ global,DS:D63E,weapon_elevation_limit,u8[6],simulation,spec:simulation,§7.1 per
 global,DS:D644,bow_barrel,u8,simulation,spec:simulation,§6.1
 global,DS:D645,readout_cache_spare,u16,simulation,spec:simulation,§9.1 set to FFFFh with D647; never read
 global,DS:D647,readout_heading_cache,u16,simulation,spec:simulation,§9.1 heading:fraction last drawn by message_line_draw; FFFFh forces a redraw
+global,DS:D649,readout_minutes_cache,u8,simulation,spec:simulation,§9.1 minutes last drawn by message_line_draw (FFh forces a redraw)
 global,DS:D64A,message_row,u8,simulation,spec:simulation,§9.1 text y of the message line
 global,DS:D64B,digit_text,u8[3],simulation,spec:simulation,§9.1 readout digits
 global,DS:D64E,readout_colon,u8,simulation,spec:simulation,§9.1 ':'
 global,DS:D64F,compass_points,u8[16],simulation,spec:simulation,§9.1 two letters per sixteenth of a turn
 global,DS:D65F,message_blank,u8[29],simulation,spec:simulation,§9.1 28 spaces + AAh: clears the message line
+global,DS:D67D,gunner_sweep,u8[3],simulation,spec:simulation,§6.2 bow / stern / midship gunner sweep direction (bit 0: 0 left 1 right)
 global,DS:D680,crew_throttle_target,u8,simulation,spec:simulation,§4.5
 global,DS:D681,crew_pilot_state,u8,simulation,spec:simulation,§4.5
 global,DS:D682,crew_pilot_keys,u8,simulation,spec:simulation,§4.5
@@ -808,8 +815,10 @@ global,DS:D6A9,missile_target_x,u16,simulation,spec:simulation,§8.4
 global,DS:D6AB,missile_target_y,u16,simulation,spec:simulation,§8.4
 global,DS:D6AD,missile_speed,u8,simulation,spec:simulation,§8.4
 global,DS:D6AE,missile_speed_table,u8[4],world,spec:world,§5
+global,DS:D6B2,missile_source_entry,u16,simulation,spec:simulation,§8.4 2*visible entry of the missile's source last found
 global,DS:D6B4,boat_locked,u8,simulation,spec:simulation,§5.2
 global,DS:D6B5,passengers_pending,u8,simulation,spec:simulation,§5.2
+global,DS:D6B6,jet_engine_offset,u8[2],simulation,spec:simulation,§4.2 added to jet_angle per engine in engine_thrust (10h F0h)
 global,DS:D6B8,radar_sweep,u8,hud,spec:hud,§3
 global,DS:D6B9,jet_marker_last,u8,hud,spec:hud,§3
 global,DS:D6BA,wake_timer,u8,simulation,spec:simulation,§4.3
@@ -818,6 +827,7 @@ global,DS:D6BF,detail_low,u8,simulation,spec:simulation,§3.3
 global,DS:D6C1,gauge_centres,u8[3][12],hud,spec:hud,§3 by look direction
 global,DS:D6E5,flash_level,u8,render3d,spec:render3d,§7.1
 global,DS:D6EA,flash_colours,u8[3][3],render3d,spec:render3d,§7.1
+global,DS:D6F6,caller_si,u16,simulation,spec:simulation,§8.3 §7.2 SI of game_frame saved by enemy_update and mark_near_objects (hit_objects reloads SI from it)
 global,DS:D6F8,salvo_heading,u8,simulation,spec:simulation,§8.5
 global,DS:D6F9,salvo_speed,u8,simulation,spec:simulation,§8.5
 global,DS:D6FA,spot_thresholds,u8[18],simulation,spec:simulation,§8.3
@@ -827,6 +837,7 @@ global,DS:D70E,incoming_descriptor,u8[16],simulation,spec:simulation,§8.5
 global,DS:D71F,incoming_timer,u8[16],simulation,spec:simulation,§8.5
 global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
+global,DS:D74C,hit_kind,u8,simulation,spec:simulation,§7.2 kind of the object hit_objects is damaging (friendly test for the message)
 global,DS:D74D,view_row_table,u16[64],world,spec:world,§5 row start offsets for the span drawers
 global,DS:D883,sprite_segment_a,u16,world,spec:world,§5
 global,DS:D885,sprite_segment_b,u16,world,spec:world,§5

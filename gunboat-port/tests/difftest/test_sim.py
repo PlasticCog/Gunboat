@@ -103,8 +103,8 @@ def test_aim(h, rng, scale):
                     near_arc(rng, m, heading, bow)
                 bx = rng.choice([0, 1, 2, 3]) if rng.random() < 0.9 else rng.randrange(0x10000)
                 cl = rng.randrange(0x20) if rng.random() < 0.9 else rng.randrange(256)
-                h.check(name, m, regs={'cx': rng.randrange(0x100) << 8 | cl, 'bx': bx},
-                        label='case %d cl %02X bx %04X' % (i, cl, bx))
+                h.check(name, m, regs={'cx': rng.randrange(0x100) << 8 | cl, 'bx': bx, 'ax': rng.randrange(0x10000)},
+                        outputs=['ax'], label='case %d cl %02X bx %04X' % (i, cl, bx))
                 n += 1
     return n
 
@@ -211,7 +211,7 @@ def test_fire(h, rng, scale):
     n = 0
     for name in ('fire_station4', 'fire_station3', 'fire_bow'):
         for i in range(700 * scale):
-            h.check(name, fire_memory(h, rng), label='case %d' % i)
+            h.check(name, fire_memory(h, rng), regs={'ax': rng.randrange(0x10000)}, outputs=['ax'], label='case %d' % i)
             n += 1
     return n
 
@@ -223,7 +223,7 @@ def test_projectile_launch(h, rng, scale):
         put8(m, 0xB7F8, rng.randrange(256))
         bx = rng.choice([1, 2, 3, 4, 5]) if rng.random() < 0.9 else rng.randrange(0x100)
         cx = rng.randrange(0x10000)
-        h.check('projectile_launch', m, regs={'bx': bx, 'cx': cx, 'si': rng.randrange(0x10000)}, outputs=['si'],
+        h.check('projectile_launch', m, regs={'bx': bx, 'cx': cx, 'si': rng.randrange(0x10000)}, outputs=['si', 'ax'],
                 label='case %d weapon %d cx %04X' % (i, bx, cx))
         n += 1
     return n
@@ -251,7 +251,7 @@ def test_projectile_aim(h, rng, scale):
         al = rng.choice([0, 0x6F, 0x70, 0x77, 0x78, 0xEB, 0xEC, 0xED, 0xEE, 0xFF]) if rng.random() < 0.3 else rng.randrange(256)
         ax = rng.choice([1, 2, 3, 4, 5, rng.randrange(256)]) << 8 | al
         cx = rng.randrange(0x10000)
-        h.check('projectile_aim', m, regs={'ax': ax, 'bx': slot, 'cx': cx, 'si': slot * 8},
+        h.check('projectile_aim', m, regs={'ax': ax, 'bx': slot, 'cx': cx, 'si': slot * 8}, outputs=['ax'],
                 label='case %d ax %04X cx %04X slot %d' % (i, ax, cx, slot))
         n += 1
     return n

@@ -1,6 +1,8 @@
 // Mission clock and time of day (simulation.md §9.2).
 #include "game/sim.hpp"
 
+#include "game/flow.hpp"
+#include "host.hpp"
 #include "mem.hpp"
 #include "symbols.hpp"
 
@@ -51,6 +53,47 @@ void time_of_day()
         }
     }
     for (u16 i = 0; i < 4; i++) ds_u8(u16(DS_scene_colours + i)) = ds_u8(u16(DS_scene_colour_table + off + i));
+}
+
+// 0919:1d30 mission_clock_tick (simulation.md §9.2, every boat pass): 15 passes make a second; at 60
+// seconds a minute and the time of day; at 60 minutes the hour (BCD, 24 -> 0) and the score word
+// B52E (+1 BCD). On the hour with easter_egg_counter's low byte 24h: "I trust you bought my game",
+// a busy-wait of 300h ticks of tick_counter (after the next tick), then "-was it worth .50 an hour?".
+// When the clock reaches a nonzero deadline: "Our time is up!" (1Fh, which ends the mission).
+void mission_clock_tick()
+{
+    ds_u8(DS_clock_subsecond)++;
+    if (ds_u8(DS_clock_subsecond) < 0x0F) return;
+    ds_u8(DS_clock_seconds)++;
+    ds_u8(DS_clock_subsecond) = 0;
+    if (ds_u8(DS_clock_seconds) < 0x3C) return;
+    ds_u8(DS_clock_seconds) = 0;
+    ds_u8(DS_clock_minutes)++;
+    time_of_day();
+    if (ds_u8(DS_clock_minutes) >= 0x3C) {
+        ds_u8(DS_clock_minutes) = 0;
+        const u8 hours = u8(bcd_inc(ds_u8(DS_clock_hours)));
+        ds_u8(DS_clock_hours) = hours;
+        if (hours >= 0x24) ds_u8(DS_clock_hours) = 0;
+        ds_u16(DS_score_words + 4) = bcd_inc(ds_u16(DS_score_words + 4));
+        if (u8(ds_u16(DS_easter_egg_counter)) == 0x24) {
+            show_message(0x13);
+            // The original polls tick_counter (0919:1d9e, then 0919:1da4): one host_pump per poll.
+            const u16 start = ds_u16(DS_tick_counter);
+            do {
+                host_pump();
+            } while (start == ds_u16(DS_tick_counter));
+            u16 elapsed;
+            do {
+                host_pump();
+                elapsed = u16(ds_u16(DS_tick_counter) - start);
+            } while (elapsed < 0x300);
+            show_message(0x14);
+        }
+    }
+    if (ds_u8(DS_clock_minutes) == ds_u8(DS_deadline_minutes) && ds_u8(DS_clock_hours) == ds_u8(DS_deadline_hours) &&
+        (ds_u8(DS_deadline_minutes) | ds_u8(DS_deadline_hours)) != 0)
+        show_message(0x1F);
 }
 
 } // namespace gb

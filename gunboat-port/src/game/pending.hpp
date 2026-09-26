@@ -6,5 +6,6 @@
 namespace gb {
 
 void mission_run();                  // 05bd:000a
+void key_f4_reverse_course();        // 0919:0667  (calls route_point 0919:8754 and route_advance 0919:87e8)
 
 } // namespace gb

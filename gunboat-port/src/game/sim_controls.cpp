@@ -1,7 +1,8 @@
-// Controls (simulation.md §3.4, §4.1, §4.3, §6.1): aiming the guns, the throttles, the heading
-// steps, the fire keys of the gun stations and the speed response.
+// Controls (simulation.md §3.4, §4.1, §4.3, §6.1): the held controls, aiming the guns, the
+// throttles and the jet, the heading steps, the fire keys of the gun stations and the speed response.
 #include "game/sim.hpp"
 
+#include "hud/hud.hpp"
 #include "mem.hpp"
 #include "sound/sound.hpp"
 #include "symbols.hpp"
@@ -32,16 +33,29 @@ void aim_elevation(u16 elevation, u8 cl, u16 bx)
 // heading, and keep the new heading unless it falls in the blocked arc relative to the hull:
 // (rel + bias) <= 41h, bias 20h for the midship and stern guns (the arc ahead), -60h for the bow
 // gun (the arc behind).
-void aim_turn(u16 heading, u16 fraction, u16 bx, bool plus, u8 bias)
+// Returns AX as the routines leave it: AL = the stepped fraction, AH = the relative heading + bias.
+u16 aim_turn(u16 heading, u16 fraction, u16 bx, bool plus, u8 bias)
 {
     ds_u8(DS_view_sky_top_prev) = 0;
     ds_u8(DS_view_sky_top) = 0;
     const u16 ax = u16(ds_u8(heading) << 8 | ds_u8(fraction));
     const u16 r = plus ? heading_step_plus(ax, bx) : heading_step_minus(ax, bx);
     const u8 dl = u8(r >> 8);
-    if (u8(dl - ds_u8(DS_heading) + bias) <= 0x41) return;
+    const u8 rel = u8(dl - ds_u8(DS_heading) + bias);
+    const u16 out = u16(rel << 8 | u8(r));
+    if (rel <= 0x41) return out;
     ds_u8(fraction) = u8(r);
     ds_u8(heading) = dl;
+    return out;
+}
+
+// The end of aim_stern / aim_midship / aim_bow: left, then AL = CL & 8, then right. Returns AX.
+u16 aim_sides(u8 cl, u16 bx, u16 ax, u16 (*left)(u16), u16 (*right)(u16))
+{
+    if (cl & 4) ax = left(bx);
+    ax = u16((ax & 0xFF00) | (cl & 8));
+    if (cl & 8) ax = right(bx);
+    return ax;
 }
 
 // Headings: hull, bow, midship, stern (heading_fraction the same order).
@@ -55,47 +69,45 @@ constexpr u16 fraction(u16 gun) { return u16(DS_heading_fraction + gun); }
 void end_mission() { ds_u16(DS_station) = 9; }
 
 // 0919:0a22 aim_stern (simulation.md §3.4): CL = held keys (1 up, 2 down, 4 left, 8 right), BX =
-// control-rate index into turn_step_table.
-void aim_stern(u8 cl, u16 bx)
+// control-rate index into turn_step_table. Returns AX as the original leaves it (AH of AX in when
+// the gun does not turn; the crew gunners pass it on, see gunner_aim).
+u16 aim_stern(u8 cl, u16 bx, u16 ax)
 {
     aim_elevation(DS_elevation_stern, cl, bx);
-    if (cl & 4) aim_stern_left(bx);
-    if (cl & 8) aim_stern_right(bx);
+    return aim_sides(cl, bx, ax, aim_stern_left, aim_stern_right);
 }
 
-// 0919:0a5b aim_stern_left (simulation.md §3.4)
-void aim_stern_left(u16 bx) { aim_turn(heading(STERN), fraction(STERN), bx, false, 0x20); }
+// 0919:0a5b aim_stern_left (simulation.md §3.4): returns AX.
+u16 aim_stern_left(u16 bx) { return aim_turn(heading(STERN), fraction(STERN), bx, false, 0x20); }
 
-// 0919:0a83 aim_stern_right (simulation.md §3.4)
-void aim_stern_right(u16 bx) { aim_turn(heading(STERN), fraction(STERN), bx, true, 0x20); }
+// 0919:0a83 aim_stern_right (simulation.md §3.4): returns AX.
+u16 aim_stern_right(u16 bx) { return aim_turn(heading(STERN), fraction(STERN), bx, true, 0x20); }
 
-// 0919:0aab aim_midship (simulation.md §3.4)
-void aim_midship(u8 cl, u16 bx)
+// 0919:0aab aim_midship (simulation.md §3.4): returns AX.
+u16 aim_midship(u8 cl, u16 bx, u16 ax)
 {
     aim_elevation(DS_elevation_midship, cl, bx);
-    if (cl & 4) aim_midship_left(bx);
-    if (cl & 8) aim_midship_right(bx);
+    return aim_sides(cl, bx, ax, aim_midship_left, aim_midship_right);
 }
 
-// 0919:0ae4 aim_midship_left (simulation.md §3.4)
-void aim_midship_left(u16 bx) { aim_turn(heading(MIDSHIP), fraction(MIDSHIP), bx, false, 0x20); }
+// 0919:0ae4 aim_midship_left (simulation.md §3.4): returns AX.
+u16 aim_midship_left(u16 bx) { return aim_turn(heading(MIDSHIP), fraction(MIDSHIP), bx, false, 0x20); }
 
-// 0919:0b0c aim_midship_right (simulation.md §3.4)
-void aim_midship_right(u16 bx) { aim_turn(heading(MIDSHIP), fraction(MIDSHIP), bx, true, 0x20); }
+// 0919:0b0c aim_midship_right (simulation.md §3.4): returns AX.
+u16 aim_midship_right(u16 bx) { return aim_turn(heading(MIDSHIP), fraction(MIDSHIP), bx, true, 0x20); }
 
-// 0919:0b34 aim_bow (simulation.md §3.4)
-void aim_bow(u8 cl, u16 bx)
+// 0919:0b34 aim_bow (simulation.md §3.4): returns AX.
+u16 aim_bow(u8 cl, u16 bx, u16 ax)
 {
     aim_elevation(DS_elevation_bow, cl, bx);
-    if (cl & 4) aim_bow_left(bx);
-    if (cl & 8) aim_bow_right(bx);
+    return aim_sides(cl, bx, ax, aim_bow_left, aim_bow_right);
 }
 
 // 0919:0b6d aim_bow_left (simulation.md §3.4): the bow gun's blocked arc is behind (sub ah,60h).
-void aim_bow_left(u16 bx) { aim_turn(heading(BOW), fraction(BOW), bx, false, u8(-0x60)); }
+u16 aim_bow_left(u16 bx) { return aim_turn(heading(BOW), fraction(BOW), bx, false, u8(-0x60)); }
 
-// 0919:0b95 aim_bow_right (simulation.md §3.4)
-void aim_bow_right(u16 bx) { aim_turn(heading(BOW), fraction(BOW), bx, true, u8(-0x60)); }
+// 0919:0b95 aim_bow_right (simulation.md §3.4): returns AX.
+u16 aim_bow_right(u16 bx) { return aim_turn(heading(BOW), fraction(BOW), bx, true, u8(-0x60)); }
 
 // 0919:0c6a throttle_step (simulation.md §4.1): one step of engine SI's throttle for the held keys
 // CL, only while that engine runs. DI = SI xor 1 is the other engine. In forward (jet_angle bit 7
@@ -134,14 +146,15 @@ void throttle_step(u16 si, u8 cl)
 
 // 0919:0cf4 fire_station4 (simulation.md §6.1): the stern mount, unless either mount byte has bit 0
 // (off). Stern weapon 0: weapon 2 with sound 8, only when the reload counter is ready (8), which it
-// starts; otherwise weapon 1 with sound 2. Sets the flash counter, then launches.
-void fire_station4()
+// starts; otherwise weapon 1 with sound 2. Sets the flash counter, then launches. Returns AX: AX in
+// when nothing is fired, else projectile_launch's.
+u16 fire_station4(u16 ax)
 {
-    if ((ds_u8(DS_stern_mount) & 1) || (ds_u8(DS_stern_mount + 1) & 1)) return;
+    if ((ds_u8(DS_stern_mount) & 1) || (ds_u8(DS_stern_mount + 1) & 1)) return ax;
     u16 bx;
     u8 al;
     if (ds_u8(DS_stern_weapon) == 0) {
-        if (ds_u8(DS_reload_stern) != 8) return;
+        if (ds_u8(DS_reload_stern) != 8) return ax;
         ds_u8(DS_reload_stern)--;
         sfx_play(8);
         bx = 2;
@@ -153,15 +166,15 @@ void fire_station4()
     }
     ds_u8(DS_flash_stern) = al;
     ds_u8(DS_shot_elevation) = ds_u8(DS_elevation_stern);
-    projectile_launch(bx, u16(ds_u8(heading(STERN)) << 8 | ds_u8(fraction(STERN))));
+    return projectile_launch(bx, u16(ds_u8(heading(STERN)) << 8 | ds_u8(fraction(STERN))));
 }
 
 // 0919:0d45 fire_station3 (simulation.md §6.1): the midship mount. Weapon 0: weapon 3 (sound 8)
 // when the reload counter is ready (30h); 1: weapon 4 (sound 1) when time compression is on or on
-// odd world passes; 2 and above: weapon 1 (sound 2).
-void fire_station3()
+// odd world passes; 2 and above: weapon 1 (sound 2). Returns AX (as fire_station4).
+u16 fire_station3(u16 ax)
 {
-    if ((ds_u8(DS_midship_mount) & 1) || (ds_u8(DS_midship_mount + 1) & 1)) return;
+    if ((ds_u8(DS_midship_mount) & 1) || (ds_u8(DS_midship_mount + 1) & 1)) return ax;
     const u8 w = ds_u8(DS_midship_weapon);
     u16 bx;
     if (w > 1) {
@@ -169,26 +182,27 @@ void fire_station3()
         bx = 1;
         ds_u8(DS_flash_midship) = 1;
     } else if (w == 0) {
-        if (ds_u8(DS_reload_midship) != 0x30) return;
+        if (ds_u8(DS_reload_midship) != 0x30) return ax;
         ds_u8(DS_reload_midship)--;
         sfx_play(8);
         bx = 3;
         ds_u8(DS_flash_midship) = 2;
     } else {
-        if (ds_u8(DS_time_compression) == 0 && (ds_u8(DS_world_pass_counter) & 1) == 0) return;
+        if (ds_u8(DS_time_compression) == 0 && (ds_u8(DS_world_pass_counter) & 1) == 0) return ax;
         sfx_play(1);
         bx = 4;
         ds_u8(DS_flash_midship) = 2;
     }
     ds_u8(DS_shot_elevation) = ds_u8(DS_elevation_midship);
-    projectile_launch(bx, u16(ds_u8(heading(MIDSHIP)) << 8 | ds_u8(fraction(MIDSHIP))));
+    return projectile_launch(bx, u16(ds_u8(heading(MIDSHIP)) << 8 | ds_u8(fraction(MIDSHIP))));
 }
 
 // 0919:0dbd fire_bow (simulation.md §6.1): the bow mount. Weapon 0 (twin guns): the barrels
-// alternate with bow_barrel, weapon 4, sound 1; otherwise weapon 5 with sound 3.
-void fire_bow()
+// alternate with bow_barrel, weapon 4, sound 1; otherwise weapon 5 with sound 3. Returns AX (as
+// fire_station4).
+u16 fire_bow(u16 ax)
 {
-    if ((ds_u8(DS_bow_mount) & 1) || (ds_u8(DS_bow_mount + 1) & 1)) return;
+    if ((ds_u8(DS_bow_mount) & 1) || (ds_u8(DS_bow_mount + 1) & 1)) return ax;
     u16 bx;
     if (ds_u8(DS_bow_weapon) != 0) {
         ds_u8(DS_flash_bow) = 2;
@@ -202,7 +216,7 @@ void fire_bow()
         bx = 4;
     }
     ds_u8(DS_shot_elevation) = ds_u8(DS_elevation_bow);
-    projectile_launch(bx, u16(ds_u8(heading(BOW)) << 8 | ds_u8(fraction(BOW))));
+    return projectile_launch(bx, u16(ds_u8(heading(BOW)) << 8 | ds_u8(fraction(BOW))));
 }
 
 // 0919:0e19 pilot_slow_down (simulation.md §4.1): four times, each throttle above idle that is not
@@ -290,6 +304,106 @@ void accelerate_speed(u8 ch)
         ds_u8(DS_speed)--;
         ds_u16(DS_pitch_impulse) = u16(ds_u16(DS_pitch_impulse) - 5);
     }
+}
+
+// 0919:0953 controls_poll (simulation.md §3.4): the held keys and the joystick bits (1 up, 2 down,
+// 4 left, 8 right, 10h fire) at a 3D station (station low byte below 5). In chase view they move the
+// camera: up / down the distance by 8 (not below 28h, not wrapping to 0), left / right the heading by
+// +4 / -4. With the main switch off the fire bit is dropped, and the pilot's controls are ignored.
+// Pilot (0, 1): Enter slows down, then the throttles and the jet; gun stations: fire first, then
+// aim, with the control rate (control_rate & 3) as the step index.
+void controls_poll()
+{
+    u8 cl = ds_u8(DS_held_keys) | ds_u8(DS_joystick_bits);
+    const u16 station = ds_u16(DS_station);
+    const u8 st = u8(station);
+    if (st >= 5) return;
+    cl &= 0x1F;
+    if (cl == 0) return;
+    if (ds_u8(DS_chase_view) != 0) {
+        if (cl & 3) {
+            u8 al = ds_u8(DS_chase_distance);
+            if (cl & 1) {
+                if (al > 0x28) ds_u8(DS_chase_distance) = u8(al - 8);
+            } else {
+                al = u8(al + 8);
+                if (al != 0) ds_u8(DS_chase_distance) = al;
+            }
+        }
+        if (cl & 0x0C) {
+            ds_u8(DS_chase_heading) = u8(ds_u8(DS_chase_heading) + 4);
+            if (!(cl & 4)) ds_u8(DS_chase_heading) = u8(ds_u8(DS_chase_heading) - 8);
+        }
+        return;
+    }
+    if (ds_u8(DS_panel_switches) & 1) {
+        cl &= 0x0F;
+        if (cl == 0) return;
+    }
+    if (st < 2) {
+        if (ds_u8(DS_panel_switches) & 1) return;
+        if (cl & 0x10) pilot_slow_down();
+        pilot_throttle_controls(cl, ds_u8(DS_control_rate) & 3);
+    } else {
+        // AX: the station word with AL = CL & 10h (MOV AL,CL / AND AL,10h), then what fire leaves
+        u16 ax = u16((station & 0xFF00) | (cl & 0x10));
+        if (st == 2) {
+            if (cl & 0x10) ax = fire_bow(ax);
+            aim_bow(cl, ds_u8(DS_control_rate) & 3, ax);
+        } else if (st == 3) {
+            if (cl & 0x10) ax = fire_station3(ax);
+            aim_midship(cl, ds_u8(DS_control_rate) & 3, ax);
+        } else {
+            if (cl & 0x10) ax = fire_station4(ax);
+            aim_stern(cl, ds_u8(DS_control_rate) & 3, ax);
+        }
+    }
+}
+
+// 0919:0bbd pilot_throttle_controls (simulation.md §4.1): four rounds of throttle_step for both
+// engines; then with left or right: evade_incoming, and the jet angle (bits 0-6 of jet_angle; bit 7,
+// reverse, kept) moves by jet_step_table[BX]: left down to 0 (a result below 0 gives 0, with no phase
+// change and no redraw), right up to 7Dh (the limit: the same), each with a detent at 40h (ahead)
+// when it is crossed. A move steps the jet indicator phase (left -1 wrapping to 2, right +1 modulo 3)
+// and redraws the indicator.
+void pilot_throttle_controls(u8 cl, u16 bx)
+{
+    for (int round = 0; round < 4; round++) {
+        throttle_step(0, cl);
+        throttle_step(1, cl);
+    }
+    if (!(cl & 0x0C)) return;
+    evade_incoming();
+    u8 ch = 1;
+    const u8 step = ds_u8(u16(DS_jet_step_table + bx));
+    const u8 jet = ds_u8(DS_jet_angle);
+    const u8 ah = jet & 0x80;
+    const u8 dl = jet & 0x7F;
+    u8 al;
+    if (cl & 4) {
+        ch = 0xFF;
+        al = u8(dl - step);
+        if (s8(al) < 0) {
+            ds_u8(DS_jet_angle) = ah;  // 0 | reverse bit
+            return;
+        }
+        if (dl > 0x40 && al < 0x40) al = 0x40;
+    } else {
+        if (!(cl & 8)) return;
+        al = u8(dl + step);
+        if (al >= 0x7D) {
+            ds_u8(DS_jet_angle) = u8(0x7D | ah);
+            return;
+        }
+        if (dl < 0x40 && al > 0x40) al = 0x40;
+    }
+    al |= ah;
+    ds_u8(DS_jet_angle) = al;
+    ch = u8(ch + ds_u8(DS_jet_indicator_phase));
+    if (s8(ch) < 0) ch = 2;
+    if (ch >= 3) ch = 0;
+    ds_u8(DS_jet_indicator_phase) = ch;
+    jet_indicator_draw(u16(ah << 8 | al));
 }
 
 // 0919:3479 evade_incoming (simulation.md §4.1, §8.5): every jet move lowers the accuracy (low five
