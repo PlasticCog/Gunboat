@@ -282,7 +282,7 @@ u16 sky_water_ega(u16 es, u16 ax, u8 bl, u8 cl)
 
 // 0919:4d64 water_marks_ega (render3d.md §1.4, §3.2): the marks of water_marks_vga in one colour, AL
 // (set/reset; AH and DX are not used), each of five pixels OR'ed through the bit mask: mark BX
-// (wrapping at 20h) at column D90D[mark] plus the offsets water_mark_shape[size] (320 per row,
+// (wrapping at 20h) at column D90D[mark] plus the offsets water_mark_patterns[size] (320 per row,
 // divided by 8 into bytes and rows of 40, the bit from the low 3 bits); size 0 (the farthest rows,
 // CL > 16h, or younger than 0Bh: all five on one pixel), 1 from age 0Bh, and for CL <= 0Eh 2, 3, 4
 // from ages 11h, 17h, 1Bh. CX rows from DI (CL counts down); a row from 13DDh (view row 63) on ends
@@ -315,7 +315,7 @@ void water_marks_ega(u16 es, u16 ax, u16 bx, u16 cx, u16, u16 di)
         u16 b = u16(u16((bx & 0xFF00) | u8(size + u8(size << 2))) << 1);
         u16 si = b;
         for (u8 ch = 5; ch; ch--) {
-            const u16 a = u16(x + ds_u16(u16(DS_water_mark_shape + si)));
+            const u16 a = u16(x + ds_u16(u16(DS_water_mark_patterns + si)));
             b = u16((b & 0xFF00) | (a & 7));
             const u16 d = u16(di + u16(s16(a) >> 3));
             card_out16(GC, u16(ds_u8(u16(DS_pixel_bit + b)) << 8 | 8));

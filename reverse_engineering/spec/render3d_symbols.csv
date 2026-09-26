@@ -166,7 +166,7 @@ global,DS:D7ED,mask_low_bits,u8[9],§1.4 the n low bits set (n = 0..8): EGA firs
 global,DS:D7F6,mask_high_bits_ff,u8[8],§1.4 the n high bits set (FFh for n = 0): EGA last byte of a beam row
 global,DS:D7FE,pixel_bit,u8[8],§1.4 80h >> n: EGA water mark pixels
 global,DS:D80E,mask_high_bits,u8[8],§1.4 the n high bits set (0 for n = 0): EGA last byte of a span
-global,DS:D816,water_mark_shape,u16[5][5],§1.4 the 5 pixels of a mark by size as offsets of 320 per row (EGA; CGA and Tandy read it too)
+global,DS:D816,water_mark_patterns,u16[5][5],§1.4 the 5 pixels of a mark by size as offsets of 320 per row (EGA; CGA and Tandy read it too)
 global,DS:D8F2,slot_level_byte,u16[3],§5.6 first bitmap byte of each pool
 global,DS:D8FC,span_first_row,u8,§3.4
 global,DS:D954,span_colour,u16,§3.4 colour byte twice

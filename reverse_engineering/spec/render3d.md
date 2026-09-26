@@ -53,7 +53,7 @@ AL`, AL = 8) whose read loads the latches, so the pixels outside the mask keep t
 `terrain_frame` (7268) and `object_frame` (6e77) first set map mask 0Fh, write mode 0, set/reset on
 every plane and function replace; the twins rely on that. Tables (DGROUP data): `mask_low_bits`
 D7ED (the n low bits, n = 0..8), `mask_high_bits_ff` D7F6 and `mask_high_bits` D80E (the n high
-bits; FFh / 0 for n = 0), `pixel_bit` D7FE (80h >> n), `water_mark_shape` D816 (5 sizes x 5
+bits; FFh / 0 for n = 0), `pixel_bit` D7FE (80h >> n), `water_mark_patterns` D816 (5 sizes x 5
 offsets of 320 per row).
 
 ```
