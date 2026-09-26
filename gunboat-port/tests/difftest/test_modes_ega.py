@@ -239,7 +239,7 @@ def test_water_marks_ega(h, rng, scale):
     return n
 
 
-def span_mutate(m, rng, line):
+def span_mutate(m, rng):
     """Random span state: first row (the view rows, rows past it, the ones that wrap onto the view),
     rows, edges and steps (whole view, the wrapped left part, off the view), colour."""
     put8(m, 0xD8FC, rng.choice([0x40, 0x5F, 0x7F, 0x80, 0xBF, 0xC0, 0xFF, rng.randrange(0x40, 0x80),
@@ -258,7 +258,7 @@ def span_mutate(m, rng, line):
     put16(m, 0xD954, c << 8 | c)
 
 
-def span_test(h, rng, scale, name, line):
+def span_test(h, rng, scale, name):
     n = 0
     for label, regs, snap, card in captured(h, rng, scale, name, [0, 4, 16, 64, 128], variants=4):
         check(h, name, snap, card, regs=regs, label=label)
@@ -267,7 +267,7 @@ def span_test(h, rng, scale, name, line):
     es = get16(base, 0xD9B8)
     for i in range(300 * scale):
         m = bytearray(base)
-        span_mutate(m, rng, line)
+        span_mutate(m, rng)
         check(h, name, m, draw_card(card, rng), regs={'es': rng.choice([es, es, es, 0xA000])}, label='random %d' % i)
         n += 1
     return n
@@ -276,13 +276,13 @@ def span_test(h, rng, scale, name, line):
 @machine('ega')
 def test_span_ega_a(h, rng, scale):
     """span_ega_a ([D8F8] in EGA) where the original's triangles reach it, then random spans."""
-    return span_test(h, rng, scale, 'span_ega_a', False)
+    return span_test(h, rng, scale, 'span_ega_a')
 
 
 @machine('ega')
 def test_span_ega_b(h, rng, scale):
     """span_ega_b ([D8FA] in EGA) where the original's lines reach it, then random lines."""
-    return span_test(h, rng, scale, 'span_ega_b', True)
+    return span_test(h, rng, scale, 'span_ega_b')
 
 
 @machine('ega')
@@ -389,6 +389,20 @@ def test_view_copies_ega(h, rng, scale):
     return n
 
 
+@machine('ega')
+def test_game_frame_ega(h, rng, scale):
+    """game_frame whole in EGA on the BASES and moved variants. It needs the graphics library's EGA
+    paths (gfx_set_draw_page: page p at A000h + 200h p): on the video-ega branch alone 8 of the 10
+    BASES pass and the two others differ only by gfx_draw_page / gfx_draw_seg and what the frame
+    then draws on the wrong page. Not in TESTS until the library package is merged."""
+    n = 0
+    for label, m, card in ega_frame_states(h, rng, scale, variants=6):
+        check(h, 'game_frame', m, card, label=label)
+        n += 1
+    return n
+
+
 TESTS = [test_ega_gc_setup, test_sky_water_ega, test_water_marks_ega, test_span_ega_a, test_span_ega_b,
          test_spotlight_beam_ega, test_blit_rows_ega, test_terrain_frame_ega, test_object_frame_ega,
          test_view_copies_ega]
+# After the graphics library's EGA paths are merged: TESTS.append(test_game_frame_ega)
