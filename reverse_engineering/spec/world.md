@@ -50,7 +50,8 @@ window cracks DS:0B4A..0B4D = 0; score words B52A..B541 = 0
 B545 = 3 (in progress); B544 = B546 = B542 = B549 = B800 = B828 = 0; fuel B80A = B80C = C544h
 mission_load()                                                  §4
 D69F = 0; chase view D96B = 0; F5CA = 0
-05bd:2efc (clear the screen); F21C = station; F286 = look direction; EEA0 = F107
+05bd:2efc screen_clear (instrument caches, message strip: hud §5); F21C = station; F286 = look
+direction; EEA0 = F107
 draw the starting station: 1 → 05bd:048c, 2 → 05bd:08be, 4 → 05bd:0e9e      (3 is not handled:
                                                                  the front end never starts there)
 12ed:0000                                                       (engine sound on)
@@ -83,7 +84,9 @@ far_to_near_copy(F5D4:F5D6 → DS:53A8, F396 bytes)             0000:072c  (the 
 draw page = DS:0074; text colours 0Fh/0
 sprite_cache_invalidate()                                      0919:5a9f
 panel_redraw_all() 0919:0000 (indicators 40h–5Dh; Ghidra shows it as 08e1:0380, the same
-address); 0919:016a (panel switches); window_cracks_draw() 05bd:3114
+address); 0919:016a (panel switches); window_cracks_draw() 05bd:3114 (a far call: push cs)
+   (the two panel routines get AX as sprite_cache_invalidate leaves it: its AH is stored in
+   scratch_b7e3, hud §2.1)
 EA86 = F10B; ECA8 = F132; F10B = B83C; F132 = B839
 game_frame()
 if not chase view: present (05bd:1fd4); draw page 0

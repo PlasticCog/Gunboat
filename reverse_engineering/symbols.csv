@@ -85,12 +85,13 @@ func,05bd:1ba4,damage_report_screen,far void(),world,spec:world,§3.2 station 7 
 func,05bd:1dba,assignment_screen,far void(),world,spec:world,§3.2 station 8; prints the mission text DS:ECB4
 func,05bd:1ed0,gun_sprites_capture,far void(),hud,spec:hud,§5 cuts sight and barrel sprites from the art
 func,05bd:1fd4,view_present,far void(u16 page),world,spec:world,§3 copies the 3D view and composes the cockpit (hud spec)
-func,05bd:2cde,gun_frame_draw,far void(u16),hud,spec:hud,§6
+func,05bd:2cde,gun_frame_draw,far void(u16 bearing),hud,spec:hud,§6 the gun's bearing relative to the hull (view_present adds 20h or subtracts 60h) | §6
 func,05bd:2efc,screen_clear,far void(),world,spec:world,§3.1
-func,05bd:30ae,gun_panel_copy,far void(u16),hud,spec:hud,§5
-func,05bd:3114,window_cracks_draw,near void(),world,spec:world,§3.3 simulation §8.6
+func,05bd:2f6a,station_screen_colours,far void(),hud,spec:hud,§5 EGA/Tandy/CGA palette entries of the full-screen stations (ega_pal_entry); nothing in VGA
+func,05bd:30ae,gun_panel_copy,far void(u16 parts),hud,spec:hud,§5 1: the left panel; 2: the right one and then the left | §5
+func,05bd:3114,window_cracks_draw,far void(),world,spec:world,§3.3 simulation §8.6; hud §5 | §3.3 simulation §8.6
 func,08e1:006e,demo_next_key,far void(u8 *key),simulation,spec:simulation,§3.1 recorded demo keys; any real key ends the demo
-func,08e1:016f,lzw_decode_cracks,far void(),platform,spec:platform,§6 crack picture
+func,08e1:016f,crack_table_entry,far u16(u16 index),platform,spec:platform,§6 not LZW: AL = crack_table[index]; AH = the next byte | the third byte rotated right by 2 (hud §5) | was lzw_decode_cracks | §6 crack picture
 func,08e1:018e,lzw_alloc,,platform,td3-match,"TD3 0ab4:000f lzw_alloc, score 0.53; low score: confirm in the spec"
 func,08e1:01aa,lzw_free,,platform,td3-match,"TD3 0ab4:0034 lzw_free, score 1.00"
 func,08e1:01bd,lzw_decode_picture,far void(u8 far *src u16 dst_off u16 dst_seg),platform,spec:platform,§6 into DS:1094
@@ -102,10 +103,10 @@ func,08e1:034e,lzw_out,near (AL),platform,spec:platform,§6 one byte to the outp
 func,08e1:035a,lzw_idx3,near BX(BX),platform,spec:platform,§6 BX * 3 (clobbers BP)
 func,08e1:0361,lzw_add_entry,near,platform,td3-match+spec:platform,"§6 dict[next] = {old; firstchar}; next++ | TD3 0ab4:01f0 lzw_add_entry, score 1.00"
 func,0919:0000,panel_redraw_all,far void(),world,spec:world+spec:platform,hud §2.1 (kept here: same address as 08e1:0380) | §3.3 redraws indicators 40h-5Dh (hud spec); Ghidra label FUN_08e1_0380
-func,0919:000e,panel_blink,near void(),hud,spec:hud,§2.1 every frame; timer DS:D5BE
-func,0919:0027,indicator_draw,near void(AL mode_id AH value),hud,spec:hud,§2.1
-func,0919:016a,panel_switches_redraw,far void(),hud,spec:hud,§2.1
-func,0919:0178,switch_draw,near void(AL mode_switch AH value),hud,spec:hud,§2.1
+func,0919:000e,panel_blink,near AX(AX),hud,spec:hud,§2.1 every frame; timer DS:D5BE; AH goes to every indicator_draw call | §2.1 every frame; timer DS:D5BE
+func,0919:0027,indicator_draw,near AX(AL mode_id AH value),hud,spec:hud,§2.1 returns AX as it leaves it (callers pass it on) | §2.1
+func,0919:016a,panel_switches_redraw,far AX(AX),hud,spec:hud,§2.1 AH goes to every switch_draw call | §2.1
+func,0919:0178,switch_draw,near AX(AL mode_switch AH value),hud,spec:hud,§2.1 returns AX (AH = 0 once the switch number is valid) | §2.1
 func,0919:038e,key_dispatch,far void(),simulation,td3-match+spec:simulation,"§3.2 key code DS:EE9C -> CS:0290 (01h-7Fh) / DS:D615 (81h-8Ah) | TD3 0e12:0084 key_dispatch, score 0.54; low score: confirm in the spec"
 func,0919:03c7,key_default,near void(),simulation,spec:simulation,§3.2 default handler: controls_poll
 func,0919:03cb,panel_switch_toggle,near void(BX entry),simulation,spec:simulation,§3.3 table CS:0270 -> switch DS:D520+n
@@ -186,12 +187,12 @@ func,0919:1e87,mission_stop,near void(),simulation,spec:simulation,§5.2 passeng
 func,0919:1fc3,move_toward,near void(BX object CX DX target),simulation,spec:simulation,§5.2 steps D6A2/D6A4
 func,0919:2038,missile_update,near void(),simulation,spec:simulation,§8.4 homing missile kind 12h
 func,0919:2273,propulsion,near void(),simulation,spec:simulation,§4.3 wake + engines + acceleration + turning
-func,0919:2324,throttle_needles,near void(),hud,spec:hud,§3 pilot station
+func,0919:2324,throttle_needles,near AX(AX),hud,spec:hud,§3 pilot station
 func,0919:2529,engine_thrust,,simulation,codex,"ORIGINAL_PHYSICS.md B6B9: one engine thrust, fuel, leaks, startup; propulsion body is inside 0919:2273 at +4E (B451)"
-func,0919:2704,needle_draw,near void(),hud,spec:hud,§3
-func,0919:2786,jet_marker,near void(),hud,spec:hud,§3 pilot station
-func,0919:2810,radar_scope,near void(),hud,spec:hud,§3 pilot looking right
-func,0919:2932,radar_plot,near void(),hud,spec:hud,§3
+func,0919:2704,needle_draw,near void(CX end),hud,spec:hud,§3 erases needle_old_end and draws to CX from the pivot | §3
+func,0919:2786,jet_marker,near AX(AX),hud,spec:hud,§3 pilot station
+func,0919:2810,radar_scope,near AX(AX),hud,spec:hud,§3 pilot looking right
+func,0919:2932,radar_plot,near void(AH bearing CX distance),hud,spec:hud,§3 BX kept | §3
 func,0919:29f9,accelerate_speed,near void(CH target),simulation,codex+spec:simulation,"§4.3 one unit toward the target unless the boat is locked; pitch impulse -+5 | ORIGINAL_PHYSICS.md BB89: one unit toward target, pitch impulse +-5"
 func,0919:2a37,boat_hit,near void(AL class),simulation,spec:simulation,§8.6
 func,0919:2a69,boat_hit_component,near void(AL component CL message),simulation,spec:render3d+spec:simulation,§8.6 entry of boat_hit with a chosen component (ramming: render3d §5.4) | simulation §8.6 entry of boat_hit with a chosen component (ramming)
@@ -294,22 +295,23 @@ func,0919:8711,route_rotate,near (AL x CL y)->AX CX,simulation,spec:simulation,�
 func,0919:8754,route_point,near (CL index BX cell)->AX CX DH,simulation,spec:simulation,§4.6
 func,0919:87e8,route_advance,near void(DH link CL index),simulation,spec:simulation,§4.6
 func,0919:8930,game_frame,,engine,codex,"ORIGINAL_PHYSICS.md 11AC0: main update; simulation iteration loop at +AF (11B6F), outer loop at +ED (11BAD); motion before propulsion"
-func,0919:8a32,view_copy_1,far void(u16 dst_page u16 src_page),hud,spec:hud,§6 VGA 8a72
-func,0919:8a72,view_copy_1_vga,near void(),hud,spec:hud,§6 window trapezoid + 5x magnified strip
-func,0919:8ad5,view_copy_2,far void(u16 u16),hud,spec:hud,§6 VGA 8b15
-func,0919:8b15,view_copy_2_vga,near void(),hud,spec:hud,§6
-func,0919:8b43,view_copy_3,far void(u16 u16),hud,spec:hud,§6 VGA 8b83
-func,0919:8b83,view_copy_3_vga,near void(),hud,spec:hud,§6
-func,0919:8bf9,view_copy_4,far void(u16 u16),hud,spec:hud,§6 VGA 8c39
-func,0919:8c39,view_copy_4_vga,near void(),hud,spec:hud,§6
-func,0919:8cd3,view_copy_5,far void(u16 u16),hud,spec:hud,§6 VGA 8d13
-func,0919:8d13,view_copy_5_vga,near void(),hud,spec:hud,§6
-func,0919:8d45,view_copy_6,far void(u16 u16),hud,spec:hud,§6 VGA 8d85
-func,0919:8d85,view_copy_6_vga,near void(),hud,spec:hud,§6
-func,0919:8db7,view_copy_7,far void(u16 u16),hud,spec:hud,§6 VGA 8df7
-func,0919:8df7,view_copy_7_vga,near void(),hud,spec:hud,§6
-func,0919:8e47,view_copy_8,far void(u16 u16),hud,spec:hud,§6 VGA 8e87
-func,0919:8e87,view_copy_8_vga,near void(),hud,spec:hud,§6
+func,0919:8a32,view_copy_1,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8a72
+func,0919:8a72,view_copy_1_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6 8 rows in two runs narrowing by 8 words; then 64 source rows of 80 bytes as 5 pieces of 16 stepping up a row | §6 window trapezoid + 5x magnified strip
+func,0919:8ad5,view_copy_2,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8b15
+func,0919:8b15,view_copy_2_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8b43,view_copy_3,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8b83
+func,0919:8b83,view_copy_3_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8bf9,view_copy_4,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8c39
+func,0919:8c39,view_copy_4_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8cd3,view_copy_5,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8d13
+func,0919:8d13,view_copy_5_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8d45,view_copy_6,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8d85
+func,0919:8d85,view_copy_6_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8db7,view_copy_7,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8df7
+func,0919:8df7,view_copy_7_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
+func,0919:8e29,view_copy_head_vga,near (ES DS)->DI SI,hud,spec:hud,§6 nine rows of 208 bytes shared by view_copy_5..8_vga; leaves DI/SI for the caller and CX = 0
+func,0919:8e47,view_copy_8,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 VGA 8e87
+func,0919:8e87,view_copy_8_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
 func,0919:8eb9,list_quicksort,near void(),render3d,spec:render3d,§5.3
 func,0919:8ece,list_quicksort_range,near void(u16 first u16 last),render3d,spec:render3d,§5.3
 func,121b:036e,world_a_base,far u16(),world,spec:world,§3.1 returns 6E54h
@@ -491,10 +493,14 @@ func,1b5f:00e7,cms_opl_delay,near void(),sound,spec:sound,§3.3
 func,1b5f:00f8,cms_dsp_read,near CF(),sound,spec:sound,§3.3 AL
 func,1b5f:0116,cms_dsp_write,near CF(AL),sound,spec:sound,§3.3
 cglobal,08e1:0008,demo_script,u8[102],game_flow,spec:game_flow,§3 (count; key) pairs of the demo; key >= E0h sets held_keys = key - E0h; 00 00 restarts at 08e1:0008
+cglobal,08e1:00df,crack_table,u8[][3],hud,spec:hud,§5 window cracks: column; row; picture (bits 0-1)
 cglobal,0919:0270,panel_switch_table,u8[2][],simulation,spec:simulation,§3.3 switch number / indicator per entry
 cglobal,0919:0290,key_handlers,u16[127],simulation,spec:simulation,§3.2 codes 01h-7Fh
 cglobal,0919:0feb,message_table,u16[56],simulation,spec:simulation,§9.1 attribute byte + text ending with a byte >= 80h
 cglobal,0919:1457,component_names,u16[16],simulation,spec:simulation,§8.6
+cglobal,0919:213b,fuel_needle_pivot,u16,hud,spec:hud,§3 (x; y) added to the gauge centre for the fuel needles' pivot
+cglobal,0919:213d,fuel_needle_points,u16[32],hud,spec:hud,§3 needle end (dx; dy) by fuel >> 11
+cglobal,0919:2171,needle_pivot,u16,hud,spec:hud,§3 (x; y) added to the gauge centre for the throttle needles and the radar sweep
 cglobal,0919:2173,throttle_needle_points,u16[],hud,spec:hud,§3
 cglobal,0919:2e47,shake_offsets,u8[][2],render3d,spec:render3d,§7.2
 cglobal,0919:2e88,salvo_bearing_table,u8[],simulation,spec:simulation,§8.5
@@ -597,6 +603,7 @@ global,DS:B2C3,promotion_rank_by_type,u8[26],game_flow,spec:game_flow,§7.3
 global,DS:B2DB,mission_text_offsets,u16[4][8],world,spec:world,§7 relative to DS:6E54
 global,DS:B311,region_brief_texts,u16[3],game_flow,spec:game_flow,§6.2 DAT5-relative: the region's title and brief
 global,DS:B317,region_orders_texts,u16[3],game_flow,spec:game_flow,§6.2 DAT5-relative: the region's orders
+global,DS:B31E,practice_note,u8[],hud,spec:hud,§5 assignment screen: invulnerable in practice (mission 1 outside region 3)
 global,DS:B354,mission_times,u8[16][4],world,spec:world,§5 start hours minutes deadline hours minutes
 global,DS:B3C0,map_objective_arrow,u8[24][2],world,spec:world,§3.2
 global,DS:B3F4,region_fire_phase,u8[4],simulation,spec:simulation,§8.3
@@ -636,7 +643,9 @@ global,DS:B54A,clock_minutes,u8,simulation,spec:simulation,§9.2
 global,DS:B54B,clock_hours,u8,simulation,spec:simulation,§9.2 BCD
 global,DS:B54C,commander_slot,u16,game_flow,spec:game_flow,§5
 global,DS:B54E,roster,u8[703],game_flow,spec:game_flow,§5 GBROSTER.DAT image
-global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation,§9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer
+global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation+spec:hud,was needle_old_end | §3 needle_draw: the end (dx; dy) to erase; dx FFh = none | was scratch_b7dc | §9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer
+global,DS:B7DE,gauge_row,u16,hud,spec:hud,§3 12 * look direction: the row of gauge_centres
+global,DS:B7E0,needle_centre_x,u16,hud,spec:hud,§3 needle_draw: the gauge centre's x (y in scratch_b7e3)
 global,DS:B7E2,scratch_b7e2,u8,simulation,spec:simulation,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)
 global,DS:B7E3,scratch_b7e3,u8,simulation,spec:simulation,§5.1 shared scratch byte (step fraction here)
 global,DS:B7E5,vec_factor,u8,simulation,spec:simulation,§5.1 multiplicand of vec_scale
@@ -644,6 +653,7 @@ global,DS:B7E7,vec_angle,u8,simulation,spec:simulation,§5.1 angle of the last h
 global,DS:B7E8,vec_sin,u8,simulation,spec:simulation,§5.1 second component of the last heading_vector
 global,DS:B7E9,vec_product_lo,u8,simulation,spec:simulation,§5.1
 global,DS:B7EA,vec_product_hi,u8,simulation,spec:simulation,§5.1
+global,DS:B7ED,radar_steps,u8,hud,spec:hud,§3 radar_scope: sweep steps left in this frame
 global,DS:B7F0,joystick_bits,u8,simulation,spec:simulation,was keypad_bits | §3.1
 global,DS:B7F1,time_compression,u8,simulation,spec:simulation,§1.2
 global,DS:B7F3,quiz_digit,u16,game_flow,spec:game_flow,§4 hq_quiz's typing flag / check index (6 after a pass); -6 by mission_setup; +14h at mission end
@@ -664,9 +674,12 @@ global,DS:B807,midship_weapon,u8,simulation,spec:simulation,§6.1
 global,DS:B808,engine_state,u8[2],simulation,spec:simulation,§2.3
 global,DS:B80A,fuel,u16[2],simulation,spec:simulation,§2.3
 global,DS:B80C,roster_check,u8,game_flow,spec:game_flow,§5 GBROSTER.DAT byte 702: XOR of bytes 0..701 ^ 5Bh
+global,DS:B80E,fuel_needle_ends,u16[2],hud,spec:hud,§3 last drawn fuel needle ends (FFFFh after screen_clear)
+global,DS:B812,throttle_needle_ends,u16[2],hud,spec:hud,§3 last drawn throttle needle ends (FFFFh after screen_clear)
 global,DS:B816,throttle,u8[2],simulation,spec:simulation,§2.3
 global,DS:B818,jet_angle,u8,simulation,spec:simulation,§2.3
 global,DS:B819,speed_band,u8,simulation,spec:simulation,§2.3
+global,DS:B81A,lever_last_x,u8[2],hud,spec:hud,§3 last drawn throttle lever offsets (FFh after screen_clear)
 global,DS:B81C,throttle_max,u8[2],simulation,spec:simulation,§2.3
 global,DS:B81E,heading,u8[4],simulation,spec:simulation,§2.3 hull bow midship stern
 global,DS:B822,heading_fraction,u8[4],simulation,spec:simulation,§2.3
@@ -711,9 +724,16 @@ global,DS:D19C,component_indicator,u8[16],simulation,spec:simulation,§8.6
 global,DS:D1AC,component_condition_index,u8[16],simulation,spec:simulation,§8.6
 global,DS:D1BC,projectile_timer,u8[32],simulation,spec:simulation,§7.1
 global,DS:D1DC,projectile_record,u8[32][8],simulation,spec:simulation,§7.1
+global,DS:D385,assignment_title,u8[],hud,spec:hud,"§5 record ""MISSION:"""
 global,DS:D390,damage_report_labels,u16,hud,spec:hud,§5 pointer to records
 global,DS:D392,damage_report_list,u16,hud,spec:hud,§5 pointer to (x y id) triples
 global,DS:D394,condition_words,u16[8],hud,spec:hud,§5
+global,DS:D3BE,text_ship_sinking,u8[],hud,spec:hud,§5 damage report leak line (leak_level >= 2)
+global,DS:D3D1,text_pumps_off,u8[],hud,spec:hud,§5 damage report leak line (0)
+global,DS:D3E5,text_pumps_on,u8[],hud,spec:hud,§5 damage report leak line (1)
+global,DS:D3F8,text_mission_not_done,u8[],hud,spec:hud,§5 damage report when objective_state & 3 = 2
+global,DS:D40B,text_mission_complete,u8[],hud,spec:hud,§5 damage report otherwise
+global,DS:D41E,damage_report_title,u8[],hud,spec:hud,"§5 record ""STATUS"""
 global,DS:D502,boat_record,u8[189],simulation,spec:simulation+spec:hud,§2.2 DAT10/DAT11 | hud §2 the cockpit indicators read the component condition bytes of this record
 global,DS:D503,engine_indicator,u8[2],simulation,spec:simulation,§2.2
 global,DS:D505,objective_state,u8,simulation,spec:simulation,§5.2
@@ -738,13 +758,23 @@ global,DS:D52C,control_rate,u8,simulation,spec:simulation,§3.4
 global,DS:D52E,stern_mount,u8[2],simulation,spec:simulation,§6.1
 global,DS:D531,indicator_positions,u8[30][2],hud,spec:hud,§2
 global,DS:D56D,indicator_graphics,u8[30],hud,spec:hud,§2
+global,DS:D58B,switch_positions,u8[17][2],hud,spec:hud,§2 row/8 and column/8 of each switch (column 0 = not drawn)
+global,DS:D5AD,switch_graphics,u8[17],hud,spec:hud,§2
 global,DS:D5BE,blink_timer,u8,hud,spec:hud,§2.1
+global,DS:D5BF,indicator_frame_sizes,u8[4][2],hud,spec:hud,§2 width and height of each lamp graphic
+global,DS:D5C7,indicator_frames,u8[4][4][2],hud,spec:hud,§2 x and y on page 1 of each graphic's four state pictures
+global,DS:D5E7,switch_frames,u8[4][4][2],hud,spec:hud,§2 x and y on page 1 of each switch graphic's four state pictures
+global,DS:D607,switch_frame_sizes,u8[4][2],hud,spec:hud,§2 width and height of each switch graphic
 global,DS:D60F,identified_object,u16,simulation,spec:simulation,§6.3
 global,DS:D611,identify_candidate,u16,simulation,spec:simulation,§6.3
 global,DS:D615,fkey_handlers,u16[10],simulation,spec:simulation,§3.2 odd-aligned
 global,DS:D629,turn_step_table,u8[5],simulation,spec:simulation,§3.4 slot 4 = propulsion turn amount
 global,DS:D62E,jet_step_table,u8[4],simulation,spec:simulation,§4.1
 global,DS:D632,jet_indicator_phase,u8,simulation,spec:simulation,§4.1
+global,DS:D633,jet_picture_a_x,u8[3],hud,spec:hud,§3 jet_indicator_draw: page 1 x of the first picture by phase
+global,DS:D636,jet_picture_b_x,u8[3],hud,spec:hud,§3 page 1 x of the second picture by phase
+global,DS:D639,jet_picture_a_dx,u8[3],hud,spec:hud,§3 screen x of the first picture by look direction (0 = not drawn)
+global,DS:D63C,jet_picture_b_dx,u8[3],hud,spec:hud,§3 screen x of the second picture by look direction (always drawn)
 global,DS:D63E,weapon_elevation_limit,u8[6],simulation,spec:simulation,§7.1 per weapon 1-5 (E9 E7 EB EB E9)
 global,DS:D644,bow_barrel,u8,simulation,spec:simulation,§6.1
 global,DS:D645,readout_cache_spare,u16,simulation,spec:simulation,§9.1 set to FFFFh with D647; never read
@@ -960,6 +990,12 @@ global,DS:DF6F,mode_text_cols,u16[21],video,spec:video,§1
 global,DS:DF99,mode_video_seg,u16[21],video,spec:video,§1 A000h in mode 13h
 global,DS:DFC3,mode_width,u16[21],video,spec:video,§1 0 in text modes
 global,DS:DFED,mode_height,u16[21],video,spec:video,§1
+global,DS:E065,line_step_x,u16,hud,spec:hud,video §2 gfx_line_to: x step when the error term is >= 0
+global,DS:E067,line_step_y,u16,hud,spec:hud,video §2 y step when the error term is >= 0
+global,DS:E069,line_axis_x,u16,hud,spec:hud,video §2 x step when the error term is < 0 (0 on a steep line)
+global,DS:E06B,line_axis_y,u16,hud,spec:hud,video §2 y step when the error term is < 0 (0 on a flat line)
+global,DS:E06D,line_err_diag,u16,hud,spec:hud,video §2 2 * minor - 2 * major
+global,DS:E06F,line_err_axis,u16,hud,spec:hud,video §2 2 * minor
 global,DS:E124,gfx_e124,u16,video,spec:video,§1 cleared by gfx_set_mode
 global,DS:E16F,mode_text_rows,u8,video,spec:video,§1 19h; 1Eh in modes 11h/12h
 global,DS:E21C,crt_ctype,u8[257],game_flow,spec:game_flow,MSC _ctype (index c + 1): 1 upper 2 lower 4 digit 8 space
@@ -985,25 +1021,36 @@ global,DS:E6D0,speaker_branch_mask,u8[6],sound,spec:sound,§4.4
 global,DS:E6D6,speaker_script_ops,u16[8],sound,spec:sound,§4.4 near handlers in 1b37
 global,DS:E9E0,pencil_colour,u16,game_flow,spec:game_flow,§3 title_colour_a saved for the menu cursor drawer 020d:09cc
 global,DS:EA84,map_drawn,u16,game_flow,spec:game_flow,§6 the mission whose assignment map is on page 1 (0 = redraw)
+global,DS:EA88,gun_frame_right,u8[32],hud,spec:hud,§5 captured at (58h; 2Fh)
 global,DS:ECB0,menu_idle,u16,game_flow,spec:game_flow,§3 menu loop iterations without a key; 113h starts the demo
 global,DS:ECB4,mission_text,u8[480],world,spec:world,§6.2
 global,DS:EE9C,key_code,u8,simulation,spec:simulation,§3.2
+global,DS:EEA0,gun_edge_mask_colour,u8,hud,spec:hud,§5 colour gun_sprites_capture reads the edge sprites in (F107 at a station change)
+global,DS:EEA2,clip_runs,u16,hud,spec:hud,§5 run count of CLIP.LZ
 global,DS:EEA4,mp5a_runs,u16,game_flow,spec:game_flow,§6 run count of MP5A.LZ
 global,DS:EED0,map_a_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnA.LZ
 global,DS:EED2,video_mode,u16,render3d,spec:render3d,§1.2 13h VGA 0Dh EGA 09h Tandy 04h CGA
 global,DS:F0DA,sprite_cache_a_far,u16[2],platform,spec:platform,§5
+global,DS:F0DE,pictures_runs,u16,hud,spec:hud,§5 run count of the picture in pictures_far (MAP.LZ in a mission)
 global,DS:F0E0,sprite_cache_b_far,u16[2],platform,spec:platform,§5
+global,DS:F0E6,map_sheet_a_runs,u16,hud,spec:hud,§5 run count of MPnA.LZ (clip_1838_far in a mission)
 global,DS:F0E8,cms_driver_entry,u16[2],sound,spec:sound,§4.5 far pointer to the loaded CMS.DRV
+global,DS:F0EC,map_sheet_b_runs,u16,hud,spec:hud,§5 run count of MPnB.LZ
 global,DS:F0FA,mp5b_runs,u16,game_flow,spec:game_flow,§6 run count of MP5B.LZ
 global,DS:F0FC,bd1_far,u16[2],platform,spec:platform,§5 1784h bytes
 global,DS:F100,map_b_runs,u16,game_flow,spec:game_flow,§6 run count of the region's MPnB.LZ
 global,DS:F102,bd2_far,u16[2],platform,spec:platform,§5 0CC6h bytes
+global,DS:F107,gun_edge_colour,u8,hud,spec:hud,§6 gun_frame_draw: the edge sprites (VGA 15h)
+global,DS:F109,gun_frame_colour,u8,hud,spec:hud,§6 gun_frame_draw: the frame pieces and fills (VGA 17h)
+global,DS:F10A,gun_rail_colour,u8,hud,spec:hud,§6 gun_frame_draw: the rail sprites (VGA 17h)
 global,DS:F10C,flow_file,u16,game_flow,spec:game_flow,§1 FILE* of main's disk checks and config_load
 global,DS:F110,practice_mode,u16,simulation,spec:simulation+spec:game_flow,§3 0 mission 1 gunnery 2 grenade 3 pilot | §3.3 0 mission; 1-3 practice types
+global,DS:F112,gun_frame_left,u8[32],hud,spec:hud,§5 8 x 32 captured at (60h; 2Fh)
 global,DS:F134,title_colour_a,u16,game_flow,spec:game_flow,§3 the title sprite's first colour layer; the pencil's; then the menu text colour (0 in VGA)
 global,DS:F13A,flow_scratch,u16,world,spec:world,"§1 scratch of main and config_load: the title choice, the page allocation result | was copy_counter | §3.3 shared with the front end"
 global,DS:F13C,folder_code,char[5],game_flow,spec:game_flow,"§6 ""4x7x"" with the folder letter and digit (shown at row 7 col 31)"
 global,DS:F144,title_colour_b,u16,game_flow,spec:game_flow,§3 the sprite's second layer / the pencil's second
+global,DS:F146,gun_frame_mask_colour,u8,hud,spec:hud,§5 gun_sprites_capture: colour of the frame pieces (VGA 10h)
 global,DS:F148,map_blink,u16,game_flow,spec:game_flow,§6 the assignment map's objective blink counter
 global,DS:F14A,sprite_mask_a,u8[63],game_flow,spec:game_flow,§3 the title sprite (8x4) and the pencil (24x21) colour masks
 global,DS:F152,sprite_mask_b,u8[8],game_flow,spec:game_flow,§3 the title sprite 16x4 mask (colour b)
@@ -1012,6 +1059,8 @@ global,DS:F189,pencil_mask_b,u8[63],game_flow,spec:game_flow,§3
 global,DS:F1C8,pencil_mask_c,u8[63],game_flow,spec:game_flow,§3
 global,DS:F207,pencil_mask_tip,u8[8],game_flow,spec:game_flow,§3
 global,DS:F210,pencil_mask_point,u8[7],game_flow,spec:game_flow,§3
+global,DS:F21E,gun_edge_right,u8[45],hud,spec:hud,§5 captured at (118h; 38h)
+global,DS:F24B,gun_rail_right,u8[30],hud,spec:hud,§5 captured at (118h; 29h)
 global,DS:F26A,title_colour_c,u16,game_flow,spec:game_flow,§3 the sprite's third layer / the pencil's third
 global,DS:F26C,front_end_running,u16,game_flow,spec:game_flow,§6
 global,DS:F26E,title_colour_d,u16,game_flow,spec:game_flow,§3 set with the others (1 in VGA)
@@ -1033,6 +1082,8 @@ global,DS:F29C,music_control,u16[2],sound,spec:sound,§3 far pointer
 global,DS:F2A0,sound_device,u16,sound,spec:sound,§3 8 MT-32 4 AdLib 2 CMS 1 Tandy 0 speaker
 global,DS:F2A2,music_loop,u16,sound,spec:sound,§4.2 music_play's third argument
 global,DS:F346,look_direction,u16,simulation,spec:simulation,§1.2
+global,DS:F348,gun_edge_left,u8[45],hud,spec:hud,§5 1-bit sprite 8 x 45 captured at (20h; 38h)
+global,DS:F375,gun_rail_left,u8[30],hud,spec:hud,§5 8 x 30 captured at (20h; 29h)
 global,DS:F394,joystick,u16,game_flow,spec:game_flow,§2
 global,DS:F396,world_b_size,u16,world,spec:world,§4
 global,DS:F398,first_run,u8,game_flow,spec:game_flow,§1

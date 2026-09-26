@@ -89,9 +89,10 @@ far pointers stored in DGROUP keep their original values (TD3 `mem.h` model).
 `lzw_add_entry` (`08e1`) are TD3's LZW decoder (TD3 platform §4.5). `lzw_decode_picture`
 (`08e1:01bd`, far source, DS destination): decodes a `.LZ` entry into `DS:1094` (the terrain
 arrays' memory, used as a scratch buffer). Then `1390:0000` (all modes) or `121b:08a8` (VGA) draws
-it: the RLE picture format of TD3 (`pic_draw`, bottom-to-top rows). `08e1:016f` decodes the crack
-picture for the cockpit (`window_cracks_draw`). Verified by Codex against the original
-(`gunboat-port/legacy/tests/verify_assets.py`: six pictures).
+it: the RLE picture format of TD3 (`pic_draw`, bottom-to-top rows). Verified by Codex against
+the original (`gunboat-port/legacy/tests/verify_assets.py`: six pictures). `08e1:016f`
+(`crack_table_entry`, formerly named `lzw_decode_cracks`) is not part of the decoder: it returns
+a window crack's record from the table `08e1:00DF` (AL = column, AH = row | picture << 6; hud §5).
 
 ## 7. Text **verified** (structure)
 

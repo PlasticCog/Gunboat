@@ -12,7 +12,7 @@ func,05bd:1ba4,damage_report_screen,far void(),§3.2 station 7 (hud spec)
 func,05bd:1dba,assignment_screen,far void(),§3.2 station 8; prints the mission text DS:ECB4
 func,05bd:1fd4,view_present,far void(u16 page),§3 copies the 3D view and composes the cockpit (hud spec)
 func,05bd:2efc,screen_clear,far void(),§3.1
-func,05bd:3114,window_cracks_draw,near void(),§3.3 simulation §8.6
+func,05bd:3114,window_cracks_draw,far void(),§3.3 simulation §8.6; hud §5
 func,0919:3d78,mission_setup,far void(),§5
 func,0919:3f8d,colour_remap,near void(DI start DX end SI table),§5 CGA/EGA/Tandy only
 func,0919:3fba,video_mode_setup,near void(),§5 row table DS:D74D and span pointers D8F8/D8FA

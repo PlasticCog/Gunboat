@@ -58,6 +58,7 @@ s16 lzw_alloc();  // 08e1:018e  DOS 48h 300h paragraphs -> DS:1078; 1 ok, 0 fail
 void lzw_free();  // 08e1:01aa  DOS 49h on DS:1078
 void lzw_decode_picture(FarPtr src, FarPtr dst);  // 08e1:01bd
 void lzw_decode_body(FarPtr src, FarPtr dst);     // 08e1:01db
+u16 crack_table_entry(u16 index);                 // 08e1:016f  (a table lookup, not LZW)
 
 // ---- BIOS model (bios.cpp): INT 10h video and INT 1Ah on the BIOS data area in mem[]
 void bios_init();                                        // as DOS leaves it: text mode 3

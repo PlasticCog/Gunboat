@@ -158,6 +158,19 @@ void lzw_decode_body(FarPtr src, FarPtr dst)
     }
 }
 
+// 08e1:016f crack_table_entry (platform.md §6; hud.md §5): not part of the decoder: a window crack
+// from the 3-byte records of crack_table (08e1:00DF + index): AL = the first byte (the column),
+// AH = the second (the row) OR the third rotated right by 2 (its picture in bits 6-7). CL is left
+// with the rotated byte; no caller uses it.
+u16 crack_table_entry(u16 index)
+{
+    const u16 bx = u16(index + CS_crack_table);
+    const u8 al = seg_u8(CSSEG_crack_table, bx);
+    const u8 ah = seg_u8(CSSEG_crack_table, u16(bx + 1));
+    const u8 cl = seg_u8(CSSEG_crack_table, u16(bx + 2));
+    return u16(u8(ah | u8(cl >> 2 | cl << 6)) << 8 | al);
+}
+
 // 08e1:01bd lzw_decode_picture (platform.md §6): resets the decoder and falls into the body.
 void lzw_decode_picture(FarPtr src, FarPtr dst)
 {
