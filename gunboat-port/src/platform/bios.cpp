@@ -79,7 +79,8 @@ void bios_set_mode(u8 al)
     if (card_machine() != Machine::Vga) {
         card_bios_set_mode(mode, clear);  // the card's registers (EGA: its planes)
         // the BIOS's copies of the CGA mode control and colour select registers (ega_pal_register
-        // reads 0040:0065)
+        // reads 0040:0065). TODO(verify): as the card model sets them; an IBM BIOS stores its table's
+        // 2Ah for mode 4 (the blink bit, 20h, set), which ega_pal_register would then write to 3D8h.
         mem_u8(BDA, 0x65) = card().cga_mode;
         mem_u8(BDA, 0x66) = card().cga_colour;
     }

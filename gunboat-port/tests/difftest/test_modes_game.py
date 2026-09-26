@@ -3,11 +3,23 @@
 gfx_set_ega_palette, gfx_set_pal_reg, gfx_set_display_offset, ega_pal_entry / ega_pal_apply /
 ega_pal_init, palette_flash, screen_shake_step, text_draw_char (the EGA planar path) and
 dissolve_page1_to_0. The library is put in its mode by the original's gfx_set_mode (test_modes);
-all memory and the whole card state are compared, and the DAC on the VGA machine."""
+all memory and the whole card state are compared, and the DAC on the VGA machine.
+
+The game routines further down (config_load, title_menu, the front end, the HQ quiz, the full-screen
+stations) run on states the original reaches on each machine, with the original's calls of the
+graphics library running the port's library (PortLibrary): the game code is compared whatever state
+the library's paths of the other modes are in. Effects that only the drawing shows (the colour
+patterns set before a picture_draw) are compared only as far as the port's library draws them."""
+import contextlib
+import ctypes
+import os
+import pathlib
+import shutil
 import struct
+import tempfile
 
 import cardmodel
-from gbdiff import DS_BASE, put8, put16, randomize, seg_of
+from gbdiff import DS_BASE, GAME_DIR, MEM_SIZE, Mismatch, put8, put16, randomize, seg_of
 from test_modes import after_original, machine, mode_state
 
 SCRATCH = 0xF000                 # DS offset of a table the tests build (BSS, below the stack)
@@ -263,6 +275,300 @@ def dissolve(h, rng, scale):
     return n
 
 
+# ---------------------------------------------------------------- game routines on the port's library
+
+# The graphics library (segments 137e-15ea). In the tests below the original's calls of these run
+# the port's functions (PortLibrary), so the game's own code is compared on every machine whatever
+# state the library's ports of the other modes are in (the library is tested on its own).
+LIBRARY = ['gfx_alloc_page', 'gfx_detect', 'picture_draw', 'gfx_line_to', 'gfx_draw_bitmap', 'gfx_free_page',
+           'gfx_get_draw_seg', 'gfx_read_bitmap', 'gfx_saved_mode', 'gfx_move_to', 'ega_pal_register',
+           'gfx_set_ega_palette', 'gfx_set_display_offset', 'ega_pal_set', 'gfx_put_pixel', 'gfx_fill_rect',
+           'text_exit_clear', 'gfx_copy_rect_from_copy_page', 'gfx_copy_rect_to_copy_page', 'gfx_set_colour',
+           'gfx_set_copy_page', 'gfx_set_mode', 'gfx_set_draw_page', 'gfx_set_visible_page', 'gfx_copy_rect',
+           'gfx_fill_rect_clipped', 'gfx_clear_page']
+
+BLOCK = 0x1000
+
+
+class PortLibrary:
+    """While active, each call of the original to a LIBRARY routine runs the port's routine instead,
+    on the original's memory and card state (copied to the port and back), and returns its AX. The
+    port's own card state is kept for its run of the check."""
+
+    def __init__(self, h):
+        self.h, self.hooks = h, []
+        self.calls = 0
+
+    def __enter__(self):
+        for name in LIBRARY:
+            file_seg, off, _ = self.h.sym.func(name)
+            self.hooks.append(self.h.orig.stub(file_seg, off, self._call(name)))
+        return self
+
+    def __exit__(self, *exc):
+        for hook in self.hooks:
+            self.h.orig.uc.hook_del(hook)
+        self.hooks = []
+
+    def _call(self, name):
+        def run(arg):
+            h = self.h
+            self.calls += 1
+            args = [arg(i) for i in range(8)]
+            before = h.orig.memory()
+            h.port.set_memory(before)
+            saved = ctypes.create_string_buffer(cardmodel.SIZE)
+            h.port.dll.gb_card_get(saved)
+            h.port.dll.gb_card_set(bytes(h.card.s))
+            try:
+                regs = h.port.call(name, {}, args)
+            except Mismatch as e:
+                h.port.dll.gb_card_set(saved.raw)
+                h.orig.fail('%s (the port library): %s' % (name, e))
+                return None
+            card = ctypes.create_string_buffer(cardmodel.SIZE)
+            h.port.dll.gb_card_get(card)
+            h.card.s[:] = card.raw
+            h.port.dll.gb_card_set(saved.raw)
+            after = h.port.memory()
+            if after != before:
+                for at in range(0, MEM_SIZE, BLOCK):
+                    if before[at:at + BLOCK] != after[at:at + BLOCK] and not (0xA0000 <= at < 0xB0000 and h.machine == 'ega'):
+                        h.orig.uc.mem_write(at, after[at:at + BLOCK])
+            return regs['ax'], None
+        return run
+
+
+CFG_MODE = {'ega': 0x0D, 'cga': 4, 'tandy': 9, 'hercules': 0x0C}
+# Poll points: the VGA fades and dissolve, the CGA and Tandy dissolves, the title's sprite loop,
+# bios_wait_ticks.
+POLLS = ['121b:07eb', '121b:0841', '121b:0670', '121b:060f', '121b:0799', '00f2:03d0', '15d4:0019']
+BIG = 2_000_000_000
+
+
+@contextlib.contextmanager
+def machine_game(h, single_page=0):
+    """The game folder copied, its GUNBOAT.CFG choosing the machine's mode (Hercules: 0Ch), no
+    joystick; both sides use the copy. The real game folder is never written."""
+    tmp = pathlib.Path(tempfile.mkdtemp(prefix='gbdiff_modes_'))
+    try:
+        for f in GAME_DIR.iterdir():
+            if f.is_file():
+                shutil.copy2(f, tmp / f.name)
+        (tmp / 'GUNBOAT.CFG').write_bytes(struct.pack('<HHH', CFG_MODE[h.machine], 0, single_page))
+        h.set_game_dirs(tmp)
+        yield tmp
+    finally:
+        h.set_game_dirs(GAME_DIR)
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+# GB_MODES_HYBRID=0: the game routines below run the original on its own library instead (the
+# whole game code and library compared; for when the library's paths of every mode are ported).
+HYBRID = os.environ.get('GB_MODES_HYBRID', '1') != '0'
+
+
+def check_hybrid(h, name, m, keys=None, **kw):
+    """h.check with the original on the port's library (unless HYBRID is off), the sound model on
+    and the poll points."""
+    from test_sound import sound
+    with sound(h), (PortLibrary(h) if HYBRID else contextlib.nullcontext()):
+        return h.check(name, m, tick=(POLLS, 'both', keys or []), max_insns=BIG, **kw)
+
+
+def config_load_cases(h, rng, scale):
+    """config_load from GUNBOAT.CFG in the machine's mode (Hercules: the CGA mode and hercules_setup;
+    CGA: the palette register), one or two pages."""
+    n = 0
+    for single in (0, 1):
+        with machine_game(h, single):
+            h.card_state = None  # the card as the machine starts
+            check_hybrid(h, 'config_load', h.fresh_memory(), label='single page %d' % single)
+            n += 1
+    return n
+
+
+def captured(h, key, build):
+    """A state the original builds (build() from the reset card), cached per harness with the card
+    state it leaves; h.card_state becomes that card state (the checks start from it)."""
+    cache = h.__dict__.setdefault('_modes_states', {})
+    if key not in cache:
+        h.card.s[:] = cardmodel.reset_state()
+        m = build()
+        cache[key] = (bytes(m), bytes(h.card.s))
+    m, card = cache[key]
+    h.card_state = card
+    return bytearray(m)
+
+
+def main_state_modes(h):
+    """test_title.main_state in the machine's mode (the original's config_load, kbd_install,
+    mem_alloc_all), run by the original on its own library (inside machine_game)."""
+    import test_title
+    return captured(h, 'main', lambda: test_title.main_state(h))
+
+
+def title_cases(h, rng, scale):
+    """title_menu: the menu choices and the demo key; the whole intro on its first run."""
+    import test_title
+    n = 0
+    with machine_game(h):
+        for keys, first in (([0x0D], 0), ([0x96, 0, 0, 0x0D], 0), ([0x98, 0x96, 0x92, 0x0D], 0), ([0x44], 0),
+                            ([0] * 40 + [0x20] + [0] * 400 + [0x0D], 1)):
+            m = main_state_modes(h)
+            put8(m, 0xF398, first)
+            check_hybrid(h, 'title_menu', m, test_title.spaced(keys) if not first else keys, outputs=['ax'],
+                         label='first run %d keys %s' % (first, bytes(keys).hex()))
+            n += 1
+    return n
+
+
+def menu_cursor_cases(h, rng, scale):
+    with machine_game(h):
+        check_hybrid(h, 'menu_cursor_init', main_state_modes(h))
+    return 1
+
+
+def front_state_modes(h):
+    """test_front.front_state in the machine's mode: the front end's set-up run by the original on
+    its own library until it calls name_entry."""
+    from test_sound import sound
+
+    def build():
+        m = main_state_modes(h)
+        h.card.s[:] = h.card_state
+        put16(m, 0x0082, 2)
+        with sound(h):
+            h.set_tick((POLLS, 'both', []))
+            hook = h.orig.stub(0x02D2, 0x0BD8, lambda args: h.orig.fail('stop'))
+            try:
+                h.orig.set_memory(m)
+                file_seg, off, far = h.sym.func('front_end')
+                h.orig.call(file_seg, off, far, {}, (), max_insns=BIG)
+                raise Mismatch('front_end returned before name_entry')
+            except Mismatch as e:
+                if str(e) != 'original: stop':
+                    raise
+            finally:
+                h.orig.uc.hook_del(hook)
+                h.set_tick(None)
+        return h.orig.memory()
+    return captured(h, 'front', build)
+
+
+def region_state_modes(h, region, rank=5):
+    """test_front.region_state on front_state_modes (its file loads run by the original)."""
+    import test_front
+
+    def build():
+        saved = getattr(h, '_front_state', None)
+        h._front_state = front_state_modes(h)
+        h.card.s[:] = h.card_state
+        try:
+            return test_front.region_state(h, region, rank)
+        finally:
+            h._front_state = saved
+    return captured(h, ('region', region, rank), build)
+
+
+def front_cases(h, rng, scale):
+    """The front end's screens with their colour patterns per mode: the office, the folders, the
+    spec sheets, the maps, the outfitting; a whole front end (a new commander) and the quiz."""
+    import test_front
+    n = 0
+    with machine_game(h):
+        base = front_state_modes(h)
+        for c1, c2 in ((ord('S'), ord('1')), (ord('D'), ord('6'))):
+            check_hybrid(h, 'folder_draw', base, stack_args=[c1, c2], label='%02X %02X' % (c1, c2))
+            n += 1
+        check_hybrid(h, 'office_restore', base)
+        check_hybrid(h, 'office_draw', base)
+        n += 2
+        for page in range(17):
+            m = bytearray(base)
+            put8(m, 0xB508, page)
+            check_hybrid(h, 'spec_sheet_draw', m, stack_args=[5 if page % 2 else 9], label='page %d' % page)
+            n += 1
+        for region in range(3):
+            base_r = region_state_modes(h, region)
+            for mission, drawn in ((0, 0), (3, 0), (3, 1)):
+                m = bytearray(base_r)
+                put16(m, test_front.MISSION, mission)
+                put16(m, 0xEA84, drawn)
+                check_hybrid(h, 'map_draw', m, stack_args=[5], label='region %d mission %d drawn %d' % (region, mission, drawn))
+                n += 1
+        for item in range(4):
+            m = bytearray(base)
+            put8(m, 0xB4DA, item)
+            put8(m, 0xB7FC, item & 1)
+            check_hybrid(h, 'outfitting_draw', m, outputs=['ax'], label='item %d' % item)
+            n += 1
+        label, records, keys, code = test_front.front_flows()[0]
+        m = main_state_modes(h)
+        put16(m, 0x0082, 2)
+        check_hybrid(h, 'front_end', m, test_front.spaced(keys, gap=test_front.FLOW_GAP), label=label, exit_code=code)
+        m = main_state_modes(h)
+        m = after_original(h, m, 'file_load_near', [0x0722, 0x6E54])  # DAT6.DAT, as test_front.hq_state
+        put16(m, 0x0082, 1)
+        h.set_pit2(0x5A)
+        check_hybrid(h, 'hq_quiz', m, test_front.spaced([0x38, 0x0D], gap=4), outputs=['ax'], label='quiz')
+        n += 2
+    return n
+
+
+def hud_cases(h, rng, scale):
+    """The full-screen stations (the map, the damage report, the assignment) and the station
+    helpers, in the machine's mode, from a mission the original runs there."""
+    import test_hud
+    n = 0
+    with machine_game(h):
+        for name, key, mission in (('map_screen', 'm', 3), ('damage_report_screen', '/', 3), ('assignment_screen', '.', 1)):
+            m = captured(h, name, lambda: test_hud.screen_state(h, name, key, region=0, mission=mission, rank=5))
+            check_hybrid(h, name, m, label=name)
+            n += 1
+        base = captured(h, 'pilot', lambda: test_hud.pilot(h))
+        check_hybrid(h, 'station_screen_colours', base)
+        n += 1
+        for station in (1, 2, 5, 7, 8):
+            m = bytearray(base)
+            put16(m, 0x0086, station)
+            check_hybrid(h, 'screen_clear', m, label='station %d' % station)
+            n += 1
+        # the pilot's instruments and the message line (its text in the mode's way)
+        for i in range(6 * scale):
+            m = bytearray(base)
+            put8(m, 0xB818, rng.randrange(256))
+            put8(m, 0xD6B9, rng.randrange(256))
+            put16(m, 0xF346, rng.choice([0, 1, 2]))
+            check_hybrid(h, 'jet_marker', m, regs={'ax': rng.randrange(0x10000)}, outputs=['ax'], label='case %d' % i)
+            put8(m, 0xD649, 0xFF)  # the clock's minutes changed: the clock is drawn
+            check_hybrid(h, 'message_line_draw', m, label='case %d' % i)
+            n += 2
+        right = captured(h, 'pilot_right', lambda: test_hud.pilot_right(h))
+        for i in range(6 * scale):
+            m = bytearray(right)
+            if i:
+                put8(m, 0xD6B8, rng.randrange(0x80))
+                put8(m, 0xD50D, rng.randrange(256))
+            check_hybrid(h, 'radar_scope', m, regs={'ax': rng.randrange(0x10000)}, outputs=['ax'], label='case %d' % i)
+            n += 1
+    return n
+
+
+def mission_load_cases(h, rng, scale):
+    """mission_load at its entry (the art, the palette file with ega_pal_init, LIGHTS.LZ on page 1
+    with its patterns), by day and at night, in the machine's mode."""
+    import test_hud
+    n = 0
+    with machine_game(h):
+        for kw in (dict(region=0, mission=3, rank=5), dict(region=1, mission=2, rank=5, night=True), dict(practice=1)):
+            m = captured(h, ('mission_load',) + tuple(sorted(kw.items())),
+                         lambda: test_hud.station_state(h, 'mission_load', **kw))
+            check_hybrid(h, 'mission_load', m, label=str(kw))
+            n += 1
+    return n
+
+
 # ---------------------------------------------------------------- the test list
 
 ALL = ('ega', 'cga', 'tandy', 'hercules')
@@ -275,4 +581,10 @@ TESTS = (on_machines(*ALL, 'vga')(ega_pal_set) + on_machines('vga')(ega_pal_set_
          + on_machines(*ALL)(palette_flash)
          + on_machines(*ALL)(screen_shake)
          + on_machines('ega')(text_ega)
-         + on_machines(*ALL)(dissolve))
+         + on_machines(*ALL)(dissolve)
+         + on_machines(*ALL)(config_load_cases)
+         + on_machines(*ALL)(menu_cursor_cases)
+         + on_machines(*ALL)(title_cases)
+         + on_machines(*ALL)(front_cases)
+         + on_machines(*ALL)(hud_cases)
+         + on_machines(*ALL)(mission_load_cases))
