@@ -21,12 +21,12 @@ constexpr u16 REC_WEAPON = 0, REC_X = 1, REC_Y = 3, REC_FRACTION = 5, REC_HEADIN
 u8 &record(u16 si, u16 field) { return ds_u8(u16(DS_projectile_record + field + si)); }
 
 // A sprite cache slot's descriptor: slot s (1-based sprite index) is in segment sprite_segment_a
-// when s >= 69h, else in sprite_segment_b; its offset is sprite_slots[s - 1] (CS:583D).
+// when s >= 69h, else in sprite_segment_b; its offset is sprite_slot_pointers[s - 1] (CS:583D).
 FarPtr sprite_descriptor(u8 sprite)
 {
     const u16 es = sprite >= 0x69 ? ds_u16(DS_sprite_segment_a) : ds_u16(DS_sprite_segment_b);
     const u8 slot = u8(sprite - 1);
-    return {seg_u16(CSSEG_sprite_slots, u16(CS_sprite_slots + 2 * slot)), es};
+    return {seg_u16(CSSEG_sprite_slot_pointers, u16(CS_sprite_slot_pointers + 2 * slot)), es};
 }
 
 // The sine table words at a byte offset from sine_table (CS:3502).

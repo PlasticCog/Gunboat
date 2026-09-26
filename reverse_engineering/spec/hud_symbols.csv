@@ -52,7 +52,7 @@ cglobal,0919:2171,needle_pivot,u16,§3 (x; y) added to the gauge centre for the 
 cglobal,08e1:00df,crack_table,u8[][3],§5 window cracks: column; row; picture (bits 0-1)
 global,DS:B7DC,scratch_b7dc,u16,§3 needle_draw: the end (dx; dy) to erase; dx FFh = none
 global,DS:B7DE,gauge_row,u16,§3 12 * look direction: the row of gauge_centres
-global,DS:B7E0,needle_centre_x,u16,§3 needle_draw: the gauge centre's x (y in scratch_b7e3)
+global,DS:B7E0,scratch_b7e0,u16,§3 needle_draw: the gauge centre's x (y in scratch_b7e3)
 global,DS:B7ED,radar_steps,u8,§3 radar_scope: sweep steps left in this frame
 global,DS:B80E,fuel_needle_ends,u16[2],§3 last drawn fuel needle ends (FFFFh after screen_clear)
 global,DS:B812,throttle_needle_ends,u16[2],§3 last drawn throttle needle ends (FFFFh after screen_clear)

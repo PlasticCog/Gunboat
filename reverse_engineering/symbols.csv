@@ -243,16 +243,20 @@ func,0919:5aeb,sprite_cache_build,,render3d,codex,NATIVE_PORT.md EC7B: sprite ca
 func,0919:5c71,blit_record,,render3d,codex,"NATIVE_PORT.md EE01: direct VGA blitter, zero = transparent"
 func,0919:5d5a,blit_place,near void(),render3d,spec:render3d,§5.7
 func,0919:5e66,blit_rows_vga,near void(),render3d,td3-match+spec:render3d,"§5.7 TD3 match sprite_rows_mirror (wrong role here) | was sprite_rows_mirror | TD3 0e12:2a9e sprite_rows_mirror, score 0.64; low score: confirm in the spec"
-func,0919:5f4b,sprite_scale_rows,,render3d,td3-match,"TD3 0e12:2d54 sprite_scale_rows, score 0.57; low score: confirm in the spec"
-func,0919:5fc8,sprite_scale_rows_up,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
-func,0919:6054,sprite_scale_rows_up_b,,render3d,td3-match,"TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec"
+func,0919:5f4b,sprite_scale_rows,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 0: rows kept by the row pattern, columns by the column pattern | TD3 0e12:2d54 sprite_scale_rows, score 0.57; low score: confirm in the spec"
+func,0919:5fc8,sprite_scale_rows_up,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 1: rows 1-2 times, columns 1-2 times | TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:6054,sprite_scale_rows_up2,near (ES CX SI DI)->DI,render3d,td3-match+spec:render3d,"§5.7 zoom 2-3: rows 2-4 times, columns 2-3 times | was sprite_scale_rows_up_b | TD3 0e12:2dc6 sprite_scale_rows_up, score 0.55; low score: confirm in the spec"
 func,0919:60e0,sprite_view_angle,near void(BX entry DX distance),render3d,spec:render3d,§5.7 -> D864 D86A
-func,0919:6174,sprite_scale_patterns,,render3d,td3-match,"TD3 0e12:2eb6 sprite_scale_patterns, score 0.95"
-func,0919:6373,sprite_cache_f503,,render3d,codex,NATIVE_PORT.md F503; role to name in the spec
-func,0919:66a7,sprite_scale_row_up,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
-func,0919:6824,sprite_scale_row,,render3d,td3-match,"TD3 0e12:2f84 sprite_scale_row, score 1.00"
-func,0919:68a4,sprite_scale_row_up_b,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
-func,0919:6925,sprite_scale_row_up_c,,render3d,td3-match,"TD3 0e12:3004 sprite_scale_row_up, score 0.77; low score: confirm in the spec"
+func,0919:6174,sprite_scale_patterns,near void(),render3d,td3-match+spec:render3d,"§5.7 column/row patterns and zoom from D864 | TD3 0e12:2eb6 sprite_scale_patterns, score 0.95"
+func,0919:6244,sprite_row_box,near (ES BX SI CL DI)->DI,render3d,spec:render3d,"§5.7 row type 0: two faces turned by the view, shrunk"
+func,0919:6373,sprite_row_box_up,near (ES BX SI CL DI)->DI,render3d,codex+spec:render3d,"§5.7 row type 0, zoom 1 | was sprite_cache_f503 | NATIVE_PORT.md F503; role to name in the spec"
+func,0919:64ac,sprite_row_box_up2,near (ES BX SI CL DI)->DI,render3d,spec:render3d,"§5.7 row type 0, zoom 2"
+func,0919:65eb,sprite_row_turn,near (ES BX CL DI)->DI,render3d,spec:render3d,"§5.7 row type 80h: a strip scrolled by the view, shrunk"
+func,0919:66a7,sprite_row_turn_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 80h, zoom 1 | was sprite_scale_row_up | TD3 0e12:3004 sprite_scale_row_up, score 0.50; low score: confirm in the spec | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:6764,sprite_row_turn_up2,near (ES BX CL DI)->DI,render3d,spec:render3d,"§5.7 row type 80h, zoom 2"
+func,0919:6824,sprite_row_flat,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h: a centred row, shrunk | was sprite_scale_row | TD3 0e12:2f84 sprite_scale_row, score 1.00"
+func,0919:68a4,sprite_row_flat_up,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h, zoom 1 | was sprite_scale_row_up_b | TD3 0e12:3004 sprite_scale_row_up, score 1.00 | NATIVE_PORT.md sprite routine (translated in gunboat-port/legacy/src/assets.cpp)"
+func,0919:6925,sprite_row_flat_up2,near (ES BX CL DI)->DI,render3d,td3-match+spec:render3d,"§5.7 row type 40h, zoom 2 | was sprite_scale_row_up_c | TD3 0e12:3004 sprite_scale_row_up, score 0.77; low score: confirm in the spec"
 func,0919:69a9,visible_list_rebuild,near void(),render3d,spec:render3d,§5.1
 func,0919:6af9,object_update,near void(),render3d,spec:render3d,§5.3-5.4 sort and ramming
 func,0919:6c23,list_bubble,near void(),render3d,spec:render3d,§5.3 descending distance; slot array not swapped
@@ -261,6 +265,7 @@ func,0919:6cfa,sprite_lod_entry,near void(SI entry DL class BX object),render3d,
 func,0919:6d92,visible_project,near void(),render3d,spec:render3d,§5.2
 func,0919:6e5c,object_frame,near void(),render3d,spec:render3d,§5
 func,0919:6f2a,free_temp_object,near ()->BX,simulation,spec:simulation,§4.3 objects 1-34; returns 46h when full (quirk)
+func,0919:6f3d,sprite_slots_reset,near void(),render3d,spec:render3d,§5.6 slot bitmaps and the slots of all entries cleared
 func,0919:7017,sprite_slot_alloc,near void(AH level SI entry),render3d,spec:render3d,§5.6
 func,0919:7158,terrain_frame,near void(),simulation,spec:simulation,§10 render3d; shore contact
 func,0919:728c,terrain_save_view,near void(),render3d,spec:render3d,§3
@@ -277,9 +282,11 @@ func,0919:788e,span_vga_a,near void(),render3d,spec:render3d,§3.4 DS:D8F8 in VG
 func,0919:7909,edge_setup,near void(),render3d,spec:render3d,§3.4
 func,0919:7943,span_vga_b,near void(),render3d,spec:render3d,§3.4 DS:D8FA in VGA
 func,0919:79e1,shore_contact_test,,simulation,codex,ORIGINAL_PHYSICS.md 10B71: edge bearings of projection candidates D901/D903
+func,0919:7a3e,shore_edge_test,near void(CX DX),render3d,spec:render3d,§3.3 simulation §10: one neighbouring vertex of a contact candidate
 func,0919:7a89,spotlights,near void(),render3d,spec:render3d,§6
 func,0919:7b17,spotlight_beam,near void(AX bearing BL elevation),render3d,spec:render3d,§6
 func,0919:7bbd,spotlight_beam_vga,near void(),render3d,spec:render3d,§6
+func,0919:7c38,terrain_rect_test,near void(CX x DX y),render3d,spec:render3d,§5.3 simulation: point in the loaded terrain -> B7E2
 func,0919:7e5f,heading_vector,near AX(AL angle),simulation,codex+spec:simulation,§5.1 sine components of an angle; vec_factor scaled by |speed| | ORIGINAL_PHYSICS.md 10FEF: integer heading lookup
 func,0919:7ebb,boat_motion,near void(),simulation,spec:simulation,§5.1
 func,0919:7ee8,boat_move,near void(),simulation,codex+spec:simulation,§5.1 moves the boat along the hull heading; map clipping; water marks | ORIGINAL_PHYSICS.md 11078: fractional XY motion and map-edge clipping
@@ -314,6 +321,8 @@ func,0919:8e47,view_copy_8,far void(u16 src_page u16 dst_page),hud,spec:hud,§6 
 func,0919:8e87,view_copy_8_vga,near void(ES dst_seg DS src_seg),hud,spec:hud,§6
 func,0919:8eb9,list_quicksort,near void(),render3d,spec:render3d,§5.3
 func,0919:8ece,list_quicksort_range,near void(u16 first u16 last),render3d,spec:render3d,§5.3
+func,0919:8f53,list_swap,near void(SI DI),render3d,spec:render3d,§5.3 swaps two visible entries (not the sprite slot)
+func,0919:8fa7,list_bubble_range,near void(u16 first u16 last),render3d,spec:render3d,§5.3 bubble sort of a quicksort partition
 func,121b:036e,world_a_base,far u16(),world,spec:world,§3.1 returns 6E54h
 func,121b:0372,pit_random,far u16(u16 base),world,spec:world,reads PIT counter 2 (port 42h) + base (platform spec)
 func,121b:0380,far_normalize,,platform,td3-match,"TD3 0c1c:071c far_normalize, score 1.00"
@@ -507,7 +516,8 @@ cglobal,0919:2e88,salvo_bearing_table,u8[],simulation,spec:simulation,§8.5
 cglobal,0919:3502,sine_table,u16[],simulation,spec:simulation,§8.5 polar_small
 cglobal,0919:3606,atan_table,u8[256],simulation,spec:simulation,§4.6
 cglobal,0919:378f,damage_matrix,u8[32],simulation,spec:simulation,§7.2 Codex image C91F
-cglobal,0919:583d,sprite_slots,u16[183],simulation,spec:simulation,§7.2 sprite cache slot pointers (render3d §5.6; world §3.3); size bytes at +3 +4 +6 read by hit_test and line_of_sight
+cglobal,0919:583d,sprite_slot_pointers,u16[185],simulation,spec:simulation+spec:render3d,§5.6 slot - 1 -> offset in DS:D885 (slots 1-68h) or DS:D883 | was sprite_slots | §7.2 sprite cache slot pointers (render3d §5.6; world §3.3); size bytes at +3 +4 +6 read by hit_test and line_of_sight
+cglobal,0919:59af,sprite_scale_table,u8[][10],render3d,spec:render3d,§5.7 per size step: 7 column-pattern bytes and 3 row-pattern bytes
 cglobal,0919:6f5f,sprite_slot_level,u8[],render3d,spec:render3d,§5.6
 cglobal,0919:709a,spotlight_widths,u8[],render3d,spec:render3d,§6
 cglobal,0919:7dbf,water_shift_table,u8[16][10],simulation,spec:simulation,§5.1 bits 2-7 fraction; bits 0-1 whole
@@ -643,9 +653,9 @@ global,DS:B54A,clock_minutes,u8,simulation,spec:simulation,§9.2
 global,DS:B54B,clock_hours,u8,simulation,spec:simulation,§9.2 BCD
 global,DS:B54C,commander_slot,u16,game_flow,spec:game_flow,§5
 global,DS:B54E,roster,u8[703],game_flow,spec:game_flow,§5 GBROSTER.DAT image
-global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation+spec:hud,§3 needle_draw: the end (dx; dy) to erase; dx FFh = none | §9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer | hud §3 needle_draw: the end (dx; dy) to erase (dx FFh = none); radar_scope: the range
+global,DS:B7DC,scratch_b7dc,u16,simulation,spec:simulation+spec:hud+spec:render3d,"shared scratch word (project end, thinning mask copy, loop ends) | §3 needle_draw: the end (dx; dy) to erase; dx FFh = none | §9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer | hud §3 needle_draw: the end (dx; dy) to erase (dx FFh = none); radar_scope: the range"
 global,DS:B7DE,gauge_row,u16,hud,spec:hud,§3 12 * look direction: the row of gauge_centres
-global,DS:B7E0,needle_centre_x,u16,hud,spec:hud,§3 needle_draw: the gauge centre's x (y in scratch_b7e3)
+global,DS:B7E0,scratch_b7e0,u16,render3d,spec:hud+spec:render3d,shared scratch word (terrain_rect_test loop count) | was needle_centre_x | §3 needle_draw: the gauge centre's x (y in scratch_b7e3)
 global,DS:B7E2,scratch_b7e2,u8,simulation,spec:simulation,§5.1 shared scratch byte (step whole part here; also render3d §2 rotation and §4.6 side results)
 global,DS:B7E3,scratch_b7e3,u8,simulation,spec:simulation,§5.1 shared scratch byte (step fraction here)
 global,DS:B7E5,vec_factor,u8,simulation,spec:simulation,§5.1 multiplicand of vec_scale
@@ -656,9 +666,13 @@ global,DS:B7EA,vec_product_hi,u8,simulation,spec:simulation,§5.1
 global,DS:B7ED,radar_steps,u8,hud,spec:hud,§3 radar_scope: sweep steps left in this frame
 global,DS:B7F0,joystick_bits,u8,simulation,spec:simulation,was keypad_bits | §3.1
 global,DS:B7F1,time_compression,u8,simulation,spec:simulation,§1.2
+global,DS:B7F2,shake_counter,u8,render3d,spec:render3d,§7.2 screen shake steps left (boat_hit sets 2 or 8)
 global,DS:B7F3,quiz_digit,u16,game_flow,spec:game_flow,§4 hq_quiz's typing flag / check index (6 after a pass); -6 by mission_setup; +14h at mission end
-global,DS:B7F5,scratch_b7f5,u8,simulation,spec:simulation,§7.1 projectile_aim quadrant; §4.6 atan octant
+global,DS:B7F5,scratch_b7f5,u8,simulation,spec:simulation+spec:render3d,§3.3 octant of the last atan or projection | §7.1 projectile_aim quadrant; §4.6 atan octant
+global,DS:B7F7,sprite_column,u8,render3d,spec:render3d,§5.7 screen column (bearing byte) of the sprite being placed
 global,DS:B7F8,shot_elevation,u8,simulation,spec:simulation,§6.1
+global,DS:B7F9,sprite_rows_left,u8,render3d,spec:render3d,§5.7 rows left to scale or to blit
+global,DS:B7FA,sprite_row_pixels,u8,render3d,spec:render3d,§5.7 pixels of the current source row
 global,DS:B7FC,daylight,u8,simulation,spec:simulation,§9.2
 global,DS:B7FD,twilight_stage,u8,simulation,spec:simulation,§9.2
 global,DS:B7FE,leak_level,u8,simulation,spec:simulation,§8.7
@@ -815,8 +829,10 @@ global,DS:D6B9,jet_marker_last,u8,hud,spec:hud,§3
 global,DS:D6BA,wake_timer,u8,simulation,spec:simulation,§4.3
 global,DS:D6BB,jet_marker_bitmap,u8[],hud,spec:hud,§3
 global,DS:D6BF,detail_low,u8,simulation,spec:simulation,§3.3
+global,DS:D6C0,detail_distance,u8,render3d,spec:render3d,"§5.6 distance class limit for sprites (FFh high detail, 16h low)"
 global,DS:D6C1,gauge_centres,u8[3][12],hud,spec:hud,§3 by look direction
 global,DS:D6E5,flash_level,u8,render3d,spec:render3d,§7.1
+global,DS:D6E6,flash_ega_colours,u8[4],render3d,spec:render3d,§7.1 EGA/Tandy palette register 8 per flash level
 global,DS:D6EA,flash_colours,u8[3][3],render3d,spec:render3d,§7.1
 global,DS:D6F8,salvo_heading,u8,simulation,spec:simulation,§8.5
 global,DS:D6F9,salvo_speed,u8,simulation,spec:simulation,§8.5
@@ -825,16 +841,56 @@ global,DS:D70C,world_pass_counter,u8,simulation,spec:simulation,§8.3
 global,DS:D70D,incoming_count,u8,simulation,spec:simulation,§8.5
 global,DS:D70E,incoming_descriptor,u8[16],simulation,spec:simulation,§8.5
 global,DS:D71F,incoming_timer,u8[16],simulation,spec:simulation,§8.5
+global,DS:D730,atan_raw,u8,render3d,spec:render3d,§3.3 raw atan table value of the last projection
+global,DS:D731,octant_negate,u8[8],render3d,spec:render3d,§3.3 1 = the octant angle is subtracted
+global,DS:D739,octant_base,u8[8],render3d,spec:render3d,§3.3 octant base angle (atan)
+global,DS:D741,octant_base_view,u8[8],render3d,spec:render3d,§3.3 octant base of the bearing high byte (project)
 global,DS:D749,shot_bearing,u16,simulation,spec:simulation,§7.2
 global,DS:D74B,shot_range,u8,simulation,spec:simulation,§7.2
 global,DS:D74D,view_row_table,u16[64],world,spec:world,§5 row start offsets for the span drawers
+global,DS:D862,sprite_blit_width,u8,render3d,spec:render3d,§5.7 columns to copy after clipping
+global,DS:D863,sprite_slot,u8,render3d,spec:render3d,§5.7 cache slot of the sprite being built (1-based)
+global,DS:D864,sprite_size,u8,render3d,spec:render3d,§5.7 apparent size (atan of size / distance)
+global,DS:D865,sprite_zoom,u8,render3d,spec:render3d,"§5.7 0 shrink, 1, 2 or 3 (rows per source row)"
+global,DS:D866,sprite_side,u8[2],render3d,spec:render3d,"§5.7 kind record word 3: side face width, second part index"
+global,DS:D868,sprite_kind,u8,render3d,spec:render3d,§5.7
+global,DS:D869,sprite_pad,u8,render3d,spec:render3d,§5.7 padding pixels of the current row
+global,DS:D86A,sprite_view,u8,render3d,spec:render3d,§5.7 view angle (0-3Fh after sprite_cache_build)
+global,DS:D86B,sprite_out_rows,u8,render3d,spec:render3d,§5.7 output rows of the image
+global,DS:D86C,sprite_part_offset,u8,render3d,spec:render3d,§5.7 column offset of the second part
+global,DS:D86D,sprite_part_height,u8,render3d,spec:render3d,§5.7 height of the parts placed so far
+global,DS:D86F,sprite_row_repeat,u8,render3d,spec:render3d,§5.7 repeats left of the current output row
+global,DS:D870,sprite_part_width,u8,render3d,spec:render3d,§5.7 second part: width
+global,DS:D871,sprite_part_rows,u8,render3d,spec:render3d,§5.7 second part: rows
+global,DS:D872,sprite_part_shift,u8,render3d,spec:render3d,§5.7 second part: column offset ratio
+global,DS:D873,sprite_half_column,u16,render3d,spec:render3d,§5.7 fine bearing bit 2 (one pixel)
+global,DS:D875,sprite_clip_left,u16,render3d,spec:render3d,§5.7 columns clipped at the left
+global,DS:D877,sprite_part_types,u16,render3d,spec:render3d,§5.7 second part: row-type table
+global,DS:D879,sprite_part_data,u16,render3d,spec:render3d,§5.7 second part: row pointer table
+global,DS:D87B,sprite_repeat_ptr,u16,render3d,spec:render3d,§5.7 cache record: row repeat counts
+global,DS:D87D,sprite_size_ptr,u16,render3d,spec:render3d,§5.7 cache record: width/height bytes
+global,DS:D87F,sprite_slot_end,u16,render3d,spec:render3d,§5.7 end of the slot (next slot pointer)
+global,DS:D881,sprite_record,u16,render3d,spec:render3d,§5.7 cache record + 2 (view byte)
 global,DS:D883,sprite_segment_a,u16,world,spec:world,§5
 global,DS:D885,sprite_segment_b,u16,world,spec:world,§5
+global,DS:D887,sprite_segment,u16,render3d,spec:render3d,§5.7 segment of the cache record being drawn
+global,DS:D889,sprite_column_pattern,u8[26],render3d,spec:render3d,"§5.7 column keep bits, rotated as used"
+global,DS:D8A4,sprite_row_pattern,u8[3],render3d,spec:render3d,"§5.7 row keep bits, shifted out top first"
+global,DS:D8A7,sprite_face_patterns,u8[8][2],render3d,spec:render3d,§5.7 per view step: bits of the two box faces
+global,DS:D8BA,sprite_face_a,u8,render3d,spec:render3d,§5.7
+global,DS:D8BB,sprite_face_b,u8,render3d,spec:render3d,§5.7
 global,DS:D8BC,scene_rebuild,u8,simulation,spec:simulation,§11.2
 global,DS:D8BD,far_object_mask,u16,render3d,spec:render3d,§5.1
 global,DS:D8BF,visible_count_previous,u16,render3d,spec:render3d,§5.1
+global,DS:D8C1,slot_clear_mask,u8[8],render3d,spec:render3d,§5.6
+global,DS:D8C9,slot_bit,u8[8],render3d,spec:render3d,§5.6
+global,DS:D8D1,slot_bitmap,u8[24],render3d,spec:render3d,"§5.6 used slots, bit 0 of D8D1 = slot 1; slot 69h reserved"
+global,DS:D8E9,slot_level_first,u8[3],render3d,spec:render3d,§5.6 first slot number of each level pool
+global,DS:D8EC,slot_level_mask,u16[3],render3d,spec:render3d,"§5.6 first byte mask, 8 - first bit"
+global,DS:D8F2,slot_level_byte,u16[3],render3d,spec:render3d,§5.6 first bitmap byte of each pool
 global,DS:D8F8,span_routine_a,u16,render3d,spec:render3d,§1.2 per-mode near code pointer
 global,DS:D8FA,span_routine_b,u16,render3d,spec:render3d,§1.2 per-mode near code pointer
+global,DS:D8FC,span_first_row,u8,render3d,spec:render3d,§3.4
 global,DS:D8FD,boat_lost_pending,u8,simulation,spec:simulation,§10
 global,DS:D8FE,contact_colour,u8,simulation,spec:simulation,§10
 global,DS:D8FF,contact,u8,simulation,spec:simulation,§10
@@ -852,13 +908,21 @@ global,DS:D94D,water_phase,u8,simulation,spec:simulation,§5.1; render3d §3.2 h
 global,DS:D94E,last_view_heading,u8,render3d,spec:render3d,§3.2
 global,DS:D94F,scene_colours,u8[4],simulation,spec:simulation,§9.2
 global,DS:D953,horizon_row,u8,render3d,spec:render3d,§3.1
+global,DS:D954,span_colour,u16,render3d,spec:render3d,§3.4 colour byte twice
+global,DS:D956,span_left,u16,render3d,spec:render3d,§3.4 left edge bearing (+40h)
+global,DS:D958,span_right,u16,render3d,spec:render3d,§3.4 right edge bearing (+BFh)
+global,DS:D95A,span_step_left,u16,render3d,spec:render3d,§3.4 per-row step (subtracted)
+global,DS:D95C,span_step_right,u16,render3d,spec:render3d,§3.4
+global,DS:D95E,span_apex,u16,render3d,spec:render3d,§3.4 apex bearing of the triangle half
 global,DS:D960,group_a_count,u16,render3d,spec:render3d,§8
 global,DS:D962,group_b_count,u16,render3d,spec:render3d,§8
-global,DS:D965,view_sky_top,u8,simulation,spec:simulation,§3.4 first view row to redraw (render3d §3.1); the aiming routines clear it
+global,DS:D964,span_from_apex,u8,render3d,spec:render3d,§3.4 1 = the half starts at the apex
+global,DS:D965,view_sky_top,u8,simulation,spec:simulation+spec:render3d,§3.1 first view row the sky fill covers; lowered by sprites and beams | §3.4 first view row to redraw (render3d §3.1); the aiming routines clear it
 global,DS:D966,view_sky_top_prev,u8,simulation,spec:simulation,§3.4 D965 of the last present (05bd:1fd4)
 global,DS:D967,bob_countdown,u8,simulation,spec:simulation,§2.3
 global,DS:D968,bob_period,u8,simulation,spec:simulation,§2.3
 global,DS:D969,bob_phase,u8,simulation,spec:simulation,§2.3
+global,DS:D96A,chase_view_reset,u8,render3d,spec:render3d,§5.3 set when the chase camera gives up
 global,DS:D96B,chase_view,u8,simulation,spec:simulation,§3.3
 global,DS:D96C,chase_heading,u8,simulation,spec:simulation,§5.3
 global,DS:D96D,chase_distance,u8,simulation,spec:simulation,§5.3
@@ -874,9 +938,11 @@ global,DS:D984,water_mark_x_fraction,u8[32],simulation,spec:simulation,§5.1 fra
 global,DS:D9A4,scenery_count,u8,render3d,spec:render3d,§2
 global,DS:D9A5,window_quadrant,u8,render3d,spec:render3d,§2
 global,DS:D9A6,window_overflow,u8,render3d,spec:render3d,§2
+global,DS:D9A7,tile_record,u16,render3d,spec:render3d,§2 TILE.BIN record being loaded
 global,DS:D9A9,tile_origin_x,u16,render3d,spec:render3d,§2 also route_point
 global,DS:D9AB,tile_origin_y,u16,render3d,spec:render3d,§2 also route_point
 global,DS:D9AD,terrain_rebuild,u16,simulation,spec:simulation,§7.3
+global,DS:D9AF,shade_toggle,u8,render3d,spec:render3d,§2 00h/1Fh alternating per vertex
 global,DS:D9B0,shade_mask_a,u8,render3d,spec:render3d,§2
 global,DS:D9B1,shade_mask_b,u8,render3d,spec:render3d,§2
 global,DS:D9B2,window_visibility,u8,render3d,spec:render3d,§2

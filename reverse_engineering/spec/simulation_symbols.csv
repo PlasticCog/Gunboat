@@ -338,7 +338,7 @@ func,0919:37c7,projectile_aim,near void(AL elevation AH weapon BX slot CX headin
 func,0919:3b3b,elevation_add_clamped,near (AL)->AL,§7.1 signed AL + shot_elevation B7F8 clamped to 0..FFh
 func,0919:80e0,camera_pitch_bob,near void(),§5.4 pitch impulse decay; wave bob; view pitch D193
 func,0919:81f8,muzzle_flash_tick,near void(),§6.1 flash counters B839..B83C down to 0
-cglobal,0919:583d,sprite_slots,u16[183],§7.2 sprite cache slot pointers (render3d §5.6; world §3.3); size bytes at +3 +4 +6 read by hit_test and line_of_sight
+cglobal,0919:583d,sprite_slot_pointers,u16[185],§7.2 sprite cache slot pointers (render3d §5.6; world §3.3); size bytes at +3 +4 +6 read by hit_test and line_of_sight
 global,DS:B7DC,scratch_b7dc,u16,§9.1 character for text_draw_char (show_message); §7.1 projectile_aim interpolated sine; §6.2 gunner memory pointer
 global,DS:B7F5,scratch_b7f5,u8,§7.1 projectile_aim quadrant; §4.6 atan octant
 global,DS:D63E,weapon_elevation_limit,u8[6],§7.1 per weapon 1-5 (E9 E7 EB EB E9)

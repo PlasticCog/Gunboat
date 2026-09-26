@@ -81,13 +81,18 @@ middle, so that crossing a half-cell line back and forth does not rebuild every 
 The TILE.BIN record (far segment `DS:F282`, base `DS:F280`, ORIGINAL_WORLD_FORMAT.md) gives
 counts A, B, objects, waypoints. Group A vertices go to indices 0..511 and group B to
 200h..3FFh through `vertex_load` (`0919:8665`); scenery objects are appended to the object
-arrays at `B959 + D9A4` (at most **60h** scenery objects), with the type byte, the source
-entry's low 3 bits as facing, and rotated/translated position (`route_rotate`). Overflow of
-either group (512) or of the scenery (96) sets `D9A6`.
+arrays at `B959 + D9A4` (at most **60h** scenery objects), with the type byte, the low 3 bits of
+the entry's **offset** in TILE.BIN as the facing (flags byte), and rotated/translated position
+(`route_rotate`). Overflow of either group (512) or of the scenery (96) sets `D9A6`. Quirks
+(port-verified, kept): the vertex count A + B is summed in 8 bits (a record with 256 vertices
+loads none); `vertex_load` returns SI where it stopped, so when group A loads nothing (group
+full, or A = 0) group B reads group A's vertices; the scenery count is summed in 8 bits too
+(D9A4 + objects can wrap below 60h and load more than the limit).
 
 `vertex_load` (`0919:8665`) per vertex **verified (Codex:** `verify_original_tile_code.py`,
 25,576 + 12,788 cases, and the daytime colours**)**: control byte → `DS:1096 + i` with the
-colour substituted: 0Eh → `D951`, 0Ah → `D952`, 02h → `02h ^ (alt & D9B0)`, 06h →
+colour substituted: 0Eh → `D951`, 0Ah → `D952`, 02h → `D952 ^ (alt & D9B0)` (port-verified:
+the base is D952, which is 02h at night), 06h →
 `06h ^ ((alt & D9B1) ^ 4)` where `alt` toggles 00h/1Fh per vertex (`D9AF`); other colours unchanged;
 bit 7 (primitive mode) kept. Height → word `DS:1496 + 2i`; X and Y (rotated, ×8 + origin, then
 ×4) → words `DS:1C96 + 2i` and `DS:2496 + 2i`. `D94F..D952` and `D9B0/D9B1` come from the time
@@ -151,7 +156,8 @@ bearing word = ±(angle << 5 masked 1FE0h) + quadrant base (DS:D741[octant]) −
 scale = (CS:3502[…] >> 1) / large, or FFh when very close   → DS:4496[i] (word, 0..FFh)
 if scale == FFh and height(i) or height(i+1) is 0:            shore-contact candidate:
    rel = high(bearing) + D191 − B81E − 14h; forward (speed ≥ 0): rel in 0..57h;
-   reverse: rel in D8h..FFh  → first candidate D901, later ones overwrite D903
+   reverse: rel in 80h..D7h  → first candidate D901, later ones overwrite D903
+   (port-verified: the reverse window is 80h..D7h; D901/D903 hold the byte offset 2i)
 row = ((200h | scale) − ((scale × height) >> 5)) clamped ≥ 0, >> 3, + horizon + 1  → DS:3496[i]
 ```
 
@@ -169,6 +175,18 @@ triangle whose three bearings all have bit 15 set, then fills it with `fill_tria
 edge set-up `0919:7909` (calls `[DS:D8FA]`, VGA `0919:7943`, with the edge slope in `D95A`). Rows are inclusive, columns
 exclusive; bearings wrap as signed 16-bit values; addresses wrap at 16 bits inside the page.
 
+Port-verified details: a triangle's vertices are sorted by row word; all three on one row →
+one row between the widest pair of bearings; a flat bottom or top → one half (`D964` = 1 when
+the half starts at the apex `D95E`); else two halves split at the bearing interpolated on the
+middle row. Mode 3 (bits 6-7 = 11) reads its first vertex from the odd byte offset 2i − 3
+(kept). `fill_triangle` (AL = first row, AH = last row, CX/DX = the flat side's bearings): the
+edge steps are (edge − apex) / (rows − 1) as a signed magnitude, `D956` += 40h and `D958` += BFh
+(so the left column rounds up and the right one down). A span's columns are bits 7-15 of the
+bearings (0..1FFh): a left column of 180h-1FFh is a span wrapped from the left of the view
+(clipped at column 0), 100h-17Fh is off the view; the width is cut at column 256; widths 0
+and 1 both fill one pixel. The line routine (`span_vga_b`) draws from the edge to where it
+will be on the next row, and its step becomes ±80h (one column) on the last row.
+
 `draw_group_b` (`0919:763f`): group B primitives from index `200h + min(D962, 1FEh) − 1` **down**
 to 200h, in stream order. Group B is drawn entirely before objects (the far/flat terrain).
 Group A is drawn later, sorted and interleaved with sprites (§5.5).
@@ -179,7 +197,9 @@ Group A is drawn later, sorted and interleaved with sprites (§5.5).
 
 `order_sort` (`0919:72c0`): key for each entry (`DS:4096[k]`, word): 0 for no primitive; else
 the scales of the primitive's vertices (i, i+1, and i+2, or i−1 for mode 2; two for a line)
-with **high byte = the largest, low byte = the smallest**. Then a bubble sort of `3C96`/`4096`
+with **high byte = the largest, low byte = the middle one of the three** (port-verified: the
+code keeps the second largest, not the smallest; a line's key is its larger and smaller scale).
+Then a bubble sort of `3C96`/`4096`
 by key, **descending** (nearest first): each pass swaps adjacent entries while the left key is
 smaller, and the next pass ends at the last swap position; sorting stops when that position is
 ≤ 2, so the first entries can stay unsorted (**quirk: keep**). The order persists between
@@ -197,6 +217,14 @@ frames, so the sort is incremental.
 | D972 / D974 | Camera position ×4 + fraction bits (renderer units) |
 | D96B / D96C / D96D | Chase view, its heading and distance |
 | D9B8 | Segment of the drawing page (page 1) |
+
+`terrain_rect_test` (`0919:7c38`, CX/DX = a point in 1/4 units; simulation §5.3, the chase camera)
+sets `B7E2` = 1 when the point counts as land: when the camera's cell (from `D96E`/`D970`) is
+neither the window's centre cell `D9AD` nor one of its loaded neighbours (the visibility bits of
+the centre tile, records `CS:839C + 5k`), or when it lies in the box of a group A primitive (in
+draw order, all entries but the last two) or of a group B vertex from 200h (all but the last
+three): on each axis between the first vertex's coordinate and one of the next two (bit 7: the
+first vertex is i − 1; line primitives and empty entries are skipped). Port-verified.
 
 ## 5. Objects (`object_frame`, 0919:6e5c)
 
@@ -228,11 +256,21 @@ Rebuilt only on scene rebuilds. Entries (`DS:523E[2k]` = object offset):
 At most B5h (181) entries; `B83D` = count. Sprite cache slots of entries beyond the new count are
 freed (`D8BF` = previous count).
 
+**Bug (port-verified, not reproducible):** the scenery entries are copied with `LOOP` on
+CX = `D9A4`; a terrain window without scenery (D9A4 = 0) runs it 65536 times, writing entry
+offsets over all of DGROUP including the stack, and the routine returns to a garbage address.
+The shipped data has such windows: Mare Island (region 3, the practice missions), grid cells
+137 and 154 (open water, all nine window cells scenery-free), i.e. the boat at X 05xx-07xx,
+Y 05xx-0Bxx, in the bay west of the practice start cell. The port ends with a fatal error
+there (PORT); to confirm in DOSBox.
+
 ### 5.2 Projection (`visible_project`, 0919:6d92) **verified**
 
 For each entry i with a nonzero kind: `dx = X·4 − D972`, `dy = Y·4 − D974`; `atan`
 (`0919:3712`) gives the bearing and `D730`; the distance is `dx / cos` using the sine table
-`CS:3502` interpolated with the two low bits of `D730`, doubled (`7FFFh` on overflow):
+`CS:3502` interpolated with the two low bits of `D730` (shifted out of D730, which is left
+>> 2), divided into `max × 65536`, doubled (`7FFFh` when bit 15 gets set); an entry is skipped
+when its object's kind byte equals the entry index's high byte (0: no object):
 
 | Array | Content |
 |---|---|
@@ -249,8 +287,12 @@ For each entry i with a nonzero kind: `dx = X·4 − D972`, `dy = Y·4 − D974`
 Object 35 (the overflow slot of `free_temp_object`, simulation §4.3) is never in the list, so
 an object written there is neither drawn nor hit.
 
-On scene rebuilds `list_quicksort` (`0919:8eb9`, recursive `8ece`, partition `8f53`, swap
-`8fa7`) sorts entries 1..count−1 by distance; otherwise `list_bubble` (`0919:6c23`) does
+On scene rebuilds `list_quicksort` (`0919:8eb9`, recursive `list_quicksort_range` `8ece` with
+the first entry as the pivot, `list_swap` `8f53`; partitions of up to 20 entries go to
+`list_bubble_range` `8fa7`, bubble passes until a pass ends at the range start) sorts entries
+1..count−1 by distance (ranges as byte offsets on the stack, the stride AX = 2; a range of fewer
+than two entries is never passed and would make the recursion run over all of DGROUP);
+otherwise `list_bubble` (`0919:6c23`) does
 incremental bubble passes, **descending distance** (farthest first), starting at entry 1 (entry
 0 too in chase view) and stopping when the last swap is below entry 2. A swap exchanges
 `4C96`, `523E`, `4E00`, `4EB5`, `4F6A` and `50D4` but **not `5189`** (the sprite cache slot
@@ -300,10 +342,19 @@ permanent objects (offset ≥ 48h), then temporary ones. For each (`0919:6cfa`):
   (detail: FFh high, 16h low);
 * level = 2 if class < 0Ah, 1 if < 0Fh, else 0, capped at `DS:53AC[kind] & 3` (the kind's number
   of scale levels);
-* keep the slot if its level `CS:6F5F[slot]` equals the wanted level, else free it (bitmaps
-  `DS:D8C1`/`D8D1`, masks `DS:D8C1+bit`) and allocate a new one (`sprite_slot_alloc`
-  `0919:7017`: level 0 from the small pool, otherwise from the pool of that level, tables
-  `DS:D8E9..`).
+* keep the slot if its level `CS:6F5F[slot]` equals the wanted level, else free it (bitmap
+  `DS:D8D1`, bit n−1 for slot n; clear masks `DS:D8C1[8]`) and allocate a new one
+  (`sprite_slot_alloc` `0919:7017`).
+
+Slots (port-verified): level 0 = slots 1..99h (200h bytes each), level 1 = 9Ah..B2h (400h),
+level 2 = B3h..B8h (800h); slot n's record is at `CS:583D[n−1]`, in segment `D885` for slots
+1..68h and `D883` from 69h (slot 69h at `D883:D000`, the offsets restart at 0 from slot 6Ah). Slot 69h (`D883:D000`, overlapping slot B2h) is reserved:
+`sprite_slots_reset` (`0919:6f3d`) clears the bitmap and sets its bit (`D8DE` = 1), clears every
+entry's slot and `D8BF`. Allocation: level 0 scans the bitmap from `D8D1` by words (skipping full
+words, 16 slots each; no end test), then bytes and bits; levels 1 and 2 start at their pool
+(`D8E9` first slot number, `D8EC` first-byte mask and 8 − first bit, `D8F2` first byte) and go to
+the end of the bitmap (`D8E8`); a full pool allocates nothing. `sprite_lod_entry` returns SI
+shifted left and back (bit 15 lost), and its caller's loop goes on with it.
 
 ### 5.7 Sprite images **verified (Codex:** `verify_assets.py`, 1,056 type/view combinations**)**
 
@@ -317,10 +368,44 @@ the per-mode row copier: VGA `0919:5e66` (the TD3 matcher's name `sprite_rows_mi
 wrong here), EGA `48da`, CGA `4056`, Tandy `4f96`; zero pixels are transparent; kind 39h is
 never drawn.
 
+**The scaled image (port-verified).** `sprite_cache_build`: view = (D86A + 2) >> 2 (kind 30h adds
+2 × `D70C` first, kind 31h `D70C`: animation; kinds 39h-3Bh use even sizes); the slot is kept
+when its record holds the same kind, size and view (never for kind 17h). The kind's 8-byte record
+in the world A data (`DS:6E54 + 8·kind`): width, rows; row pointer table; row type table; side
+width and a second part's index (its record at `6E54 + [6E5A] + 8·index`: width, rows, tables, and
+a column ratio; the ratio byte `D872` = (ratio << 8) / width). Cache record: +0 kind, +1 size, +2
+view, +3/+4 width and rows of the first part, +5/+6 of the second part (0 when none), +7 `D872`,
++8 24 row repeat counts, +20h the pixels. `sprite_scale_patterns` (`0919:6174`): the zoom
+`D865` = size / 18h (up to 2; 3 from 48h) and from the scale table `CS:59AF` (10-byte records,
+one per size step 0..17h, record 17h − step; step = size mod 18h) a 56-bit column pattern
+(repeated over `D889..D8A2`) and a 24-bit row pattern (`D8A4..D8A6`, used from its top bit); from
+size 48h on, the column pattern of record 0 (all bits) and the row pattern of size − 48h. Rows (`0919:5f4b`, `5fc8`, `6054` for zoom 0,
+1, 2-3): at zoom 0 a source row is kept when its row-pattern bit is set; at zoom ≥ 1 every row,
+repeated `D865` times plus once more on a pattern bit. Each row scaler (by the row's type byte)
+walks the column pattern (a kept bit adds a column: at zoom 0 only kept columns, at zoom 1 each
+pixel once plus once on a kept bit, zoom 2 twice plus one): type 80h (`65eb`/`66a7`/`6764`) a
+strip of `type & 7Fh` pixels scrolled by the view (from pixel `n × view / 32`, the pattern from
+`width × view / 32`); type 40h (`6824`/`68a4`/`6925`) `type & 3Fh` pixels centred; other types
+(`6244`/`6373`/`64ac`) two faces of a box (`type` and the next byte pixels) whose visibility
+comes from the face bit patterns `DS:D8A7[view & 7]` and whose order and side width from view
+bits 3-4, padded to centre the row. Rows stop when another row of the last width would pass the
+slot end (`D87F`); DI then stays past it (the second part starts there).
+
+`blit_place` (`0919:5d5a`): column = bearing − (width / 2 + part offset) / 2 + 8, doubled, clipped
+at column 40 on the left and after column 296 on the right (297 with the half column `D873`:
+one or two columns past the view's last column 295, kept); first row =
+`4F6A[i]` / 8 + (−B82D) / 8 + `D193` − 2Ch − part height; nothing when that is 50h or more; rows
+above 10h (the view's top, screen row 48 + row) are skipped (their repeat counts consumed);
+`D965` = min(D965, max(row − 10h, 0)). A second
+part (`D870` columns) is drawn above the first, shifted by `D870 × D872 / 512` columns.
+
 ## 6. Spotlights (`spotlights`, 0919:7a89) **verified**
 
-Only at night (`B7FC == 0`), not in chase view, and with the main switch on. `D905 = 0`, then
-for each light that is switched on, intact and whose gun mount is on:
+Only at night (`B7FC == 0`), not in chase view, and with the main switch on (bit 0 of `D520`
+clear). `D905 = 0`, then for each light that is switched on (bit 0 clear), not destroyed
+(condition & 3 ≠ 2) and whose gun mount is on (bit 0 clear), in the order bow, midship, stern
+(the stern tests its mount before its condition); the fraction byte passed is the gun's heading
+fraction ORed with the light's condition bits (port-verified, kept):
 
 | Light | Switch | Condition | Mount | Aims with |
 |---|---|---|---|---|
@@ -341,7 +426,9 @@ rear spotlight, `D50C` the middle one): keep the code's mapping.
 
 ### 7.1 Explosion flash (`palette_flash`, 0919:2c35) **verified**
 
-Level = `D9B5 & 3` in a 3D station (else 0); when it changes (`D6E5`): VGA sets DAC register 8 to
+Level = `D9B5 & 3` in a 3D station (else 0); when it changes (the **raw** D9B5 is compared with
+`D6E5`, which stores the level & 3, so a value ≥ 4 reprograms the DAC every frame; port-verified):
+VGA sets DAC register 8 to
 the RGB triple `DS:D6EA + 3·level` (INT 10h AX=1012h); EGA/Tandy set palette register 8 from
 `DS:D6E6[level]` through `147c:000f`. Together with the sky colour override in `terrain_setup`
 this is the whole-screen flash after hits and explosions.
@@ -349,8 +436,11 @@ this is the whole-screen flash after hits and explosions.
 ### 7.2 Screen shake (`screen_shake_step`, 0919:2e57) **verified**
 
 `B7F2` counts down (set to 2 or 8 by `boat_hit`); each step sets the display start from the pair
-`CS:2E47[2·B7F2]` (`gfx_set_display_offset`). **Not in VGA mode 13h** (`EED2 == 13h` skips it):
-the VGA version only flashes.
+`CS:2E47[2·B7F2]` (`gfx_set_display_offset(x = odd byte, y = even byte)`). **Not in VGA mode 13h**
+(`EED2 == 13h` skips it): the VGA version only flashes. `gfx_set_display_offset` (`149f:0004`)
+in mode 13h: CRTC start = y × 80 + x / 4, also to the BIOS page offset `0040:004E`, written after
+the start and the end of a vertical retrace (port 3DAh at the BIOS's CRTC base + 6); the text
+modes and modes 8/0Ah only return 0.
 
 ## 8. Arrays (DGROUP) **verified**
 
@@ -382,12 +472,29 @@ the VGA version only flashes.
 |---|---|---|
 | 0919:2c35 | palette_flash | 7.1 |
 | 0919:2e57 | screen_shake_step | 7.2 |
+| 0919:3712 | atan (simulation) | 5.2 |
+| 0919:3f8d | colour_remap (world) | world §5 |
+| 0919:3fba | video_mode_setup (world) | 1.2 |
+| 0919:5a9f | sprite_cache_invalidate (world) | 5.6, world §3.3 |
 | 0919:5acc | sprite_prepare | 5.7 |
 | 0919:5aeb | sprite_cache_build (Codex) | 5.7 |
 | 0919:5c71 | blit_record (Codex) | 5.7 |
 | 0919:5d5a | blit_place | 5.7 |
 | 0919:5e66 | blit_rows_vga | 5.7 |
+| 0919:5f4b | sprite_scale_rows | 5.7 |
+| 0919:5fc8 | sprite_scale_rows_up | 5.7 |
+| 0919:6054 | sprite_scale_rows_up2 | 5.7 |
 | 0919:60e0 | sprite_view_angle | 5.7 |
+| 0919:6174 | sprite_scale_patterns | 5.7 |
+| 0919:6244 | sprite_row_box | 5.7 |
+| 0919:6373 | sprite_row_box_up | 5.7 |
+| 0919:64ac | sprite_row_box_up2 | 5.7 |
+| 0919:65eb | sprite_row_turn | 5.7 |
+| 0919:66a7 | sprite_row_turn_up | 5.7 |
+| 0919:6764 | sprite_row_turn_up2 | 5.7 |
+| 0919:6824 | sprite_row_flat | 5.7 |
+| 0919:68a4 | sprite_row_flat_up | 5.7 |
+| 0919:6925 | sprite_row_flat_up2 | 5.7 |
 | 0919:69a9 | visible_list_rebuild | 5.1 |
 | 0919:6af9 | object_update | 5.4 |
 | 0919:6c23 | list_bubble | 5.3 |
@@ -395,6 +502,7 @@ the VGA version only flashes.
 | 0919:6cfa | sprite_lod_entry | 5.6 |
 | 0919:6d92 | visible_project | 5.2 |
 | 0919:6e5c | object_frame | 5 |
+| 0919:6f3d | sprite_slots_reset | 5.6 |
 | 0919:7017 | sprite_slot_alloc | 5.6 |
 | 0919:7158 | terrain_frame | 3 |
 | 0919:728c | terrain_save_view | 3 |
@@ -410,22 +518,38 @@ the VGA version only flashes.
 | 0919:788e | span_vga_a | 3.4 |
 | 0919:7909 | edge_setup | 3.4 |
 | 0919:7943 | span_vga_b | 3.4 |
+| 0919:79e1 | shore_contact_test (simulation) | simulation §10 |
+| 0919:7a3e | shore_edge_test | simulation §10 |
 | 0919:7a89 | spotlights | 6 |
 | 0919:7b17 | spotlight_beam | 6 |
 | 0919:7bbd | spotlight_beam_vga | 6 |
+| 0919:7c38 | terrain_rect_test | 4 |
+| 0919:8229 | camera_position (simulation) | simulation §5.3 |
+| 0919:82de | chase_view_collision (simulation) | simulation §5.3 |
+| 0919:8331 | polar_small | simulation §5.3 |
 | 0919:8408 | terrain_cells_update | 2 |
 | 0919:858f | tile_load | 2 |
 | 0919:8665 | vertex_load (Codex) | 2 |
+| 0919:8711 | route_rotate (simulation) | 2 |
 | 0919:8eb9 | list_quicksort | 5.3 |
 | 0919:8ece | list_quicksort_range | 5.3 |
+| 0919:8f53 | list_swap | 5.3 |
+| 0919:8fa7 | list_bubble_range | 5.3 |
+| 149f:0004 | gfx_set_display_offset (video) | 7.2 |
+
+All of these are ported (`gunboat-port/src/render/`, `src/platform/gfx_display.cpp`) and
+differential-tested on all memory (`tests/difftest/test_render.py`), except `object_update`,
+`object_frame` and `terrain_frame`, which call simulation routines ported later.
 
 ## 10. Open questions
 
 * The hysteresis rule in `terrain_cells_update` (`8443..848b`) and the neighbour tables
-  `CS:8399`/`83C6`/`83E4`: transcribe from the disassembly; the differential test covers them.
+  `CS:8399`/`83C6`/`83E4`: ported from the disassembly and differential-tested (the rule only
+  applies when the window overflowed, D9A6).
+* The empty terrain window of Mare Island (§5.1): confirm the original's crash in DOSBox.
 * The thinning word `DS:D8BD` and the objects 296 and up (step 4 of §5.1): what they are
   (far scenery?) and how `D8BD` changes.
 * Whether the unswapped sprite slot in `list_bubble` (§5.3) is visible in DOS.
 * `05bd:1fd4` (presenting the view and the cockpit) belongs to the hud spec.
-* The sprite blitter's placement arithmetic (`5d5a`) beyond what Codex tested (fixture crop at
-  X 40..295, Y 64..127, baseline row 56, pivot column 120).
+* The sprite blitter's placement arithmetic (`5d5a`): ported and differential-tested (§5.7);
+  a scene check against DOSBox captures is still to do.

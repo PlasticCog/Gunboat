@@ -34,7 +34,7 @@ void needle(u16 points, u16 index, u16 last, u16 centre, u8 centre_y, u16 &ax)
     ds_u16(last) = cx;
     ax = ds_u16(u16(ds_u16(DS_gauge_row) + centre));
     if (ax == 0) return;
-    ds_u16(DS_needle_centre_x) = ax;
+    ds_u16(DS_scratch_b7e0) = ax;
     ds_u8(DS_scratch_b7e3) = centre_y;
     needle_draw(cx);
     ax = 0;  // gfx_line_to's AX
@@ -142,23 +142,23 @@ u16 throttle_needles(u16 ax)
     return ax;
 }
 
-// 0919:2704 needle_draw (hud.md §3): the needle from the pivot (needle_centre_x + pivot x,
+// 0919:2704 needle_draw (hud.md §3): the needle from the pivot (scratch_b7e0, the needle centre x, + pivot x,
 // scratch_b7e3 + pivot y, 8-bit) to the end point `cx` (dx, dy from the centre): first the old end
 // (needle_old_end, unless its dx is FFh) in the erase colour, then the new one in the draw colour.
 // The pen is moved back to the pivot with the first gfx_move_to's arguments, still on the stack.
 void needle_draw(u16 cx)
 {
-    const u16 x = u16(ds_u16(DS_needle_centre_x) + ds_u8(PIVOT_X));
+    const u16 x = u16(ds_u16(DS_scratch_b7e0) + ds_u8(PIVOT_X));
     const u16 y = u8(ds_u8(DS_scratch_b7e3) + ds_u8(PIVOT_Y));
     gfx_move_to(s16(x), s16(y));
     gfx_set_colour(ds_u8(ERASE_COLOUR));
     const u16 old = ds_u16(DS_scratch_b7dc);
     if (u8(old) != 0xFF) {
-        gfx_line_to(s16(u16(ds_u16(DS_needle_centre_x) + u8(old))), u8(ds_u8(DS_scratch_b7e3) + (old >> 8)));
+        gfx_line_to(s16(u16(ds_u16(DS_scratch_b7e0) + u8(old))), u8(ds_u8(DS_scratch_b7e3) + (old >> 8)));
         gfx_move_to(s16(x), s16(y));
     }
     gfx_set_colour(ds_u8(DRAW_COLOUR));
-    gfx_line_to(s16(u16(ds_u16(DS_needle_centre_x) + u8(cx))), u8(ds_u8(DS_scratch_b7e3) + (cx >> 8)));
+    gfx_line_to(s16(u16(ds_u16(DS_scratch_b7e0) + u8(cx))), u8(ds_u8(DS_scratch_b7e3) + (cx >> 8)));
 }
 
 // 0919:2786 jet_marker (hud.md §3): at the pilot's station, when the jet angle (jet_angle & 7Fh)
@@ -202,7 +202,7 @@ u16 radar_scope(u16 ax)
     const u16 pivot = cs_word(CSSEG_needle_pivot, CS_needle_pivot);
     ds_u8(PIVOT_X) = u8(pivot);
     ds_u8(PIVOT_Y) = u8(pivot >> 8);
-    ds_u16(DS_needle_centre_x) = 0xEE;  // (the original stores these after the first step's ends)
+    ds_u16(DS_scratch_b7e0) = 0xEE;  // (the original stores these after the first step's ends)
     ds_u8(DS_scratch_b7e3) = 0x77;
     needle_draw(sweep_step());
     ds_u8(DS_radar_steps) = 3;

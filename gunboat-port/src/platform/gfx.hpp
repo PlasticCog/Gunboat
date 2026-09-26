@@ -31,5 +31,6 @@ void gfx_put_pixel(s16 x, s16 y);                                    // 14b5:000
 void ega_pal_set(u16 index, u16 value);                              // 14ae:0005
 void gfx_line_to(s16 x, s16 y);                                      // 13d5:000d  (gfx_lines.cpp)
 void gfx_fill_rect_clipped(s16 x0, s16 x1, s16 y0, s16 y1);          // 15d9:0003  (gfx_lines.cpp)
+u16 gfx_set_display_offset(s16 x, s16 y);                            // 149f:0004  returns 0 (gfx_display.cpp)
 
 } // namespace gb
