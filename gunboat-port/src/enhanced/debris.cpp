@@ -19,7 +19,8 @@ constexpr double PI = 3.14159265358979323846;
 constexpr double SIZE = 2.5;     // the particles' size, times the table's
 constexpr double LINGER = 0.25;  // seconds a particle lies on the ground, fading, before it is gone
 
-// What a shot hit.
+// What a shot hit. Grass is any green ground (brush, jungle, grass): pale leaves and twigs that drift
+// down, so that they show against the green; Wood has pale fresh splinters among the brown.
 enum class Stuff : u8 { Ground, Water, Grass, Dirt, Metal, Wood, Flesh, Stone, Sand, COUNT };
 
 // A shot's landing until its particles are made (when the view first shows its place).
@@ -54,10 +55,10 @@ struct Spec {
 const Spec SPECS[int(Stuff::COUNT)] = {
     {0, {0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, false},                                          // Ground
     {16, {0xFFFFFF, 0xDDEEFF, 0xB0D4F0}, 5, 16, 24, 44, 85, 0.8, 0.55, 0.9, 0.65, false},       // Water
-    {12, {0x4E8A2E, 0x6FAE3C, 0x3A6A22}, 10, 24, 12, 26, 48, 1.0, 0.55, 0.9, 0.65, false},      // Grass
+    {14, {0xD2E87E, 0x9AD24E, 0x6B4A2A}, 8, 22, 14, 30, 26, 1.6, 0.8, 1.4, 0.8, false},        // Grass
     {13, {0, 0, 0}, 6, 18, 7, 18, 28, 2.5, 0.7, 1.2, 0.95, false},                               // Dirt
     {12, {0xFFF4C8, 0xFFD050, 0xFF9A28}, 30, 70, 14, 36, 56, 0, 0.3, 0.6, 0.5, true},           // Metal
-    {10, {0x8A5A2B, 0xA87840, 0x5C3A1C}, 14, 34, 14, 30, 48, 0.5, 0.75, 1.3, 0.85, false},      // Wood
+    {12, {0xE8CC94, 0xA87840, 0x5C3A1C}, 14, 34, 14, 30, 48, 0.5, 0.75, 1.3, 0.9, false},       // Wood
     {16, {0xE01C1C, 0xFF3A3A, 0xA80C0C}, 12, 30, 8, 24, 50, 0.5, 0.55, 0.95, 0.8, false},       // Flesh
     {10, {0x9A968C, 0xBAB6AC, 0x6C6862}, 16, 38, 12, 26, 52, 0.3, 0.6, 1.05, 0.7, false},       // Stone
     {13, {0xC8B07A, 0xB09460, 0xDCC894}, 8, 20, 6, 16, 24, 2.0, 0.7, 1.2, 1.05, false},         // Sand
@@ -119,7 +120,7 @@ void on_object_hit(u8 kind, u16)
 {
     if (impacts.empty() || kind == 0x30 || kind == 0x31) return;  // the shot passes wrecks 30h/31h
     Impact &im = impacts.back();
-    im.h = between(1, 4);
+    im.h = kind >= 0x2A && kind <= 0x2E ? between(3, 14) : between(1, 4);  // trees: up the trunk
     im.stuff = stuff_of(kind);
 }
 
