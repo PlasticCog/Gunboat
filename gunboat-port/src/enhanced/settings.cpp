@@ -115,6 +115,7 @@ bool settings_load(Settings &s)
         else if (!std::strcmp(k, "hires_view")) s.hires_view = truthy(v);
         else if (!std::strcmp(k, "smooth_motion")) s.smooth_motion = truthy(v);
         else if (!std::strcmp(k, "far_view")) s.far_view = truthy(v);
+        else if (!std::strcmp(k, "debris")) s.debris = truthy(v);
         else if (!std::strcmp(k, "widescreen")) {  // (the first settings files had 0 / 1)
             s.widescreen = !std::strcmp(v, "world")                    ? Wide::World
                            : !std::strcmp(v, "cockpit") || truthy(v) ? Wide::Cockpit
@@ -153,13 +154,14 @@ bool settings_save(const Settings &s)
                  "hires_view = %d\n"
                  "smooth_motion = %d\n"
                  "far_view = %d\n"
+                 "debris = %d\n"
                  "widescreen = %s\n"
                  "sound = %s\n"
                  "effects = %s\n"
                  "video = %s\n"
                  "fps = %d\n",
                  s.game_dir.c_str(), s.launcher, s.fullscreen, s.window_scale, aspect_name(s.aspect),
-                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, wide_name(s.widescreen), sound_name(s.sound), effects_name(s.effects),
+                 filter_name(s.filter), s.hires_view, s.smooth_motion, s.far_view, s.debris, wide_name(s.widescreen), sound_name(s.sound), effects_name(s.effects),
                  video_name(s.video), s.fps);
     return std::fclose(f) == 0;
 }

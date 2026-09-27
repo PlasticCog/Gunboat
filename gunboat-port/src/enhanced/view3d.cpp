@@ -98,21 +98,42 @@ struct ScaleTable {
     }
 } scale_table;
 
+// The camera of `cur`, interpolated from `prev` at t (smooth motion).
+Camera interpolated_camera(const Scene &cur, const Scene *prev, double t)
+{
+    Camera cam = camera_of(cur);
+    if (prev) {
+        const Camera p = camera_of(*prev);
+        const double back = 1.0 - t;
+        cam.qx -= wrap16(cam.qx - p.qx) * back;
+        cam.qy -= wrap16(cam.qy - p.qy) * back;
+        cam.view -= wrap16(cam.view - p.view) * back;
+        cam.horizon -= (cam.horizon - p.horizon) * back;
+        cam.sprite_h -= (cam.sprite_h - p.sprite_h) * back;
+    }
+    return cam;
+}
+
+// project (0919:7523) in floating point: a point at (x, y) quarter units, height h, on the page, for
+// the camera (qx, qy, view, horizon); returns its scale.
+double project_point(double qx, double qy, double view, double horizon, double x, double y, double h, double &px,
+                     double &py)
+{
+    const double dx = wrap16(x - qx), dy = wrap16(y - qy);
+    const double d = wrap16(bearing16(dx, dy) - view);
+    const double dist = std::hypot(dx, dy);
+    const double s = dist > 32767.5 / 255.0 ? 32767.5 / dist : 255.0;
+    px = VIEW_X + 130 + d / 128.0;
+    py = horizon + std::max(0.0, 512.0 + s - s * h / 32.0) / 8.0;
+    return s;
+}
+
 class Renderer {
 public:
     Renderer(const Scene &cur, const Scene *prev, double t, const ViewTarget &target)
         : sc_(cur), prev_(prev), t_(t), tg_(target)
     {
-        cam_ = camera_of(cur);
-        if (prev_) {
-            const Camera p = camera_of(*prev_);
-            const double back = 1.0 - t_;
-            cam_.qx -= wrap16(cam_.qx - p.qx) * back;
-            cam_.qy -= wrap16(cam_.qy - p.qy) * back;
-            cam_.view -= wrap16(cam_.view - p.view) * back;
-            cam_.horizon -= (cam_.horizon - p.horizon) * back;
-            cam_.sprite_h -= (cam_.sprite_h - p.sprite_h) * back;
-        }
+        cam_ = interpolated_camera(cur, prev_, t_);
         view_shift_ = wrap16(double(cur.u16_at(DS_view_heading_low)) - cam_.view) / 128.0;
         if (!scale_table.ready) scale_table.build();
     }
@@ -263,13 +284,7 @@ private:
     // A point at (x, y) quarter units, height h, on the page; returns its scale.
     double point(double x, double y, double h, double &px, double &py) const
     {
-        const double dx = wrap16(x - cam_.qx), dy = wrap16(y - cam_.qy);
-        const double d = wrap16(bearing16(dx, dy) - cam_.view);
-        const double dist = std::hypot(dx, dy);
-        const double s = dist > 32767.5 / 255.0 ? 32767.5 / dist : 255.0;
-        px = VIEW_X + 130 + d / 128.0;
-        py = cam_.horizon + std::max(0.0, 512.0 + s - s * h / 32.0) / 8.0;
-        return s;
+        return project_point(cam_.qx, cam_.qy, cam_.view, cam_.horizon, x, y, h, px, py);
     }
 
     // ---- the extended draw distance: the far cells from the farthest in, each its group B (from its
@@ -582,6 +597,22 @@ private:
 };
 
 } // namespace
+
+double ViewProjection::point(double x, double y, double h, double &px, double &py) const
+{
+    return project_point(qx, qy, view, horizon, x, y, h, px, py);
+}
+
+ViewProjection view3d_projection(const Scene &cur, const Scene *prev, double t)
+{
+    const Camera c = interpolated_camera(cur, prev, t);
+    ViewProjection p;
+    p.qx = c.qx;
+    p.qy = c.qy;
+    p.view = c.view;
+    p.horizon = c.horizon;
+    return p;
+}
 
 bool view3d_compatible(const Scene &a, const Scene &b)
 {

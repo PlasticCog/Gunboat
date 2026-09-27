@@ -18,9 +18,9 @@ namespace gb {
 
 namespace {
 
-enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, WIDE, ASPECT, FILTER, DISPLAY, SOUND, EFFECTS, SHOW, PLAY, QUIT, ITEMS };
+enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, DEBRIS, WIDE, ASPECT, FILTER, DISPLAY, SOUND, EFFECTS, SHOW, PLAY, QUIT, ITEMS };
 
-const char *const LABELS[ITEMS] = {"Game folder", "Video card", "Preset",  "3D view", "Motion",      "Draw distance",
+const char *const LABELS[ITEMS] = {"Game folder", "Video card", "Preset",  "3D view", "Motion",      "Draw distance", "Impact debris",
                                    "Widescreen",  "Picture", "Scaling", "Display",     "Music",   "Sound effects",
                                    "This screen", "Play",    "Quit"};
 
@@ -42,6 +42,9 @@ const char *const HELP[ITEMS][3] = {
     {"Extended: the terrain, scenery and objects beyond the 3 x 3 cells around the boat that the",
      "game draws, out to 5 cells, behind its own: islands and shores on the horizon. The game",
      "itself is unchanged (what it sees and hits). Original: only the game's cells."},
+    {"On: small debris where the shots hit: sparks off metal, wood chips, blood, stone chips,",
+     "splashes on water, grass and dust on land. Drawn in the high-resolution 3D view.",
+     "Off: as the original (only its own explosion puffs)."},
     {"Wide cockpit: in a window wider than the picture, the cockpit art is widened to its",
      "edges where it has the least detail (the centre stays as drawn). Extended world: the",
      "world continues beside the cockpit instead. Off: black borders. (3D stations only.)"},
@@ -123,6 +126,7 @@ std::string value_of(const Settings &s, int item)
     case VIEW: return s.hires_view ? "High resolution" : "Original (320 x 200)";
     case MOTION: return s.smooth_motion ? "Smooth (60 fps)" : "Original (the game's frames)";
     case DISTANCE: return s.far_view ? "Extended" : "Original (3 x 3 cells)";
+    case DEBRIS: return s.debris ? "On" : "Off (original)";
     case WIDE:
         return s.widescreen == Wide::Cockpit ? "Wide cockpit"
                : s.widescreen == Wide::World ? "Extended world"
@@ -158,6 +162,7 @@ void change(Settings &s, int item, int dir)
     case VIEW: s.hires_view = !s.hires_view; break;
     case MOTION: s.smooth_motion = !s.smooth_motion; break;
     case DISTANCE: s.far_view = !s.far_view; break;
+    case DEBRIS: s.debris = !s.debris; break;
     case WIDE: s.widescreen = Wide((int(s.widescreen) + 3 + dir) % 3); break;
     case ASPECT: s.aspect = s.aspect == Aspect::Crt43 ? Aspect::Square : Aspect::Crt43; break;
     case FILTER: s.filter = Filter((int(s.filter) + 4 + dir) % 4); break;

@@ -55,6 +55,8 @@ enhancements only change how its frames are shown.
                  (the view is one game frame behind).
   Draw distance  Extended: the terrain and objects beyond the 3 x 3 cells the game draws, out to
                  5 cells: islands and shores on the horizon.
+  Impact debris  On: small debris where the shots hit: sparks off metal, wood chips, blood,
+                 stone chips, splashes on the water, grass and dust on land.
   Widescreen     Wide cockpit: in a wide window the cockpit art is widened to the edges where it
                  has the least detail. Extended world: the world continues beside the cockpit.
                  Off: black borders.

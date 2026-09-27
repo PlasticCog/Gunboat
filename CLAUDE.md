@@ -179,6 +179,13 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     centre cell or the time-of-day colours change, drawn behind the game's terrain far to near
     with the objects standing in them (scenery and authored objects; their images built like the
     visible ones, by kind and view);
+  * impact debris (`debris.cpp`, launcher "Impact debris", `--debris`): `projectile_impact` and
+    `hit_objects` notify the host where a shot lands and what it hits (`host_shot_landed`,
+    `host_object_hit`: PORT, no memory change); the debris module makes small particles in world
+    coordinates by the stuff hit (sparks off metal, wood chips, blood, stone chips, sandbag sand;
+    on the ground the drawn pixel decides: a splash on water, grass on green, dust in the ground's
+    colour), and the presenter draws them into the enhanced view (true colour, before the cockpit)
+    with the view's projection (`view3d_projection`, interpolated as the view);
   * checks (`scene_enhanced.py`): the view drawn again at 1x equals the original's pixels on
     94.7% (pilot practice) and 97.0% (night gunnery) of the view (the rest: sub-pixel terrain
     edges, the original's bit-pattern sprite scaling), no capture changes the game's memory,

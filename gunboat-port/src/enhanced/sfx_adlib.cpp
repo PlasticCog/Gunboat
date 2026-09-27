@@ -129,7 +129,7 @@ void on_target_destroyed(u8 old, u8 wreck)
 // A shot has hit an object of kind `kind`: a bullet's impact on its material, at half volume on what
 // is dead, destroyed or inanimate (the dead with the dull wood sound). Not on the living, not for the
 // grenades and the mortar (their own explosion sounds), not on the wrecks the shot passes through.
-void on_object_hit(u8 kind)
+void on_object_hit(u8 kind, u16)
 {
     const u8 weapon = ds_u8(DS_vec_product_hi);  // hit_objects' weapon: 2 and 3 are the explosive ones
     if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31 || alive(kind)) return;
@@ -200,9 +200,9 @@ void sfx_adlib_install()
     host_set_sfx_gain(SFX_GAIN);
     host_set_speaker_filter(filter);
     host_set_tick_observer(tick);
-    host_set_sfx_play_observer(on_sfx_play);
-    host_set_target_destroyed_observer(on_target_destroyed);
-    host_set_object_hit_observer(on_object_hit);
+    host_add_sfx_play_observer(on_sfx_play);
+    host_add_target_destroyed_observer(on_target_destroyed);
+    host_add_object_hit_observer(on_object_hit);
 }
 
 } // namespace gb

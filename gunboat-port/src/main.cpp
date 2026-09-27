@@ -3,7 +3,7 @@
 // usage: gunboat [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window]
 //                [--fps N] [--sound adlib|speaker] [--effects speaker|adlib]
 //                [--original | --enhanced] [--view original|hires]
-//                [--motion original|smooth] [--draw-distance original|extended]
+//                [--motion original|smooth] [--draw-distance original|extended] [--debris on|off]
 //                [--widescreen off|world|cockpit] [--aspect 4:3|square]
 //                [--video vga|ega|tandy|cga|hercules]
 //                [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]
@@ -65,7 +65,7 @@ int usage(const char *prog)
                  "usage: %s [--launcher | --no-launcher] [--game-dir DIR] [--scale N] [--fullscreen | --window] [--fps N]\n"
                  "          [--sound adlib|speaker] [--effects speaker|adlib] [--original | --enhanced]\n"
                  "          [--view original|hires]\n"
-                 "          [--motion original|smooth] [--draw-distance original|extended]\n"
+                 "          [--motion original|smooth] [--draw-distance original|extended] [--debris on|off]\n"
                  "          [--widescreen off|world|cockpit] [--aspect 4:3|square] [--video vga|ega|tandy|cga|hercules]\n"
                  "          [--filter sharp|nearest|smooth|crt] [--check] [--host-test] [--version]\n",
                  prog);
@@ -158,6 +158,8 @@ int main(int argc, char **argv)
         else if (val("--video", "hercules")) st.video = Video::Hercules;
         else if (val("--draw-distance", "original")) st.far_view = false;
         else if (val("--draw-distance", "extended")) st.far_view = true;
+        else if (val("--debris", "on")) st.debris = true;
+        else if (val("--debris", "off")) st.debris = false;
         else if (val("--widescreen", "off")) st.widescreen = Wide::Off;
         else if (val("--widescreen", "world")) st.widescreen = Wide::World;
         else if (val("--widescreen", "cockpit") || val("--widescreen", "on")) st.widescreen = Wide::Cockpit;

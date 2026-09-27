@@ -11,6 +11,7 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
+#include <vector>
 
 #include "opl3.h"
 
@@ -36,9 +37,10 @@ bool (*presenter)(const u32 *, int, int, bool);
 void (*frame_hook)();
 bool (*speaker_filter)(u16, bool &, bool);
 void (*tick_observer)();
-void (*sfx_play_observer)(u16);
-void (*target_destroyed_observer)(u8, u8);
-void (*object_hit_observer)(u8);
+std::vector<void (*)(u16)> sfx_play_observers;
+std::vector<void (*)(u16, u16, u8)> shot_landed_observers;
+std::vector<void (*)(u8, u16)> object_hit_observers;
+std::vector<void (*)(u8, u8)> target_destroyed_observers;
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
@@ -443,20 +445,25 @@ void host_sfx_opl_write(u8 reg, u8 value)
 
 void host_set_speaker_filter(bool (*filter)(u16 divisor, bool &on, bool effects)) { speaker_filter = filter; }
 void host_set_tick_observer(void (*observer)()) { tick_observer = observer; }
-void host_set_sfx_play_observer(void (*observer)(u16)) { sfx_play_observer = observer; }
+void host_add_sfx_play_observer(void (*observer)(u16)) { sfx_play_observers.push_back(observer); }
+void host_add_shot_landed_observer(void (*observer)(u16, u16, u8)) { shot_landed_observers.push_back(observer); }
+void host_add_object_hit_observer(void (*observer)(u8, u16)) { object_hit_observers.push_back(observer); }
+void host_add_target_destroyed_observer(void (*observer)(u8, u8)) { target_destroyed_observers.push_back(observer); }
 void host_sfx_play(u16 program)
 {
-    if (sfx_play_observer) sfx_play_observer(program);
+    for (auto f : sfx_play_observers) f(program);
 }
-void host_set_target_destroyed_observer(void (*observer)(u8, u8)) { target_destroyed_observer = observer; }
+void host_shot_landed(u16 x, u16 y, u8 weapon)
+{
+    for (auto f : shot_landed_observers) f(x, y, weapon);
+}
+void host_object_hit(u8 kind, u16 obj)
+{
+    for (auto f : object_hit_observers) f(kind, obj);
+}
 void host_target_destroyed(u8 old, u8 wreck)
 {
-    if (target_destroyed_observer) target_destroyed_observer(old, wreck);
-}
-void host_set_object_hit_observer(void (*observer)(u8)) { object_hit_observer = observer; }
-void host_object_hit(u8 kind)
-{
-    if (object_hit_observer) object_hit_observer(kind);
+    for (auto f : target_destroyed_observers) f(old, wreck);
 }
 
 void host_pump()

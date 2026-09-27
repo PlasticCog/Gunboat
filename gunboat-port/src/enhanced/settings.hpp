@@ -32,21 +32,25 @@ struct Settings {
     bool smooth_motion = true;  // 60 fps: the 3D view interpolated between the game's frames
     Wide widescreen = Wide::Cockpit;
     bool far_view = true;       // the extended draw distance: terrain and objects beyond the game's window
+    bool debris = true;         // impact debris: particles where the shots hit (debris.hpp)
     Sound sound = Sound::Auto;
     Effects effects = Effects::Speaker;
     Video video = Video::Vga;
     int fps = 15;               // frame rate of the 3D stations (the mission clock; host_set_frame_rate)
 
-    bool any_enhancement() const { return hires_view || smooth_motion || widescreen != Wide::Off || far_view; }
-    bool all_enhancements() const { return hires_view && smooth_motion && widescreen == Wide::Cockpit && far_view; }
+    bool any_enhancement() const { return hires_view || smooth_motion || widescreen != Wide::Off || far_view || debris; }
+    bool all_enhancements() const
+    {
+        return hires_view && smooth_motion && widescreen == Wide::Cockpit && far_view && debris;
+    }
     void set_original()
     {
-        hires_view = smooth_motion = far_view = false;
+        hires_view = smooth_motion = far_view = debris = false;
         widescreen = Wide::Off;
     }
     void set_enhanced()
     {
-        hires_view = smooth_motion = far_view = true;
+        hires_view = smooth_motion = far_view = debris = true;
         widescreen = Wide::Cockpit;
     }
 };

@@ -11,7 +11,8 @@ opens first.
 **Enhancements, all optional** (`src/enhanced/`; the launcher, the command line, F11 in the game):
 the 3D view drawn again at the window's resolution under the original cockpit, smooth 60 fps motion
 in the 3D view, an extended draw distance (the terrain and objects out to 5 cells instead of the
-game's 3 x 3), in a wide window the cockpit widened to its edges (or the world continued beside
+game's 3 x 3), impact debris where the shots hit (sparks, wood chips, blood, splashes, dust), in a
+wide window the cockpit widened to its edges (or the world continued beside
 the picture), the picture's aspect (4:3 like the VGA monitor, or square pixels) and scaling (sharp,
 nearest, smooth, CRT scanlines) and, optionally, the sound effects on AdLib FM instruments instead
 of the PC speaker, edited effect by effect with the sound-effects editor

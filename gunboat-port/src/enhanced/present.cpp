@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "enhanced/capture.hpp"
+#include "enhanced/debris.hpp"
 #include "enhanced/sfx_adlib.hpp"
 #include "enhanced/view3d.hpp"
 #include "enhanced/widen.hpp"
@@ -294,6 +295,9 @@ void render_region(ViewTex &vt, double ox, double oy, double pw, double ph, doub
             }
         }
     }
+    if (cfg.debris)
+        debris_draw(view3d_projection(*cur, interpolate ? prev : nullptr, t), target, static_cast<u32 *>(pixels), pitch,
+                    pal, hz.water);
     SDL_UnlockTexture(vt.tex);
 }
 
@@ -741,6 +745,7 @@ void enhanced_install(const Settings &s)
     host_set_frame_hook(frame_hook);
     host_set_hotkey_handler(hotkey);
     host_set_presenter(present);
+    debris_install();
     if (s.effects == Effects::Adlib) sfx_adlib_install();
 }
 

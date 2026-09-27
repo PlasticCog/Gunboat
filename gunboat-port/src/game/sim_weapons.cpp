@@ -341,6 +341,9 @@ void projectile_impact(u16 bx, u16 si)
     const u16 slot = free_temp_object();
     u8 al = 0x42;
     const u8 weapon = ds_u8(DS_vec_product_hi);
+    // PORT: tells the host where the shot lands (the impact debris, debris.cpp); nothing in mem[]
+    // changes.
+    host_shot_landed(cx, dx, weapon);
     if (weapon > 1 && weapon < 4) al = 0x4B;
     object_word(slot) = u16(0x0300 | al);
     object_x(slot) = cx;
@@ -389,9 +392,9 @@ void hit_objects()
         if (al != 0x12 && si < 0x48) continue;
         if (al == 0 || al >= 0x3F) continue;
         if (hit_test(bx) == 0) continue;
-        // PORT: tells the host that the shot hit an object of kind `al` (the AdLib effects option sounds
-        // the impact, sfx_adlib.cpp); nothing in mem[] changes.
-        host_object_hit(al);
+        // PORT: tells the host that the shot hit object SI, of kind `al` (the AdLib effects option sounds
+        // the impact, sfx_adlib.cpp; the impact debris, debris.cpp); nothing in mem[] changes.
+        host_object_hit(al, si);
         if (al > 0x31) return;
         if (al >= 0x30) continue;
         const u16 word = object_word(si);

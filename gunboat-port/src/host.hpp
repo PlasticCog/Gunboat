@@ -70,15 +70,17 @@ void host_speaker(u16 divisor, bool on);  // PIT channel 2 divisor (0 = 65536) a
 // running: its speaker changes are the sound effects, which the presentation layer can play on AdLib
 // instead (host_set_speaker_filter). Returns the previous state.
 bool host_speaker_effects(bool effects);
-// PORT: sfx_play tells the host that an effect's program starts (its DGROUP address); the presentation
-// layer's AdLib effects follow it (host_set_sfx_play_observer).
+// PORT: events of the game for the presentation layer (the AdLib effects, the impact debris), each
+// passed to every observer added (host_add_*_observer); nothing in mem[] changes.
+// sfx_play: an effect's program starts (its DGROUP address).
 void host_sfx_play(u16 program);
-// PORT: hit_objects tells the host that a shot destroyed an object of kind `old` into its wreck
-// `wreck` (the AdLib effects add an explosion there, host_set_target_destroyed_observer).
+// projectile_impact: a shot of weapon `weapon` lands at (x, y) map units.
+void host_shot_landed(u16 x, u16 y, u8 weapon);
+// hit_objects: the shot hit object `obj` (its offset in the object arrays), of kind `kind` (before the
+// damage; wrecks 30h/31h let the shot on).
+void host_object_hit(u8 kind, u16 obj);
+// hit_objects: the shot destroyed an object of kind `old` into its wreck `wreck`.
 void host_target_destroyed(u8 old, u8 wreck);
-// PORT: hit_objects tells the host that a shot hit an object of kind `kind` (before the damage; wrecks
-// 30h/31h let the shot on) (host_set_object_hit_observer).
-void host_object_hit(u8 kind);
 // The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
 // moment it is read.
 u8 host_pit2_low();
@@ -123,9 +125,10 @@ void host_set_speaker_filter(bool (*filter)(u16 divisor, bool &on, bool effects)
 void host_sfx_opl_write(u8 reg, u8 value);
 void host_set_sfx_gain(int gain);  // the second chip's output is mixed times this
 void host_set_tick_observer(void (*observer)());
-void host_set_sfx_play_observer(void (*observer)(u16 program));
-void host_set_target_destroyed_observer(void (*observer)(u8 old, u8 wreck));
-void host_set_object_hit_observer(void (*observer)(u8 kind));
+void host_add_sfx_play_observer(void (*observer)(u16 program));
+void host_add_shot_landed_observer(void (*observer)(u16 x, u16 y, u8 weapon));
+void host_add_object_hit_observer(void (*observer)(u8 kind, u16 obj));
+void host_add_target_destroyed_observer(void (*observer)(u8 old, u8 wreck));
 // Restarts the timer clock from now (the game starts after the launcher, not at host_init).
 void host_reset_clock();
 
