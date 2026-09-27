@@ -327,8 +327,8 @@ void SfxSynth::reset()
     w(0xBD, 0x00);
     for (int ch = 0; ch < 9; ch++) w(u8(0xB0 + ch), 0);
     for (u8 o = 0; o < 0x16; o++) w(u8(0x40 + o), 0x3F);
-    key_on_ = false;
-    id_ = -1;
+    for (Player &p : players_) p = Player();
+    for (Channel &c : channels_) c = Channel();
 }
 
 void SfxSynth::program(int ch, const SfxPatch &p)
@@ -348,12 +348,15 @@ void SfxSynth::program(int ch, const SfxPatch &p)
     w(u8(0xC0 + ch), u8((p.feedback & 7) << 1 | (p.additive ? 1 : 0)));
 }
 
-// The channel's pitch: the speaker's frequency 1193182 / divisor, transposed and jittered.
-void SfxSynth::frequency(int ch, bool key)
+// The player's channel's pitch: the speaker's frequency 1193182 / divisor, transposed and jittered.
+void SfxSynth::frequency(int player, bool key)
 {
-    const SfxPatch &p = bank_.fx[id_ < 0 ? 0 : id_];
-    double f = 1193182.0 / (divisor_ ? divisor_ : 65536);
-    f *= std::pow(2.0, (p.transpose * 100 + cents_) / 1200.0);
+    const Player &pl = players_[player];
+    const int ch = pl.ch;
+    if (ch < 0) return;
+    const SfxPatch &p = bank_.fx[pl.id < 0 ? 0 : pl.id];
+    double f = 1193182.0 / (pl.divisor ? pl.divisor : 65536);
+    f *= std::pow(2.0, (p.transpose * 100 + pl.cents) / 1200.0);
     int block = 0;
     double fnum = f * double(1 << 20) / 49716.0;
     while (fnum > 1023.0 && block < 7) {
@@ -365,50 +368,93 @@ void SfxSynth::frequency(int ch, bool key)
     w(u8(0xB0 + ch), u8((key ? 0x20 : 0) | block << 2 | (n >> 8)));
 }
 
-void SfxSynth::speaker(int id, u16 divisor, bool on)
+// A channel for a new note of `player`. A player keeps at most PLAYER_CHANNELS: with that many its
+// own oldest one is used again (each effect sounds as with the three channels of one driver: a
+// note's release rings on while the next two play). Else a free one released longest ago, else (all
+// sounding) the one keyed on longest ago, whose player's note ends.
+int SfxSynth::take_channel(int player)
 {
-    if (id < 0 || id >= SFX_COUNT) return;
-    if (id != id_) {
-        silence();
-        id_ = id;
+    int best = -1, own = 0;
+    for (int c = 0; c < CHANNELS; c++)
+        if (channels_[c].player == player) {
+            own++;
+            if (best < 0 || channels_[c].since < channels_[best].since) best = c;
+        }
+    if (own < PLAYER_CHANNELS) {
+        best = -1;
+        for (int c = 0; c < CHANNELS; c++)
+            if (!channels_[c].key_on && (best < 0 || channels_[c].since < channels_[best].since)) best = c;
+    }
+    if (best < 0) {
+        for (int c = 0; c < CHANNELS; c++)
+            if (best < 0 || channels_[c].since < channels_[best].since) best = c;
+        silence(channels_[best].player);
+    }
+    channels_[best].player = player;
+    channels_[best].key_on = true;
+    channels_[best].since = ++clock_;
+    return best;
+}
+
+void SfxSynth::speaker(int player, int id, u16 divisor, bool on)
+{
+    if (player < 0 || player >= PLAYERS || id < 0 || id >= SFX_COUNT) return;
+    Player &pl = players_[player];
+    if (id != pl.id) {
+        silence(player);
+        pl.id = id;
     }
     const SfxPatch &p = bank_.fx[id];
     if (!on) {
-        divisor_ = divisor;
-        silence();
+        pl.divisor = divisor;
+        silence(player);
         return;
     }
-    if (key_on_ && !p.retrigger) {  // a new pitch during the note: it glides on
-        divisor_ = divisor;
-        frequency(ch_, true);
+    if (pl.key_on && !p.retrigger) {  // a new pitch during the note: it glides on
+        pl.divisor = divisor;
+        frequency(player, true);
         return;
     }
-    silence();
-    ch_ = (ch_ + 1) % CHANNELS;
-    program(ch_, p);
-    divisor_ = divisor;
-    cents_ = 0;
-    frequency(ch_, true);
-    key_on_ = true;
+    silence(player);
+    pl.ch = take_channel(player);
+    program(pl.ch, p);
+    pl.divisor = divisor;
+    pl.cents = 0;
+    frequency(player, true);
+    pl.key_on = true;
 }
 
 void SfxSynth::tick()
 {
-    if (!key_on_ || id_ < 0) return;
-    const int j = bank_.fx[id_].jitter;
-    if (j <= 0) return;
-    rng_ ^= rng_ << 13;
-    rng_ ^= rng_ >> 17;
-    rng_ ^= rng_ << 5;
-    cents_ = int(rng_ % u32(2 * j + 1)) - j;
-    frequency(ch_, true);
+    for (int k = 0; k < PLAYERS; k++) {
+        Player &pl = players_[k];
+        if (!pl.key_on || pl.id < 0) continue;
+        const int j = bank_.fx[pl.id].jitter;
+        if (j <= 0) continue;
+        rng_ ^= rng_ << 13;
+        rng_ ^= rng_ >> 17;
+        rng_ ^= rng_ << 5;
+        pl.cents = int(rng_ % u32(2 * j + 1)) - j;
+        frequency(k, true);
+    }
 }
 
-void SfxSynth::silence()
+void SfxSynth::silence(int player)
 {
-    if (!key_on_) return;
-    frequency(ch_, false);
-    key_on_ = false;
+    if (player < 0 || player >= PLAYERS) return;
+    Player &pl = players_[player];
+    if (!pl.key_on) return;
+    frequency(player, false);
+    pl.key_on = false;
+    if (pl.ch >= 0 && channels_[pl.ch].player == player) {
+        channels_[pl.ch].key_on = false;
+        channels_[pl.ch].since = ++clock_;
+    }
+}
+
+void SfxSynth::silence_all()
+{
+    for (int k = 0; k < PLAYERS; k++) silence(k);
 }
 
 } // namespace gb

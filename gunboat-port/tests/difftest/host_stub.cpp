@@ -98,6 +98,7 @@ std::vector<SpeakerEvent> speaker_log;
 }
 void host_speaker(u16 divisor, bool on) { speaker_log.push_back({divisor, on}); }
 bool host_speaker_effects(bool) { return false; }
+void host_sfx_play(u16) {}
 const std::vector<SpeakerEvent> &host_stub_speaker_log() { return speaker_log; }
 void host_stub_speaker_clear() { speaker_log.clear(); }
 

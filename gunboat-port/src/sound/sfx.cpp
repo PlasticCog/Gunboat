@@ -138,6 +138,9 @@ void sfx_play(u16 ax)
     }
     ds_u16(DS_sfx_state) = 1;
     // sti
+    // PORT: tells the host that the program at bx starts (the AdLib effects option plays every effect
+    // on its own channel, sfx_adlib.cpp); nothing in mem[] changes.
+    host_sfx_play(bx);
 }
 
 // 12ed:0063 engine_sound_off (sound.md §2.2): stops the effect and removes the effects timer.

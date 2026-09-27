@@ -75,36 +75,52 @@ std::string sfx_bank_path();  // sfx.ini in the settings folder
 // them all or far past them.
 int sfx_effect_of(u16 pc, const u16 starts[SFX_COUNT]);
 
-// The FM voices of the effects. They are fed the speaker changes of the effects driver and write
-// OPL2 registers through `write`. Three channels take turns, so a note's release still sounds
-// while the next one starts.
+// The FM voices of the effects, writing OPL2 registers through `write`. A player is one effects
+// driver's speaker (the game runs one driver per effect, sfx_adlib.cpp, so the effects sound
+// together); each note it starts takes one of the chip's nine channels, at most three per player
+// (its notes rotate over them, so a release rings on while the next two notes play): a free one whose
+// release has run longest, else the one sounding longest.
 class SfxSynth {
 public:
+    static constexpr int PLAYERS = SFX_COUNT;
     using Write = void (*)(void *ctx, u8 reg, u8 value);
     SfxSynth(Write write, void *ctx) : write_(write), ctx_(ctx) {}
     void reset();  // the chip's set-up; every voice off
     void set_bank(const SfxBank &b) { bank_ = b; }
     const SfxBank &bank() const { return bank_; }
-    // The effects driver of effect `id` sets the speaker: PIT channel 2's divisor (0 = 65536) and
-    // whether the gate is open.
-    void speaker(int id, u16 divisor, bool on);
-    void tick();     // one step of the driver (236.7 Hz): the pitch jitter
-    void silence();  // the sounding note is released
-    bool sounding() const { return key_on_; }
+    // Player `player`, playing effect `id`, sets its speaker: PIT channel 2's divisor (0 = 65536)
+    // and whether the gate is open.
+    void speaker(int player, int id, u16 divisor, bool on);
+    void tick();                // one step of the drivers (236.7 Hz): the pitch jitter
+    void silence(int player);   // the player's sounding note is released
+    void silence_all();
+    bool sounding(int player) const { return players_[player].key_on; }
 
 private:
-    static constexpr int CHANNELS = 3;
+    static constexpr int CHANNELS = 9;
+    static constexpr int PLAYER_CHANNELS = 3;
+    struct Player {
+        int id = -1;       // the effect of its sounding (or last) note
+        int ch = -1;       // the channel of that note
+        bool key_on = false;
+        u16 divisor = 0;
+        int cents = 0;     // the jitter now
+    };
+    struct Channel {
+        int player = -1;
+        bool key_on = false;
+        u32 since = 0;     // when it was keyed on or off
+    };
     void w(u8 reg, u8 value) { write_(ctx_, reg, value); }
     void program(int ch, const SfxPatch &p);
-    void frequency(int ch, bool key);
+    void frequency(int player, bool key);
+    int take_channel(int player);
     Write write_;
     void *ctx_;
     SfxBank bank_{};
-    int id_ = -1;       // the effect of the sounding (or last) note
-    int ch_ = 0;        // its channel
-    bool key_on_ = false;
-    u16 divisor_ = 0;
-    int cents_ = 0;     // the jitter now
+    Player players_[PLAYERS];
+    Channel channels_[CHANNELS];
+    u32 clock_ = 0;
     u32 rng_ = 0x1990u;
 };
 

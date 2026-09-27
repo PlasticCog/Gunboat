@@ -34,8 +34,9 @@ void (*focus_lost_handler)();
 bool (*frame_source)(u32 *, int *, int *);
 bool (*presenter)(const u32 *, int, int, bool);
 void (*frame_hook)();
-bool (*speaker_filter)(u16, bool, bool);
+bool (*speaker_filter)(u16, bool &, bool);
 void (*tick_observer)();
+void (*sfx_play_observer)(u16);
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
@@ -418,10 +419,7 @@ u8 host_pit2_low()
 
 void host_speaker(u16 divisor, bool on)
 {
-    if (speaker_filter && speaker_filter(divisor, on, speaker_effects)) {
-        spk_on = false;  // the change is the filter's: the speaker falls silent
-        return;
-    }
+    if (speaker_filter && speaker_filter(divisor, on, speaker_effects)) return;  // the filter's own
     spk_div = divisor;
     spk_on = on;
 }
@@ -441,8 +439,13 @@ void host_sfx_opl_write(u8 reg, u8 value)
     OPL3_WriteReg(&opl_sfx, reg, value);
 }
 
-void host_set_speaker_filter(bool (*filter)(u16 divisor, bool on, bool effects)) { speaker_filter = filter; }
+void host_set_speaker_filter(bool (*filter)(u16 divisor, bool &on, bool effects)) { speaker_filter = filter; }
 void host_set_tick_observer(void (*observer)()) { tick_observer = observer; }
+void host_set_sfx_play_observer(void (*observer)(u16)) { sfx_play_observer = observer; }
+void host_sfx_play(u16 program)
+{
+    if (sfx_play_observer) sfx_play_observer(program);
+}
 
 void host_pump()
 {

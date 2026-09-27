@@ -191,13 +191,13 @@ std::vector<s16> render_fm(const Score &sc, int id, const SfxPatch &patch)
     };
     for (int t = 0; t <= sc.ticks; t++) {
         while (k < sc.changes.size() && sc.changes[k].tick == t) {
-            synth.speaker(id, sc.changes[k].divisor, sc.changes[k].on);
+            synth.speaker(id, id, sc.changes[k].divisor, sc.changes[k].on);
             k++;
         }
         synth.tick();
         generate(ticker.next());
     }
-    synth.silence();
+    synth.silence_all();
     // the release, until it has died away (at most 3 s)
     for (int block = 0; block < 3 * 20; block++) {
         const size_t at = out.size();

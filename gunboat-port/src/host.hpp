@@ -70,6 +70,9 @@ void host_speaker(u16 divisor, bool on);  // PIT channel 2 divisor (0 = 65536) a
 // running: its speaker changes are the sound effects, which the presentation layer can play on AdLib
 // instead (host_set_speaker_filter). Returns the previous state.
 bool host_speaker_effects(bool effects);
+// PORT: sfx_play tells the host that an effect's program starts (its DGROUP address); the presentation
+// layer's AdLib effects follow it (host_set_sfx_play_observer).
+void host_sfx_play(u16 program);
 // The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
 // moment it is read.
 u8 host_pit2_low();
@@ -106,13 +109,15 @@ void host_set_hotkey_handler(bool (*handler)(int scancode));
 void host_set_fullscreen(bool on);
 bool host_fullscreen();
 // Sound effects on AdLib (sfx_adlib.cpp): every speaker change goes to the filter first with whether
-// the effects driver made it; when the filter returns true the change is its own and the speaker falls
-// silent. The filter plays the effects on a second OPL2 chip (host_sfx_opl_write), mixed with the
-// first. The observer is called after the handlers of each timer tick.
-void host_set_speaker_filter(bool (*filter)(u16 divisor, bool on, bool effects));
+// the effects driver's handler made it; when the filter returns true the change is its own and the
+// speaker does not change, else the speaker takes it (with the gate the filter may have closed). The
+// filter plays the effects on a second OPL2 chip (host_sfx_opl_write), mixed with the first. The tick
+// observer is called after the handlers of each timer tick.
+void host_set_speaker_filter(bool (*filter)(u16 divisor, bool &on, bool effects));
 void host_sfx_opl_write(u8 reg, u8 value);
 void host_set_sfx_gain(int gain);  // the second chip's output is mixed times this
 void host_set_tick_observer(void (*observer)());
+void host_set_sfx_play_observer(void (*observer)(u16 program));
 // Restarts the timer clock from now (the game starts after the launcher, not at host_init).
 void host_reset_clock();
 
