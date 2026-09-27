@@ -14,10 +14,13 @@ namespace {
 // IN from the status port (the CRTC's port + 6: 3DAh, or 3BAh on a Hercules card) until bit 3
 // (the vertical retrace; the video dots on a Hercules) is `set`. The card model's status bits
 // alternate on each read (card.cpp), so a wait ends at its first or second read; each read still
-// reaches the card (IN 3DAh resets the attribute controller's flip-flop).
+// reaches the card (IN 3DAh resets the attribute controller's flip-flop). PORT: no host_pump per
+// read: the wait is bounded by the model, and the time of a real retrace is the caller's
+// host_wait_vretrace (a pump here would be a timer tick the original does not get there).
 void wait_status(u16 port, bool set)
 {
-    while (bool(card_in(port) & 8) != set) host_pump();
+    while (bool(card_in(port) & 8) != set) {
+    }
 }
 
 } // namespace

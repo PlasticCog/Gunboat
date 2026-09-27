@@ -368,12 +368,47 @@ def machine_game(h, single_page=0):
 HYBRID = os.environ.get('GB_MODES_HYBRID', '1') != '0'
 
 
-def check_hybrid(h, name, m, keys=None, **kw):
+def check_hybrid(h, name, m, keys=None, polls=(), **kw):
     """h.check with the original on the port's library (unless HYBRID is off), the sound model on
-    and the poll points."""
+    and the poll points (POLLS and `polls`)."""
     from test_sound import sound
+    kw.setdefault('max_insns', BIG)
     with sound(h), (PortLibrary(h) if HYBRID else contextlib.nullcontext()):
-        return h.check(name, m, tick=(POLLS, 'both', keys or []), max_insns=BIG, **kw)
+        return h.check(name, m, tick=(POLLS + list(polls), 'both', keys or []), **kw)
+
+
+# A port routine of another package still a stub on this branch (the renderer's and the view copies'
+# twins of a mode) ends the port's run with one of these; the checks that reach one are counted as
+# skipped (and printed), not failed.
+UNPORTED = ('is not ported yet', 'is not ported (EGA/Tandy/CGA parked)')
+
+
+def check_or_skip(h, name, m, skipped, keys=None, polls=(), regs=None, **kw):
+    """check_hybrid; 1, or 0 when the port reaches an unported routine of another package (its
+    message in `skipped`). The port runs alone first (quick), so that the original's long run is
+    only made for a check that can complete."""
+    h.port.dll.gb_set_machine(cardmodel.MACHINES[h.machine])
+    h.port.dll.gb_card_set(bytes(h.card_state) if h.card_state is not None else bytes(cardmodel.reset_state()))
+    h.port.set_memory(m)
+    h.set_tick((POLLS + list(polls), 'both', keys or []))
+    try:
+        h.port.call(name, regs or {})
+    except Mismatch as e:
+        text = str(e)
+        if any(u in text for u in UNPORTED):
+            skipped.append('%s: %s' % (name, text[6:]))
+            return 0
+    finally:
+        h.set_tick(None)
+        h.reset_files()
+    check_hybrid(h, name, m, keys=keys, polls=polls, regs=regs, **kw)
+    return 1
+
+
+def report_skipped(h, test, skipped):
+    if skipped:
+        print('    %s on %s: %d check(s) skipped, the port reached routines not on this branch: %s'
+              % (test, h.machine, len(skipped), '; '.join(sorted(set(skipped)))[:600]))
 
 
 def config_load_cases(h, rng, scale):
@@ -569,6 +604,86 @@ def mission_load_cases(h, rng, scale):
     return n
 
 
+def station_snapshots(h, label, kw, keys):
+    """(name, call, registers, memory, card) at the entries of the station screens as the original's
+    mission_run reaches them on its own library (test_frame.loop_capture, with the card state)."""
+    import test_frame
+    from unicorn import UC_HOOK_CODE
+    from gbdiff import REGS, UC_REGS, lin
+    cache = h.__dict__.setdefault('_modes_snapshots', {})
+    if label not in cache:
+        names = ['pilot_screen', 'bow_screen', 'stern_screen', 'midship_screen', 'chase_view_screen', 'view_restore']
+        out, counts, hooks = [], {}, []
+
+        def make(name):
+            def hook(uc, address, size, _):
+                k = counts.get(name, 0)
+                counts[name] = k + 1
+                if k < 2:
+                    r = {n: uc.reg_read(UC_REGS[n]) for n in REGS}
+                    out.append((name, k, r, bytes(h.orig.memory()), bytes(h.card.s)))
+            return hook
+        h.card.s[:] = cardmodel.reset_state()
+        m = test_frame.main_state(h, ctrl=True, **kw)
+        for name in names:
+            fs, off, _ = h.sym.func(name)
+            at = lin(seg_of(fs), off)
+            hooks.append(h.orig.uc.hook_add(UC_HOOK_CODE, make(name), None, at, at))
+        from test_sound import sound
+        try:
+            with sound(h):
+                h.set_tick((test_frame.loop_polls(), 'both', keys))
+                h.orig.set_memory(m)
+                fs, off, far = h.sym.func('mission_run')
+                h.orig.call(fs, off, far, {}, (), max_insns=4_000_000_000)
+        except Mismatch as e:
+            if str(e) not in ('original: stop', 'original: exit(0)'):
+                raise
+        finally:
+            for k in hooks:
+                h.orig.uc.hook_del(k)
+            h.set_tick(None)
+        cache[label] = out
+    return cache[label]
+
+
+def station_cases(h, rng, scale):
+    """The 3D stations' screens (pilot, bow, stern, midship, chase view, view_restore) as a tour of
+    the stations reaches them in a mission on the machine, with their register flows (SI)."""
+    import test_frame
+    n, skipped = 0, []
+    with machine_game(h):
+        for label, kw in (('Vietnam 3', dict(region=0, mission=3, rank=5, weapons=(1, 0, 1))),
+                          ('Colombia 2 (night)', dict(region=1, mission=2, rank=9, weapons=(0, 1, 2)))):
+            snaps = station_snapshots(h, label, kw, test_frame.spaced(test_frame.TOUR + [ord('q')]))
+            for name, k, regs, mem, card in snaps:
+                h.card_state = card
+                n += check_or_skip(h, name, bytearray(mem), skipped, regs=regs, outputs=['si'],
+                                   polls=test_frame.loop_polls(), label='%s, %s call %d' % (label, name, k))
+    report_skipped(h, 'station_cases', skipped)
+    return n
+
+
+def mission_cases(h, rng, scale):
+    """Whole missions on the machine: the title's demo (ended by a key) and a tour of the stations
+    ended by Ctrl+Q (quit_to_dos), from main's state."""
+    import test_frame
+    n, skipped = 0, []
+    with machine_game(h):
+        h.card.s[:] = cardmodel.reset_state()
+        m = test_frame.main_state(h, demo=True, practice=1)
+        h.card_state = bytes(h.card.s)
+        n += check_or_skip(h, 'mission_run', m, skipped, keys=[0] * 400 + [0x20], polls=test_frame.loop_polls(),
+                           max_insns=8_000_000_000, label='demo')
+        h.card.s[:] = cardmodel.reset_state()
+        m = test_frame.main_state(h, ctrl=True, region=0, mission=3, rank=5, weapons=(1, 0, 1))
+        h.card_state = bytes(h.card.s)
+        n += check_or_skip(h, 'mission_run', m, skipped, keys=test_frame.spaced(test_frame.TOUR + [ord('q')]),
+                           polls=test_frame.loop_polls(), max_insns=8_000_000_000, label='Vietnam 3 tour', exit_code=0)
+    report_skipped(h, 'mission_cases', skipped)
+    return n
+
+
 # ---------------------------------------------------------------- the test list
 
 ALL = ('ega', 'cga', 'tandy', 'hercules')
@@ -587,4 +702,6 @@ TESTS = (on_machines(*ALL, 'vga')(ega_pal_set) + on_machines('vga')(ega_pal_set_
          + on_machines(*ALL)(title_cases)
          + on_machines(*ALL)(front_cases)
          + on_machines(*ALL)(hud_cases)
-         + on_machines(*ALL)(mission_load_cases))
+         + on_machines(*ALL)(mission_load_cases)
+         + on_machines(*ALL)(station_cases)
+         + on_machines(*ALL)(mission_cases))
