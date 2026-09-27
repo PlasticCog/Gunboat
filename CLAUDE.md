@@ -200,8 +200,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     `data/sfx.ini`, so the next build ships the edits.
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
-* **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects and their editor, the
-  horizon haze; Windows (`Release.ps1`, built here) and Linux (`Release.sh` on GitHub Actions when
+* **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects (the user's
+  instruments built in), the horizon haze; the editor is a development tool and is **not** in the
+  release packages (the user's decision); Windows (`Release.ps1`, built here) and Linux (`Release.sh` on GitHub Actions when
   the release is published: Ubuntu 22.04, SDL3 3.4.16 built static; untested by us on a Linux
   desktop, the CI runs `--version` and `--host-test` headless).
 * **Next:** optionally the parked sound devices; more enhancements only as player options.

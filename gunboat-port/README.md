@@ -15,7 +15,8 @@ game's 3 x 3), in a wide window the cockpit widened to its edges (or the world c
 the picture), the picture's aspect (4:3 like the VGA monitor, or square pixels) and scaling (sharp,
 nearest, smooth, CRT scanlines) and, optionally, the sound effects on AdLib FM instruments instead
 of the PC speaker, edited effect by effect with the sound-effects editor
-(`tools/sfx_editor`, `gunboat_sfx_editor.exe`). With the **Original** preset the picture is the
+(`tools/sfx_editor`, `gunboat_sfx_editor.exe`, a development tool: built here, not in the release
+packages). With the **Original** preset the picture is the
 faithful one. The game is the same either way: the enhancements only read what it drew (the
 3D-view enhancements are for VGA).
 

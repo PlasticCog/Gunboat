@@ -19,7 +19,6 @@ HOW TO PLAY
        Gunboat/
        +-- Game/                    <- your original game files
        +-- gunboat.exe              (Linux: gunboat)
-       +-- gunboat_sfx_editor.exe   (Linux: gunboat_sfx_editor) the sound effects editor
        +-- SDL3.dll                 (Windows only)
        +-- README.txt
 
@@ -63,27 +62,13 @@ enhancements only change how its frames are shown.
   Scaling        Sharp pixels, nearest, smooth, or CRT scanlines.
   Music          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
   Sound effects  PC speaker, as in the original, or AdLib: every effect plays its original
-                 notes on an FM instrument instead (see the editor below).
+                 notes on an FM instrument instead.
 
 In the game: F11 switches between the enhanced and the original picture, Alt+Enter toggles full
 screen.
 
 gunboat --help (gunboat.exe on Windows) lists the command-line options (for example --no-launcher,
 --original, --enhanced, --game-dir FOLDER, --fullscreen, --video ega, --effects adlib).
-
-
-THE SOUND EFFECTS EDITOR
-------------------------
-
-gunboat_sfx_editor.exe edits the AdLib sound effects, one by one: the key click, the guns, the
-engine, hits and explosions, incoming fire and the others. For each one you can hear the original
-PC speaker version and the AdLib version, change its FM instrument (two operators: attack,
-decay, sustain, release, level, waveform, feedback and so on, plus transpose, volume and a random
-pitch jitter for noisy sounds) and choose whether the game plays it on AdLib, on the speaker or
-not at all. The notes of each effect come from the original game itself, so their timing and
-pitch are always the original's. Save writes sfx.ini next to gunboat.ini (see above); the game
-uses it when "Sound effects" is set to AdLib in the launcher. The instruments the port ships with
-are built into the program: "All defaults" in the editor goes back to them.
 
 
 CONTROLS (from the original)
@@ -125,7 +110,6 @@ Gunboat is (c) 1990 Accolade. This project is not affiliated with the rights hol
 data is distributed with it.
 
 The host layer, VGA model and EXEPACK loader are adapted from the Test Drive III SDL3 port
-(MIT, (c) 2026 Krzysztof Kania). SDL 3 (zlib license). Dear ImGui in the sound effects editor
-(MIT). Nuked-OPL3 (LGPL 2.1 or later; built from
+(MIT, (c) 2026 Krzysztof Kania). SDL 3 (zlib license). Nuked-OPL3 (LGPL 2.1 or later; built from
 the unmodified source in the repository, which also has everything needed to rebuild and relink
 the program). The licenses are in the "licenses" folder, THIRD_PARTY.md lists the details.

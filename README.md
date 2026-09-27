@@ -24,7 +24,6 @@ the `.MUS` music and, for AdLib music, `ADLIB.COM`). They are not included.
    Gunboat/
    ├── Game/                    <- your original game files (GB.EXE, DATAA.DAT, ...)
    ├── gunboat(.exe)            <- the game
-   ├── gunboat_sfx_editor(.exe) <- the AdLib sound effects editor
    ├── SDL3.dll                 (Windows only)
    └── README.txt               <- the options and the controls
    ```
@@ -42,7 +41,7 @@ the `.MUS` music and, for AdLib music, `ADLIB.COM`). They are not included.
 | Subsystem specs | All eight done: simulation, 3D renderer, world, game flow, cockpit/HUD, platform, video, sound (`reverse_engineering/spec/`) |
 | Port core | Done: GB.EXE loaded into the original memory layout, the SDL3 host in C++, generated symbols, and differential tests that run the original code in Unicorn and compare all memory with the C++ (`gunboat-port/PORTING.md`) |
 | Porting | Done: the whole game runs natively and matches the original on every graphics card it supported, VGA, EGA, Tandy, CGA and Hercules (485 functions of GB.EXE and the Ad Lib driver's 52, each verified; `gunboat-port/Run Port.cmd`) |
-| Enhancements | Optional, chosen in the launcher: a high-resolution 3D view, smooth 60 fps motion, an extended draw distance, a wide cockpit (or the world beside the picture) in widescreen, picture aspect and scaling filters (VGA); the sound effects on AdLib FM instruments, with an editor for each effect. "Original" shows the faithful picture; F11 switches in the game. The game itself is the same either way |
+| Enhancements | Optional, chosen in the launcher: a high-resolution 3D view, smooth 60 fps motion, an extended draw distance, a wide cockpit (or the world beside the picture) in widescreen, picture aspect and scaling filters (VGA); the sound effects on AdLib FM instruments (edited effect by effect with a development tool, `gunboat-port/tools/sfx_editor`, not part of the release). "Original" shows the faithful picture; F11 switches in the game. The game itself is the same either way |
 
 ## Layout
 

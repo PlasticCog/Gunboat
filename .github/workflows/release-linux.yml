@@ -59,7 +59,7 @@ jobs:
       - name: Smoke test (no display, no game files)
         run: |
           b=gunboat-port/build-linux
-          file $b/gunboat $b/gunboat_sfx_editor
+          file $b/gunboat
           $b/gunboat --version
           SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy $b/gunboat --host-test
 

@@ -56,7 +56,7 @@ const char *const HELP[ITEMS][3] = {
      "(The sound effects are the next setting.)"},
     {"PC speaker: the effects as in the original. AdLib: each effect plays its original notes",
      "on an FM instrument instead (an AdLib of its own, with or without the AdLib music).",
-     "gunboat_sfx_editor edits the instruments, effect by effect."},
+     "Each effect has its own instrument, built into the game."},
     {"No: start the game directly next time (gunboat --launcher shows this screen again).", "", ""},
     {"Start the game with these settings (they are saved).", "", ""},
     {"Leave without starting the game.", "", ""},

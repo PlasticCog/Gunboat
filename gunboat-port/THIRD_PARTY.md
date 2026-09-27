@@ -30,7 +30,8 @@ library. It emulates the OPL2 sound chip for the AdLib music and the optional Ad
 Version 1.91.9 (github.com/ocornut/imgui, tag `v1.91.9`): the core files and the SDL3 and
 SDL_Renderer3 back ends, unmodified, in [`vendor/imgui`](vendor/imgui) with its license.
 Copyright (c) 2014-2025 Omar Cornut. MIT license. Only the sound-effects editor
-(`tools/sfx_editor`, `gunboat_sfx_editor.exe`) uses it; the game does not.
+(`tools/sfx_editor`, `gunboat_sfx_editor.exe`, a development tool that is not in the release
+packages) uses it; the game does not.
 
 ## SDL3
 
