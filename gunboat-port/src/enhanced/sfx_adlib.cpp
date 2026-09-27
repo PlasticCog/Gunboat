@@ -126,15 +126,18 @@ void on_target_destroyed(u8 old, u8 wreck)
     else start(EXPLOSION, program_of(EXPLOSION));
 }
 
-// A shot has hit an object of kind `kind`: a bullet's impact on its material, at half volume on what
-// is dead, destroyed or inanimate (the dead with the dull wood sound). Not on the living, not for the
+// A shot has hit an object of kind `kind`: a bullet's impact on its material (bridges their own clang),
+// at two thirds of the volume on what is dead, destroyed or inanimate (the dead with the dull wood
+// sound). Not on the living, not for the
 // grenades and the mortar (their own explosion sounds), not on the wrecks the shot passes through.
 void on_object_hit(u8 kind, u16)
 {
     const u8 weapon = ds_u8(DS_vec_product_hi);  // hit_objects' weapon: 2 and 3 are the explosive ones
     if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31 || alive(kind)) return;
-    const int id = metal(kind) && !dead(kind) ? SFX_IMPACT_METAL : SFX_IMPACT_WOOD;
-    start(id, program_of(id), dead(kind) || lifeless(kind) ? 50 : 100);
+    const int id = kind == 0x11 || kind == 0x21     ? SFX_IMPACT_BRIDGE
+                   : metal(kind) && !dead(kind) ? SFX_IMPACT_METAL
+                                                : SFX_IMPACT_WOOD;
+    start(id, program_of(id), dead(kind) || lifeless(kind) ? 67 : 100);
 }
 
 // Every speaker change. A driver copy's: its effect's instrument plays it. The game's driver's: the

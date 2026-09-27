@@ -299,8 +299,24 @@ void key_input(SDL_Scancode sc, bool down, bool repeat)
     }
 }
 
+// The first controller, opened when none is (its connection's event may have gone to the launcher's
+// own loop): checked twice a second.
+void ensure_gamepad()
+{
+    static Uint64 next;
+    const Uint64 now = SDL_GetTicksNS();
+    if (gamepad || now < next) return;
+    next = now + 500 * SDL_NS_PER_MS;
+    if (!SDL_HasGamepad()) return;
+    int n = 0;
+    SDL_JoystickID *ids = SDL_GetGamepads(&n);
+    if (ids && n > 0) gamepad = SDL_OpenGamepad(ids[0]);
+    SDL_free(ids);
+}
+
 void process_events()
 {
+    ensure_gamepad();
     SDL_Event ev;
     while (SDL_PollEvent(&ev)) {
         switch (ev.type) {

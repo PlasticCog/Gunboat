@@ -36,7 +36,8 @@ const Info INFO[SFX_COUNT] = {
     {"Silence", "Plays nothing: the key handler uses it to stop the current effect"},
     {"Soldier killed", "Added for the AdLib (the original is silent): enemy infantry killed. Plays the notes of the light hit (a falling sweep)"},
     {"Impact: metal", "Added for the AdLib: a bullet hits a vehicle, a boat, a gun, a helicopter, a mine or a buoy. Plays the key click's note"},
-    {"Impact: wood", "Added for the AdLib: a bullet hits a hut, a dock, a fort, a bridge, a tree or a rock. Plays the key click's note"},
+    {"Impact: wood", "Added for the AdLib: a bullet hits a hut, a dock, a fort, a tree or a rock. Plays the key click's note"},
+    {"Impact: bridge", "Added for the AdLib: a bullet hits a bridge: a deep metal clang. Plays the key click's note"},
 };
 
 SfxOperator op(u8 attack, u8 decay, u8 sustain, u8 release, u8 multiple, u8 level, u8 waveform = 0,
@@ -162,7 +163,8 @@ int sfx_program_of(int id)
     switch (id) {
     case SFX_SOLDIER_KILLED: return 9;
     case SFX_IMPACT_METAL:
-    case SFX_IMPACT_WOOD: return 0;
+    case SFX_IMPACT_WOOD:
+    case SFX_IMPACT_BRIDGE: return 0;
     default: return id >= 0 && id < SFX_PROGRAMS ? id : 0;
     }
 }
@@ -265,6 +267,13 @@ SfxPatch factory_patch(int id)
         p.transpose = -24;
         p.jitter = 200;
         p.volume = 75;
+        break;
+    case SFX_IMPACT_BRIDGE:  // a deep clang of girders: inharmonic, low, ringing long
+        p.mod = op(15, 3, 12, 5, 5, 18);
+        p.car = op(15, 4, 10, 4, 1, 0, 0, false);
+        p.feedback = 3;
+        p.transpose = -24;
+        p.volume = 85;
         break;
     default:  // 12: silence
         p.mod = op(15, 4, 4, 6, 1, 20);

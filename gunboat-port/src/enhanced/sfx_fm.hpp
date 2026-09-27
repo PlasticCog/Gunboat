@@ -23,7 +23,8 @@ constexpr int SFX_PROGRAMS = 13;  // the effect programs of the driver (sound.md
 constexpr int SFX_SOLDIER_KILLED = 13;  // enemy infantry killed: effect 9's falling sweep
 constexpr int SFX_IMPACT_METAL = 14;    // a bullet hits a vehicle, boat, gun, helicopter: effect 0's note
 constexpr int SFX_IMPACT_WOOD = 15;     // a bullet hits a hut, dock, fort, tree, rock: effect 0's note
-constexpr int SFX_COUNT = 16;
+constexpr int SFX_IMPACT_BRIDGE = 16;   // a bullet hits a bridge: effect 0's note
+constexpr int SFX_COUNT = 17;
 // The driver's program (0..12) whose notes effect `id` plays.
 int sfx_program_of(int id);
 // The effects' chip is mixed at twice its output: one FM voice against the speaker's full square wave.
@@ -92,7 +93,10 @@ class SfxSynth {
 public:
     static constexpr int PLAYERS = SFX_COUNT;
     using Write = void (*)(void *ctx, u8 reg, u8 value);
-    SfxSynth(Write write, void *ctx) : write_(write), ctx_(ctx) {}
+    SfxSynth(Write write, void *ctx) : write_(write), ctx_(ctx)
+    {
+        for (int &g : gain_) g = 100;
+    }
     void reset();  // the chip's set-up; every voice off
     void set_bank(const SfxBank &b) { bank_ = b; }
     const SfxBank &bank() const { return bank_; }
@@ -129,7 +133,7 @@ private:
     void *ctx_;
     SfxBank bank_{};
     Player players_[PLAYERS];
-    int gain_[PLAYERS] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
+    int gain_[PLAYERS];
     Channel channels_[CHANNELS];
     u32 clock_ = 0;
     u32 rng_ = 0x1990u;
