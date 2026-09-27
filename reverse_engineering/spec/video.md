@@ -149,9 +149,16 @@ On the EGA the pages 1 and 2 are the card's memory at A200h and A400h (`gfx_set_
 path: video segment + page · page_bytes / 16; `gfx_alloc_page` allocates nothing there); on the
 CGA, Tandy and Hercules they are RAM.
 
-Tests: the routines above on each machine (3,111 cases); and, with the original's calls of the
-graphics library running the port's library (`PortLibrary`, so the game code is compared on its own
-whatever state the library's other-mode paths are in), `config_load`, `title_menu` (the menu and the
-whole intro), `menu_cursor_init`, the front end's screens (office, folders, spec sheets, maps,
-outfitting), a whole front end, `hq_quiz`, the map, damage report and assignment stations,
-`station_screen_colours` and `screen_clear`, on states the original reaches on each machine.
+Tests: the routines above on each machine (3,111 cases, all memory and the card state; a port
+`host_pump` where the original has no poll point shows as a timer tick); and the game on states the
+original reaches on each machine: `config_load`, `title_menu` (the menu and the whole intro),
+`menu_cursor_init`, the front end's screens (office, folders, spec sheets, maps, outfitting), a whole
+front end, `hq_quiz`, `mission_load`, the map, damage report and assignment stations,
+`station_screen_colours`, `screen_clear`, `jet_marker`, `radar_scope`, `message_line_draw`, the 3D
+stations' screens in tours of the stations, and whole missions (the demo, a tour ended by Ctrl+Q).
+By default the original's calls of the graphics library run the port's library there
+(`PortLibrary`), so the game code is compared whatever state the library's other-mode paths are in;
+`GB_MODES_HYBRID=0` runs the original on its own library. A check whose port run reaches a routine
+still a stub on the branch is skipped and reported. On a trial merge with the library and renderer
+packages every one of these runs and passes in both ways (74 tests, 3,479 cases with the original
+on its own library).
