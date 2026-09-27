@@ -223,6 +223,12 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   desktop, the CI runs `--version` and `--host-test` headless).
 * **Release 1.1.1 (2026-09-26):** the AdLib effects on separate channels, the explosion, soldier
   and impact sounds, the user's instruments; Windows and Linux as for 1.1.0.
+* **Release 1.1.2 (2026-09-27):** impact debris; AdLib impacts at half volume on the dead,
+  destroyed and inanimate. A report of the boat "bouncing when turning" was checked: the view's
+  horizon follows the original's pitch impulse (each speed step +-5, decaying by 4 a frame, the
+  bow dipping as the boat slows in a turn); the smooth-motion view adds no jumps (measured over
+  2,068 presents: no step of a row except within one interpolated glide); the physics routines
+  match the original in the differential tests.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
