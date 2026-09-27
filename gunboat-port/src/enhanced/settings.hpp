@@ -37,6 +37,9 @@ struct Settings {
     Effects effects = Effects::Speaker;
     Video video = Video::Vga;
     int fps = 15;               // frame rate of the 3D stations (the mission clock; host_set_frame_rate)
+    // Gameplay changes (gameplay.hpp): they change the game itself, so they are off unless the player
+    // turns them on, and the Original preset turns them off.
+    bool hills_stop_bullets = false;
 
     bool any_enhancement() const { return hires_view || smooth_motion || widescreen != Wide::Off || far_view || debris; }
     bool all_enhancements() const
@@ -45,7 +48,7 @@ struct Settings {
     }
     void set_original()
     {
-        hires_view = smooth_motion = far_view = debris = false;
+        hires_view = smooth_motion = far_view = debris = hills_stop_bullets = false;
         widescreen = Wide::Off;
     }
     void set_enhanced()

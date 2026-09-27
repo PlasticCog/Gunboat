@@ -392,6 +392,10 @@ void hit_objects()
         if (al != 0x12 && si < 0x48) continue;
         if (al == 0 || al >= 0x3F) continue;
         if (hit_test(bx) == 0) continue;
+        // PORT: the gameplay option "hills stop bullets" (gameplay.cpp): with it on, a hill between the
+        // gun and the object stops the shot here. Off (the default), the host never says so: the
+        // original's rule.
+        if (host_shot_blocked(si)) return;
         // PORT: tells the host that the shot hit object SI, of kind `al` (the AdLib effects option sounds
         // the impact, sfx_adlib.cpp; the impact debris, debris.cpp); nothing in mem[] changes.
         host_object_hit(al, si);

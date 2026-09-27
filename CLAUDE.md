@@ -246,6 +246,14 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   highlighting, a dropdown per control, dead zone, save / revert / defaults. Developer aid:
   `GB_PAD="<s>:<control>[/p|/r],..."` pushes scripted controller events (checked: the menu, the
   throttle and steering of pilot practice driven by it).
+* **Gameplay changes (2026-09-27):** options that change the game itself, off unless the player
+  turns them on (launcher, their own ini keys; the Original preset turns them off; `gameplay.cpp`).
+  "Hills stop bullets" (`--hills-stop-bullets`): the original's hit test sees objects only, never the
+  terrain (`hit_objects`, `line_of_sight` 0919:348e: objects cover objects), so shots pass through
+  hills; with the option on, `hit_objects` asks the host (`host_shot_blocked`, PORT, false unless the
+  option's handler is set) and the loaded terrain's triangles are sampled along the line from the gun
+  (height 32) to the target (its ground + 8): a hill above the line stops the shot; the debris of a
+  miss behind a hill flies off the hill.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

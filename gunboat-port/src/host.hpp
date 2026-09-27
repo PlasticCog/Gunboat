@@ -90,6 +90,10 @@ void host_object_hit(u8 kind, u16 obj);
 void host_target_destroyed(u8 old, u8 wreck);
 // title_menu: the title screen (TITLE1) is on the screen, faded in (the window icon, icon.cpp).
 void host_title_shown();
+// PORT: the gameplay option "hills stop bullets" (gameplay.cpp): hit_objects asks whether a hill stops
+// the shot before object `obj`; false unless the option's handler is set.
+bool host_shot_blocked(u16 obj);
+void host_set_shot_blocked_handler(bool (*handler)(u16 obj));
 // The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
 // moment it is read.
 u8 host_pit2_low();

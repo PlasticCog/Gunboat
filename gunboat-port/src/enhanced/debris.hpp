@@ -10,6 +10,9 @@
 namespace gb {
 
 void debris_install();  // hooks the host's events
+// The shot that just landed was stopped at (x, y) quarter units, height h (a hill: gameplay.cpp): its
+// debris flies from there, as of the ground drawn there.
+void debris_move_last(double x, double y, double h);
 
 // Draws the live particles into a rendered region of the view: `target` as rendered (its palette
 // indices), `rgb` its pixels (XRGB, `pitch` bytes a row) made from them with `pal`; `water` the

@@ -18,10 +18,11 @@ namespace gb {
 
 namespace {
 
-enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, DEBRIS, WIDE, ASPECT, FILTER, DISPLAY, SOUND, EFFECTS, SHOW, PLAY, QUIT, ITEMS };
+enum Item { FOLDER, VIDEO, PRESET, VIEW, MOTION, DISTANCE, DEBRIS, WIDE, ASPECT, FILTER, DISPLAY, SOUND, EFFECTS, HILLS, SHOW, PLAY, QUIT, ITEMS };
 
 const char *const LABELS[ITEMS] = {"Game folder", "Video card", "Preset",  "3D view", "Motion",      "Draw distance", "Impact debris",
                                    "Widescreen",  "Picture", "Scaling", "Display",     "Music",   "Sound effects",
+                                   "Hills stop bullets",
                                    "This screen", "Play",    "Quit"};
 
 const char *const HELP[ITEMS][3] = {
@@ -60,6 +61,9 @@ const char *const HELP[ITEMS][3] = {
     {"PC speaker: the effects as in the original. AdLib: each effect plays its original notes",
      "on an FM instrument instead (an AdLib of its own, with or without the AdLib music).",
      "Each effect has its own instrument, built into the game."},
+    {"A change to the game, not in the original: the hills stop your shots, and nothing behind",
+     "a hill is hit. Off: as the original, where a shot hits what it lands on, hills or not.",
+     "(The Original preset turns it off.)"},
     {"No: start the game directly next time (gunboat --launcher shows this screen again).", "", ""},
     {"Start the game with these settings (they are saved).", "", ""},
     {"Leave without starting the game.", "", ""},
@@ -145,6 +149,7 @@ std::string value_of(const Settings &s, int item)
         if (s.sound == Sound::Speaker) return "PC speaker";
         return game.adlib ? "Auto (AdLib)" : "Auto (PC speaker: no ADLIB.COM)";
     case EFFECTS: return s.effects == Effects::Adlib ? "AdLib (FM instruments)" : "PC speaker (original)";
+    case HILLS: return s.hills_stop_bullets ? "On (a change to the game)" : "Off (original)";
     case SHOW: return s.launcher ? "Show at start" : "Skip next time";
     default: return "";
     }
@@ -172,6 +177,7 @@ void change(Settings &s, int item, int dir)
         break;
     case SOUND: s.sound = Sound((int(s.sound) + 3 + dir) % 3); break;
     case EFFECTS: s.effects = s.effects == Effects::Adlib ? Effects::Speaker : Effects::Adlib; break;
+    case HILLS: s.hills_stop_bullets = !s.hills_stop_bullets; break;
     case SHOW: s.launcher = !s.launcher; break;
     default: break;
     }

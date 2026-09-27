@@ -182,6 +182,16 @@ void blend(u32 *row, int x, u32 c, double a)
 
 } // namespace
 
+void debris_move_last(double x, double y, double h)
+{
+    if (impacts.empty()) return;
+    Impact &im = impacts.back();
+    im.x = x;
+    im.y = y;
+    im.h = h;
+    im.stuff = Stuff::Ground;
+}
+
 void debris_install()
 {
     host_add_shot_landed_observer(on_shot_landed);

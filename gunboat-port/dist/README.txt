@@ -64,6 +64,8 @@ enhancements only change how its frames are shown.
   Picture        4:3 as on a VGA monitor, or square pixels.
   Scaling        Sharp pixels, nearest, smooth, or CRT scanlines.
   Music          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
+  Hills stop     A change to the game, off by default: the hills stop your shots (in the
+  bullets        original a shot hits what it lands on, hills or not).
   Sound effects  PC speaker, as in the original, or AdLib: every effect plays its original
                  notes on an FM instrument instead, each on its own channel (the guns no
                  longer cut the engine and the explosions), and AdLib adds sounds where the

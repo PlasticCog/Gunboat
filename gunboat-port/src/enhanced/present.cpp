@@ -24,6 +24,7 @@
 #include "enhanced/capture.hpp"
 #include "enhanced/controller.hpp"
 #include "enhanced/debris.hpp"
+#include "enhanced/gameplay.hpp"
 #include "enhanced/icon.hpp"
 #include "enhanced/sfx_adlib.hpp"
 #include "enhanced/view3d.hpp"
@@ -227,12 +228,14 @@ class Haze {
 public:
     static constexpr double ABOVE = 3.0;  // page rows of sky the haze reaches into
 
+    // The haze: halfway between the sky and the water, a little paler by day (blue-white), and never
+    // darker than the water (under a dark sky it would be a dark stripe).
     explicit Haze(const ViewHorizon &h) : y_(h.y), sky_(pal[h.sky]), water_(pal[h.water])
     {
-        haze_ = mix(sky_, water_, 0.25);
-        const double light = (0.3 * double(sky_ >> 16 & 0xFF) + 0.59 * double(sky_ >> 8 & 0xFF) +
-                              0.11 * double(sky_ & 0xFF)) / 160.0;
-        haze_ = mix(haze_, 0xFFA0C8EBu, 0.45 * std::min(1.0, light));  // pale blue by day
+        haze_ = mix(sky_, water_, 0.5);
+        const double light = lum(sky_) / 160.0;
+        haze_ = mix(haze_, 0xFFA0C8EBu, 0.25 * std::min(1.0, light));  // pale by day
+        if (lum(haze_) < lum(water_)) haze_ = mix(haze_, water_, 1.0);
     }
 
     // The colours of page row y: `band` for its colour 8 pixels, `above` for its sky pixels (0 for
@@ -250,6 +253,10 @@ public:
     }
 
 private:
+    static double lum(u32 c)
+    {
+        return 0.3 * double(c >> 16 & 0xFF) + 0.59 * double(c >> 8 & 0xFF) + 0.11 * double(c & 0xFF);
+    }
     double y_;
     u32 sky_, water_, haze_;
 };
@@ -749,6 +756,7 @@ void enhanced_install(const Settings &s)
     host_set_hotkey_handler(hotkey);
     host_set_presenter(present);
     debris_install();
+    gameplay_install(s);
     controller_install();
     if (s.effects == Effects::Adlib) sfx_adlib_install();
 }

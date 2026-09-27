@@ -161,6 +161,8 @@ int main(int argc, char **argv)
         else if (val("--draw-distance", "extended")) st.far_view = true;
         else if (val("--debris", "on")) st.debris = true;
         else if (val("--debris", "off")) st.debris = false;
+        else if (val("--hills-stop-bullets", "on")) st.hills_stop_bullets = true;
+        else if (val("--hills-stop-bullets", "off")) st.hills_stop_bullets = false;
         else if (val("--widescreen", "off")) st.widescreen = Wide::Off;
         else if (val("--widescreen", "world")) st.widescreen = Wide::World;
         else if (val("--widescreen", "cockpit") || val("--widescreen", "on")) st.widescreen = Wide::Cockpit;
