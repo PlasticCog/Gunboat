@@ -37,6 +37,7 @@ bool (*presenter)(const u32 *, int, int, bool);
 void (*frame_hook)();
 bool (*speaker_filter)(u16, bool &, bool);
 void (*tick_observer)();
+void (*gamepad_handler)(const SDL_Event &);
 std::vector<void (*)(u16)> sfx_play_observers;
 std::vector<void (*)(u16, u16, u8)> shot_landed_observers;
 std::vector<void (*)(u8, u16)> object_hit_observers;
@@ -277,6 +278,27 @@ void key_event(SDL_Scancode sc, bool down)
     feed(seq, n);
 }
 
+// A key pressed or let go: Alt+Enter aside, the presentation layer's hotkeys first (their presses and
+// releases are theirs), else the game.
+void key_input(SDL_Scancode sc, bool down, bool repeat)
+{
+    if (down) {
+        if (sc < SDL_SCANCODE_COUNT && consumed_keys[sc]) return;  // its repeats
+        if (!repeat && hotkey_handler && hotkey_handler(sc)) {
+            if (sc < SDL_SCANCODE_COUNT) consumed_keys[sc] = true;
+            redraw = true;
+            return;
+        }
+        key_event(sc, true);
+    } else {
+        if (sc < SDL_SCANCODE_COUNT && consumed_keys[sc]) {
+            consumed_keys[sc] = false;
+            return;
+        }
+        key_event(sc, false);
+    }
+}
+
 void process_events()
 {
     SDL_Event ev;
@@ -292,20 +314,15 @@ void process_events()
                 if (!ev.key.repeat) host_set_fullscreen(!host_fullscreen());
                 break;
             }
-            if (ev.key.scancode < SDL_SCANCODE_COUNT && consumed_keys[ev.key.scancode]) break;  // its repeats
-            if (hotkey_handler && hotkey_handler(ev.key.scancode)) {
-                if (ev.key.scancode < SDL_SCANCODE_COUNT) consumed_keys[ev.key.scancode] = true;
-                redraw = true;
-                break;
-            }
-            key_event(ev.key.scancode, true);
+            key_input(ev.key.scancode, true, false);
             break;
         case SDL_EVENT_KEY_UP:
-            if (ev.key.scancode < SDL_SCANCODE_COUNT && consumed_keys[ev.key.scancode]) {
-                consumed_keys[ev.key.scancode] = false;
-                break;
-            }
-            key_event(ev.key.scancode, false);
+            key_input(ev.key.scancode, false, false);
+            break;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+        case SDL_EVENT_GAMEPAD_BUTTON_UP:
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            if (gamepad_handler) gamepad_handler(ev);
             break;
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         case SDL_EVENT_WINDOW_EXPOSED:
@@ -321,6 +338,7 @@ void process_events()
             if (gamepad && SDL_GetGamepadID(gamepad) == ev.gdevice.which) {
                 SDL_CloseGamepad(gamepad);
                 gamepad = nullptr;
+                if (gamepad_handler) gamepad_handler(ev);
             }
             break;
         default:
@@ -396,6 +414,11 @@ void host_set_timer(u16 divisor, void (*handler)())
 }
 
 void host_set_kbd_handler(void (*handler)(u8)) { kbd_handler = handler; }
+void host_set_gamepad_handler(void (*handler)(const SDL_Event &)) { gamepad_handler = handler; }
+void host_key(int scancode, bool down)
+{
+    if (scancode > 0 && scancode < SDL_SCANCODE_COUNT) key_input(SDL_Scancode(scancode), down, false);
+}
 void host_set_focus_lost_handler(void (*handler)()) { focus_lost_handler = handler; }
 
 void host_set_frame_source(bool (*compose)(u32 *, int *, int *), int w, int h)

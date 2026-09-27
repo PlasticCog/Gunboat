@@ -24,6 +24,7 @@ the `.MUS` music and, for AdLib music, `ADLIB.COM`). They are not included.
    Gunboat/
    ├── Game/                    <- your original game files (GB.EXE, DATAA.DAT, ...)
    ├── gunboat(.exe)            <- the game
+   ├── gunboat_controller(.exe) <- the controller mapping tool (Xbox controllers)
    ├── SDL3.dll                 (Windows only)
    └── README.txt               <- the options and the controls
    ```

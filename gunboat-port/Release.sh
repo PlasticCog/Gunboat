@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Builds the Linux release package: release/Gunboat-<version>-linux-x86_64.tar.gz with gunboat
-# (stripped; SDL3 linked in when it was built static), an empty Game folder with its README, the
+# Builds the Linux release package: release/Gunboat-<version>-linux-x86_64.tar.gz with gunboat and the
+# controller mapping tool gunboat_controller (stripped; SDL3 linked in when it was built static), an empty Game folder with its README, the
 # player README and the licenses. No game files: the player adds their own to Game. The sound effects
 # editor is a development tool and is not in the package. Needs CMake 3.24+, Ninja, a C++17 compiler
 # and SDL3 where CMake finds it (CMAKE_ARGS="-DCMAKE_PREFIX_PATH=..."); SDL_LICENSE is SDL's
@@ -11,7 +11,7 @@ source="$(cd "$(dirname "$0")" && pwd)"
 build="${BUILD_DIR:-$source/build-linux}"
 # shellcheck disable=SC2086
 cmake -S "$source" -B "$build" -G Ninja -DCMAKE_BUILD_TYPE=Release ${CMAKE_ARGS:-}
-cmake --build "$build" --target gunboat
+cmake --build "$build" --target gunboat gunboat_controller
 
 version="$("$build/gunboat" --version | awk '{print $NF}')"
 name="Gunboat-$version-linux-x86_64"
@@ -22,12 +22,14 @@ rm -rf "$stage"
 mkdir -p "$top/Game" "$top/licenses"
 
 strip -o "$top/gunboat" "$build/gunboat"
+strip -o "$top/gunboat_controller" "$build/gunboat_controller"
 sed "s/@VERSION@/$version/g" "$source/dist/README.txt" > "$top/README.txt"
 cp "$source/dist/Game/README.txt" "$top/Game/README.txt"
 cp "$source/THIRD_PARTY.md" "$top/"
 cp "$source/dist/gunboat.png" "$top/gunboat.png"  # the port's own icon, for a desktop entry
 cp "$source/licenses/test-drive-3-sdl3-MIT.txt" "$top/licenses/"
 cp "$source/vendor/nuked-opl3/LICENSE" "$top/licenses/Nuked-OPL3-LGPL-2.1.txt"
+cp "$source/vendor/imgui/LICENSE.txt" "$top/licenses/Dear-ImGui-MIT.txt"
 cp "${SDL_LICENSE:-$source/deps/SDL3-3.4.16/LICENSE.txt}" "$top/licenses/SDL3-zlib.txt"
 
 # No game file may be in the package.

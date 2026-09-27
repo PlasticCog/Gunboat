@@ -235,6 +235,17 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   player's own title screen (TITLE1, `host_title_shown`, PORT notification) into the window icon
   and keeps it in the settings folder (`title_icon.bmp`). The original's art is never built in or
   distributed (the user's rule).
+* **Controller support (2026-09-27):** an Xbox-style controller presses the game's keys
+  (`src/enhanced/controller.cpp`; the mapping model `controls.cpp`): every button, trigger and stick
+  or D-pad direction is mapped to one of the game's keys (labelled from the key handlers:
+  simulation.md §3), pressed through the host like the keyboard (`host_key`: hotkeys first, then the
+  game's keyboard interrupt; `host_set_gamepad_handler`); sticks with a dead zone and hysteresis; a
+  key two controls hold is released when both let go. The mapping is `controller.ini` in the
+  settings folder, edited with `gunboat_controller` (tools/controller_editor; C++, SDL3, Dear ImGui),
+  which **is** in the release packages: the controller drawn with each control's key, live
+  highlighting, a dropdown per control, dead zone, save / revert / defaults. Developer aid:
+  `GB_PAD="<s>:<control>[/p|/r],..."` pushes scripted controller events (checked: the menu, the
+  throttle and steering of pilot practice driven by it).
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

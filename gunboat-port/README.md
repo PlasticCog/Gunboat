@@ -34,6 +34,9 @@ The game's files go in `Game/` at the top of the repository (or a `Game` folder 
 `%APPDATA%\Gunboat\gunboat.ini` (Linux: `~/.local/share/Gunboat/`); options given on the command
 line apply to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
 
+Controllers: an Xbox-style controller presses the game's keys as `controller.ini` maps them;
+`gunboat_controller` (`tools/controller_editor`, shipped in the release packages) edits the mapping.
+
 Builds: Windows with `Build.ps1` (MSYS2 UCRT64 GCC, CMake, Ninja, SDL3) and `Release.ps1` (the
 zip); Linux with `Release.sh` (CMake 3.24+, Ninja, GCC, SDL3), which the GitHub workflow
 `.github/workflows/release-linux.yml` runs on Ubuntu 22.04 for each published release. The AdLib

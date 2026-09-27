@@ -10,6 +10,7 @@
 
 struct SDL_Window;    // SDL3's opaque types, for the presentation layer (src/enhanced/)
 struct SDL_Renderer;
+union SDL_Event;
 
 namespace gb {
 
@@ -61,6 +62,12 @@ void host_set_focus_lost_handler(void (*handler)());
 // Joystick (port 201h replacement, platform.md §3): the first connected gamepad. Axes
 // -32768..32767, buttons bit 0 = A, bit 1 = B. False when there is none.
 bool host_joy_read(s16 *x, s16 *y, u8 *buttons);
+
+// Controller support (the presentation layer's controller.cpp): the controller's events (buttons,
+// axes, removal) go to the handler; host_key presses or lets go of a key (an SDL_Scancode) as the
+// keyboard does: the presentation layer's hotkeys first, else the game's keyboard interrupt.
+void host_set_gamepad_handler(void (*handler)(const SDL_Event &ev));
+void host_key(int scancode, bool down);
 
 // Audio. Sound code writes OPL2 registers and the PC speaker as the original does; writes take
 // effect from the current tick onward.

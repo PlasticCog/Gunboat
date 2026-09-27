@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "enhanced/capture.hpp"
+#include "enhanced/controller.hpp"
 #include "enhanced/debris.hpp"
 #include "enhanced/icon.hpp"
 #include "enhanced/sfx_adlib.hpp"
@@ -748,6 +749,7 @@ void enhanced_install(const Settings &s)
     host_set_hotkey_handler(hotkey);
     host_set_presenter(present);
     debris_install();
+    controller_install();
     if (s.effects == Effects::Adlib) sfx_adlib_install();
 }
 

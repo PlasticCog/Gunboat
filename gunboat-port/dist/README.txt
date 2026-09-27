@@ -19,6 +19,7 @@ HOW TO PLAY
        Gunboat/
        +-- Game/                    <- your original game files
        +-- gunboat.exe              (Linux: gunboat)
+       +-- gunboat_controller.exe   (Linux: gunboat_controller) the controller mapping tool
        +-- SDL3.dll                 (Windows only)
        +-- README.txt
 
@@ -74,6 +75,32 @@ screen.
 
 gunboat --help (gunboat.exe on Windows) lists the command-line options (for example --no-launcher,
 --original, --enhanced, --game-dir FOLDER, --fullscreen, --video ega, --effects adlib).
+
+
+CONTROLLER
+----------
+
+An Xbox controller (or any controller your system knows) plays the game: each button, trigger and
+stick direction presses one of the game's keys, so every function of the keyboard can be put on the
+controller. The keyboard still works too. The defaults:
+
+  Left stick, D-pad     steer and throttle (pilot), aim (guns), menus
+  A                     fire (guns), slow down (pilot), select       (Enter)
+  B                     continue on screens and in menus              (Space)
+  X                     crew: open fire / cease fire                  (F10)
+  Y                     map                                           (M)
+  LB / RB               pilot: look left / look right                 (Z / C)
+  Right stick click     pilot: look ahead                             (X)
+  Right stick           up: bow gun, left: midship gun, down: stern gun, right: chase view
+  LT                    time compression                              (+)
+  RT (hold)             fast forward                                  (Backspace)
+  View / Menu           damage report / pause                         (/ / Esc)
+  Left stick click      mission assignment                            (.)
+
+gunboat_controller changes them: it shows the controller with the key each control presses, lights
+up what you press, and lets you choose any of the game's functions (the crew's orders F1-F9, the
+stations, detail, sound, return to base, ...) for any control. Save writes controller.ini next to
+gunboat.ini; the game uses it from its next start. Typing a name needs the keyboard.
 
 
 CONTROLS (from the original)

@@ -1,13 +1,14 @@
-# Builds the release package: release\Gunboat-<version>-win64.zip with gunboat.exe (stripped),
-# SDL3.dll, an empty Game folder with its README, the player README and the licenses. No game files:
-# the player adds their own to Game. The sound effects editor is a development tool and is not in
-# the package. Run Build.ps1 first (it builds and tests the port).
+# Builds the release package: release\Gunboat-<version>-win64.zip with gunboat.exe and the controller
+# mapping tool gunboat_controller.exe (stripped), SDL3.dll, an empty Game folder with its README, the
+# player README and the licenses. No game files: the player adds their own to Game. The sound effects
+# editor is a development tool and is not in the package. Run Build.ps1 first (it builds and tests the
+# port).
 $ErrorActionPreference = 'Stop'
 $toolchain = 'C:\msys64\ucrt64\bin'
 if (Test-Path -LiteralPath $toolchain) { $env:PATH = "$toolchain;$env:PATH" }
 $source = $PSScriptRoot
 $build = Join-Path $source 'build'
-& cmake --build $build --target gunboat
+& cmake --build $build --target gunboat gunboat_controller
 if ($LASTEXITCODE -ne 0) { throw 'Build failed.' }
 
 $exe = Join-Path $build 'gunboat.exe'
@@ -22,6 +23,8 @@ New-Item -ItemType Directory -Force (Join-Path $top 'licenses') | Out-Null
 
 & strip -o (Join-Path $top 'gunboat.exe') $exe
 if ($LASTEXITCODE -ne 0) { throw 'strip failed.' }
+& strip -o (Join-Path $top 'gunboat_controller.exe') (Join-Path $build 'gunboat_controller.exe')
+if ($LASTEXITCODE -ne 0) { throw 'strip failed.' }
 Copy-Item -LiteralPath (Join-Path $build 'SDL3.dll') -Destination $top
 # The text files with Windows line ends.
 function Copy-Text($from, $to) {
@@ -34,6 +37,7 @@ Copy-Item -LiteralPath (Join-Path $source 'THIRD_PARTY.md') -Destination $top
 Copy-Item -LiteralPath (Join-Path $source 'licenses\test-drive-3-sdl3-MIT.txt') -Destination (Join-Path $top 'licenses')
 Copy-Item -LiteralPath (Join-Path $source 'vendor\nuked-opl3\LICENSE') -Destination (Join-Path $top 'licenses\Nuked-OPL3-LGPL-2.1.txt')
 Copy-Item -LiteralPath (Join-Path $source 'deps\SDL3-3.4.16\LICENSE.txt') -Destination (Join-Path $top 'licenses\SDL3-zlib.txt')
+Copy-Item -LiteralPath (Join-Path $source 'vendor\imgui\LICENSE.txt') -Destination (Join-Path $top 'licenses\Dear-ImGui-MIT.txt')
 
 # No game file may be in the package.
 $game = Get-ChildItem -LiteralPath (Join-Path $top 'Game') -File | Where-Object { $_.Name -ne 'README.txt' }

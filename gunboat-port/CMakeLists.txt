@@ -87,6 +87,22 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vendor/imgui/imgui.cpp")
   endif()
 endif()
 
+# The controller mapping tool (tools/controller_editor): released with the game, so that players choose
+# what each control of their controller does. Dear ImGui for its window; no game code.
+if(TARGET imgui)
+  add_executable(gunboat_controller WIN32 tools/controller_editor/main.cpp src/enhanced/controls.cpp ${GB_ICON_RC})
+  target_include_directories(gunboat_controller PRIVATE src)
+  target_link_libraries(gunboat_controller PRIVATE imgui SDL3::SDL3)
+  if(NOT MSVC)
+    target_compile_options(gunboat_controller PRIVATE ${GB_WARNINGS})
+    if(WIN32)
+      target_link_options(gunboat_controller PRIVATE -static -static-libgcc -static-libstdc++)
+    else()
+      target_link_options(gunboat_controller PRIVATE -static-libgcc -static-libstdc++)
+    endif()
+  endif()
+endif()
+
 # Differential tests (tests/difftest): the core plus a stub host as a library that Python loads next
 # to the original code in Unicorn. Development only.
 file(GLOB GB_DIFFTEST_SOURCES CONFIGURE_DEPENDS tests/difftest/*.cpp)
