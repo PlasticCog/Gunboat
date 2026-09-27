@@ -84,9 +84,9 @@ u8 card_in(u16 port)
         c.attr_flip = 0;
         c.status ^= 1;
         return c.status ? 0x08 : 0x00;
-    case 0x3BA:  // Hercules status: bit 7 (vertical sync) alternates the same way
+    case 0x3BA:  // Hercules status: bit 7 (vertical sync) and bit 3 (the video dots) alternate the same way
         c.status ^= 1;
-        return c.status ? 0x80 : 0x00;
+        return c.status ? 0x88 : 0x00;
     default: return 0xFF;
     }
 }

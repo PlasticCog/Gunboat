@@ -1,5 +1,6 @@
 // The VGA palette routines (video.md §3), segment 121b: the first 32 colours of palette_3d go to the
-// DAC through the buffer dac_buffer (121b:000E) and INT 10h AX=1012h.
+// DAC through the buffer dac_buffer (121b:000E) and INT 10h AX=1012h. Also the pictures' runs, the
+// page 1 -> 0 dissolve of every mode (§4) and the Hercules set-up.
 #include "platform/platform.hpp"
 
 #include "host.hpp"
@@ -107,12 +108,124 @@ void picture_draw_vga(u16 src_ds, u16 runs, u16 y_bottom)
     } while (--n);
 }
 
-// 121b:0581 dissolve_page1_to_0 (video.md §4): page 1 (page_segments[1]) onto page 0 in 64 steps;
-// each step copies one pixel of every 8x8 block and waits for the next timer tick. PORT: only the
-// VGA path (EED2 above 0Dh); the CGA/Hercules, EGA and Tandy paths are not ported.
-void dissolve_page1_to_0()
+namespace {
+
+u8 ror8(u8 v, unsigned n)
 {
-    if (u8(ds_u16(DS_video_mode)) <= 0x0D) return;  // PORT: other adapters
+    n &= 7;
+    return n ? u8(v >> n | v << (8 - n)) : v;
+}
+
+u8 rol8(u8 v, unsigned n) { return ror8(v, 8 - (n & 7)); }
+
+// The pixel of a step in a 2- or 4-bit packed page: src's bits under `mask`, dst's others
+// (121b:05e8, 121b:0772).
+void copy_masked(u16 src, u16 dst, u16 di, u8 mask)
+{
+    vmem_write(dst, di, u8((vmem_read(src, di) & mask) | (vmem_read(dst, di) & u8(~mask))));
+}
+
+void wait_next_tick(u16 start)
+{
+    while (ds_u16(DS_tick_counter) == start) host_pump();
+}
+
+// 121b:059d: CGA (4 pixels a byte, two banks of 80-byte rows): the step's byte in each 8-pixel
+// block (2 bytes) is dissolve_order >> 2, its pixel dissolve_order & 3 (dissolve_cga_masks); a
+// dissolve_rows entry with bit 3 set (an odd row y * 40) is moved to the odd bank (+ 1FD8h).
+void dissolve_cga()
+{
+    for (u16 step = 0; step < 0x40; step++) {
+        const u8 al = ds_u8(u16(DS_dissolve_order + step));
+        u16 di = ds_u16(u16(DS_dissolve_rows + 2 * (step & 7)));
+        if (di & 8) di = u16(di + 0x1FD8);
+        di = u16(di + (al >> 2));
+        const u8 mask = ds_u8(u16(DS_dissolve_cga_masks + (al & 3)));
+        const u16 src = ds_u16(u16(DS_page_segments + 2)), dst = ds_u16(DS_page_segments);
+        const u16 start = ds_u16(DS_tick_counter);
+        ds_u8(DS_scratch_b7e3) = 0x19;
+        do {
+            ds_u8(DS_scratch_b7e2) = 0x28;
+            do {
+                copy_masked(src, dst, di, mask);
+                di = u16(di + 2);
+            } while (--ds_u8(DS_scratch_b7e2));
+            di = u16(di + 0xF0);
+        } while (--ds_u8(DS_scratch_b7e3));
+        wait_next_tick(start);
+    }
+}
+
+// 121b:0717: Tandy (2 pixels a byte, four banks of 160-byte rows): the byte dissolve_order >> 1 of
+// each 4-byte block, its pixel dissolve_order & 1 (dissolve_tandy_masks); the row y = dissolve_rows
+// / 40 (DIV) goes to bank y & 3, one row group down for y >= 4.
+void dissolve_tandy()
+{
+    for (u16 step = 0; step < 0x40; step++) {
+        const u8 order = ds_u8(u16(DS_dissolve_order + step));
+        u16 di = u16(order >> 1);
+        const u8 y = u8(div16_8(ds_u16(u16(DS_dissolve_rows + 2 * (step & 7))), 0x28));
+        if (y & 4) di = u16(di + 0xA0);
+        di = u16(di + ((y & 3) << 13));
+        const u8 mask = ds_u8(u16(DS_dissolve_tandy_masks + (order & 1)));
+        const u16 src = ds_u16(u16(DS_page_segments + 2)), dst = ds_u16(DS_page_segments);
+        const u16 start = ds_u16(DS_tick_counter);
+        ds_u8(DS_scratch_b7e3) = 0x19;
+        do {
+            ds_u8(DS_scratch_b7e2) = 0x28;
+            do {
+                copy_masked(src, dst, di, mask);
+                di = u16(di + 4);
+            } while (--ds_u8(DS_scratch_b7e2));
+            di = u16(di + 0xA0);
+        } while (--ds_u8(DS_scratch_b7e3));
+        wait_next_tick(start);
+    }
+}
+
+// 121b:0682: EGA (planar, 40-byte rows; pages 0 and 1 in the card's memory): map mask 0Fh, write
+// mode 0, set/reset on all planes, function replace; for each block the pixel dissolve_order (its
+// bit dissolve_ega_masks[order]) is read from page 1 plane by plane (read map 3..0) into a colour,
+// which becomes the set/reset value, its bit the bit mask, and a read-and-write (AND 8) of page 0
+// stores it. No timer wait: the EGA dissolve runs as fast as the machine. The registers are left
+// so (scratch_b7e2 is not used).
+void dissolve_ega()
+{
+    card_out16(0x3C4, 0x0F02);
+    card_out16(0x3CE, 0x0005);
+    card_out16(0x3CE, 0x0F01);
+    card_out16(0x3CE, 0x0003);
+    const u16 dst = ds_u16(DS_page_segments);
+    for (u16 step = 0; step < 0x40; step++) {
+        const u8 cl = ds_u8(u16(DS_dissolve_order + step));
+        u16 di = ds_u16(u16(DS_dissolve_rows + 2 * (step & 7)));
+        const u8 ch = ds_u8(u16(DS_dissolve_ega_masks + cl));
+        ds_u8(DS_scratch_b7e3) = 0x19;
+        do {
+            const u16 src = ds_u16(u16(DS_page_segments + 2));
+            for (u8 bh = 0x28; bh; bh--) {
+                card_out16(0x3CE, 0x0304);
+                u8 bl = u8(vmem_read(src, di) & ch);
+                card_out16(0x3CE, 0x0204);
+                bl |= ror8(u8(vmem_read(src, di) & ch), 1);
+                card_out16(0x3CE, 0x0104);
+                bl |= ror8(u8(vmem_read(src, di) & ch), 2);
+                card_out16(0x3CE, 0x0004);
+                const u8 colour = rol8(u8(ror8(u8(vmem_read(src, di) & ch), 3) | bl), cl);
+                card_out16(0x3CE, u16(colour << 8 | 0x00));
+                card_out16(0x3CE, u16(ch << 8 | 0x08));
+                vmem_write(dst, di, u8(vmem_read(dst, di) & 0x08));
+                di++;
+            }
+            di = u16(di + 0x118);
+        } while (--ds_u8(DS_scratch_b7e3));
+    }
+}
+
+// 121b:0621: VGA (a byte a pixel, 320-byte rows): the pixel dissolve_order of the row
+// dissolve_rows * 8.
+void dissolve_vga()
+{
     for (u16 step = 0; step < 0x40; step++) {
         const u16 col = ds_u8(u16(DS_dissolve_order + step));
         u16 di = u16((ds_u16(u16(DS_dissolve_rows + 2 * (step & 7))) << 3) + col);
@@ -127,8 +240,25 @@ void dissolve_page1_to_0()
             } while (--ds_u8(DS_scratch_b7e2));
             di = u16(di + 0x8C0);
         } while (--ds_u8(DS_scratch_b7e3));
-        while (ds_u16(DS_tick_counter) == start) host_pump();
+        wait_next_tick(start);
     }
+}
+
+} // namespace
+
+// 121b:0581 dissolve_page1_to_0 (video.md §4): page 1 (page_segments[1]) onto page 0
+// (page_segments[0]) in 64 steps; each step copies one pixel of every 8x8 block (25 rows of 40
+// blocks), the pixel at column dissolve_order[step] of row dissolve_rows[step & 7] / 40 in its
+// block, and (except on the EGA) waits for the next timer tick. By the game's mode (EED2's low
+// byte): 4 and 0Ch CGA, 0Dh EGA, above 0Dh VGA, the others (9) Tandy.
+void dissolve_page1_to_0()
+{
+    const u8 mode = u8(ds_u16(DS_video_mode));
+    if (mode == 4) dissolve_cga();
+    else if (mode == 0x0D) dissolve_ega();
+    else if (mode > 0x0D) dissolve_vga();
+    else if (mode == 0x0C) dissolve_cga();
+    else dissolve_tandy();
 }
 
 // 121b:0902 hercules_setup (game_flow.md §2): the Hercules card in graphics mode showing page 1

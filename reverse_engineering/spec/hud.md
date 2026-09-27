@@ -21,8 +21,8 @@ that are parked.
 | Page | Where | Use |
 |---|---|---|
 | 0 | A000:0000, `DS:D9B6` | visible screen |
-| 1 | RAM, `DS:D9B8` | drawing page: the 3D view (render3d §1.1) and the decoded cockpit art |
-| 2 | RAM, `DS:D9BA` | the view page outside VGA (`DS:0074 = 2`); in VGA `DS:0074 = 0` and page 2 is the screen segment A000h too |
+| 1 | RAM, `DS:D9B8` (EGA: A200h in the card's memory, video.md §8.4) | drawing page: the 3D view (render3d §1.1) and the decoded cockpit art |
+| 2 | RAM, `DS:D9BA` (EGA: A400h) | the view page outside VGA (`DS:0074 = 2`); in VGA `DS:0074 = 0` and page 2 is the screen segment A000h too |
 
 `DS:007A` is the current draw page for the graphics library (`gfx_set_draw_page`); the page
 segment table starts at `DS:D9B6` (indexed by page number, `0919:8a3f`). A frame is:

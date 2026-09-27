@@ -55,8 +55,14 @@ void menu_cursor_init()
     file_load_near(S_PENCIL, PIC);
     set_draw_page(1);
     gfx_move_to(0x128, 0x23);
-    if (ds_u16(DS_video_mode) == 4) {
-        // PORT: the CGA palette registers (ega_pal_set 14ae:0005) are not ported.
+    if (ds_u16(DS_video_mode) == 4) {  // the pencil's colour patterns
+        ega_pal_set(8, 0x200);
+        ega_pal_set(7, 0x2FF);
+        ega_pal_set(0, 0x200);
+        ega_pal_set(0x0B, 0x2FF);
+        ega_pal_set(0x0C, 0x2AA);
+        ega_pal_set(0x0F, 0x2AA);
+        ega_pal_set(6, 0x255);
     }
     picture_draw(PIC, 0x56, 0x18);
     ega_pal_apply();

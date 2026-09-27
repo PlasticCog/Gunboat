@@ -83,7 +83,14 @@ void bios_set_mode(u8 al)
         else if (mode >= 8 && mode <= 0x0A) fill_words(0xB800, 0x4000, 0);
         else if (mode >= 0x0D && mode <= 0x13 && card_machine() != Machine::Ega) fill_words(0xA000, 0x8000, 0);
     }
-    if (card_machine() != Machine::Vga) card_bios_set_mode(mode, clear);  // the card's registers (EGA: its planes)
+    if (card_machine() != Machine::Vga) {
+        card_bios_set_mode(mode, clear);  // the card's registers (EGA: its planes)
+        // the BIOS's copies of the CGA mode control and colour select registers (ega_pal_register
+        // reads 0040:0065). TODO(verify): as the card model sets them; an IBM BIOS stores its table's
+        // 2Ah for mode 4 (the blink bit, 20h, set), which ega_pal_register would then write to 3D8h.
+        mem_u8(BDA, 0x65) = card().cga_mode;
+        mem_u8(BDA, 0x66) = card().cga_colour;
+    }
     if (mode == 0x13) {
         for (int i = 0; i < 256; i++) vga_dac_write(u8(i), 0, 0, 0);
         vga_set_start(0);
@@ -128,8 +135,13 @@ void bios_set_active_page(u8 page)
     mem_u16(BDA, BDA_PAGE_START) = u16(page * mem_u16(BDA, BDA_PAGE_SIZE));
 }
 
-// INT 10h AH=0Bh: the CGA palette (BH 0: background and border BL, 1: palette BL).
-void bios_cga_palette(u8 bh, u8 bl) { card_bios_cga_palette(bh, bl); }
+// INT 10h AH=0Bh: the CGA palette (BH 0: background and border BL, 1: palette BL); the BIOS keeps
+// its copy of the colour select register in 0040:0066.
+void bios_cga_palette(u8 bh, u8 bl)
+{
+    card_bios_cga_palette(bh, bl);
+    if (card_machine() != Machine::Vga) mem_u8(BDA, 0x66) = card().cga_colour;
+}
 
 // INT 10h AX=1000h / 1001h / 1002h: an EGA (Tandy) palette register, the overscan, all 16 and the
 // overscan from a 17-byte table.

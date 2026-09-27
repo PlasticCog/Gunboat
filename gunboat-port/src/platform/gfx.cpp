@@ -1084,10 +1084,6 @@ void gfx_put_pixel(s16 x, s16 y)
     mem_u8(es, bx) = rol8(u8(ah | ds_u8(DS_gfx_colour)), cl);
 }
 
-// 14ae:0005 ega_pal_set: an EGA/CGA/Tandy palette entry (DDC1 table, hardware). In mode 13h it does
-// nothing. PORT: the other modes are not ported.
-void ega_pal_set(u16, u16) {}
-
 // 1390:006e picture_hline: x0..x1 of the pen row in the current colour.
 void picture_hline(u16 es, u16 x0, u16 x1)
 {

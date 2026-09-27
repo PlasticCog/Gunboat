@@ -389,7 +389,8 @@ void spotlights()
 
 // 0919:2c35 palette_flash (render3d.md §7.1): the flash level (D9B5 in a 3D station, else 0; the
 // raw value is compared with the last level D6E5, its low 2 bits stored): VGA sets DAC register 8
-// to the RGB triple D6EA + 3 * level (INT 10h AX=1012h).
+// to the RGB triple D6EA + 3 * level (INT 10h AX=1012h); EGA and Tandy set palette register 8 to
+// flash_ega_colours[level] (ega_pal_register; Tandy moves bit 4 to bit 3); CGA does nothing.
 void palette_flash()
 {
     u8 al = 0;
@@ -398,8 +399,12 @@ void palette_flash()
     al &= 3;
     ds_u8(DS_flash_level) = al;
     const u8 mode = u8(ds_u16(DS_video_mode));
-    // PORT: EGA and Tandy set palette register 8 through ega_pal_register (147c:000f): parked.
-    if (mode == 0x0D || mode == 9) render_parked("the flash palette register (ega_pal_register)");
+    if (mode == 0x0D || mode == 9) {  // 2c67: palette register 8 = flash_ega_colours[level]
+        u16 colour = ds_u8(u16(DS_flash_ega_colours + al));
+        if (mode == 9 && (colour & 0x10)) colour = u16(colour - 8);  // Tandy: the intensity is bit 3
+        ega_pal_register(8, colour);
+        return;
+    }
     if (mode < 0x0D) return;
     bios_dac_set_block(8, 1, {u16(DS_flash_colours + u8(al * 3)), DGROUP});
 }

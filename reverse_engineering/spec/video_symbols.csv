@@ -3,10 +3,10 @@ func,00f2:0eec,pal_apply_vga,far void(),§3 wrapper of 121b:087f
 func,00f2:0efa,pal_black_vga,far void(),§3
 func,00f2:0f08,pal_fade_in_vga,far void(),§3
 func,00f2:0f16,pal_fade_out_vga,far void(),§3
-func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),§3 parked
-func,00f2:0f46,ega_pal_apply,far void(),§3 parked
+func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),§3 ega_pal_set with the value's low byte only in Tandy mode 9; ported
+func,00f2:0f46,ega_pal_apply,far void(),"§3 CGA (4): colour patterns 0..1Fh from cga_patterns; Tandy (9): 10h..1Fh from ega_patterns & 0Fh * 11h; EGA (0Dh): 10h..1Fh from ega_patterns; ported, test_modes_game"
 func,147b:000c,gfx_move_to,far void(u16 x u16 y),§2 DS:DCFF/DD01
-func,147c:000f,ega_pal_register,far void(u16 reg u16 value),§2 parked
+func,147c:000f,ega_pal_register,far void(u16 reg u16 value),"§2 one palette register by the library mode: CGA 4/5 INT 10h AH=0Bh twice and the mode register (3D8h and 0040:0065) from the tables E0D1/E0DD/E0D7 by reg, mode 6 the background, Tandy the gate array (3DAh/3DEh), EGA INT 10h AX=1000h, 13h the DAC from rgbRGB (INT 10h AX=1010h); ported, test_modes_game"
 func,1502:0001,gfx_copy_rect_from_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),§2 copy page -> draw page (mode 13h: rows y1 up to y0)
 func,1522:000e,gfx_copy_rect_to_copy_page,far u16(u16 x0 u16 x1 u16 y0 u16 y1),§2 draw page -> copy page
 func,1432:0008,gfx_get_draw_seg,far u16(),§2 returns DD2D
@@ -50,12 +50,10 @@ global,DS:DA1D,dissolve_rows,u16[8],§4 VGA: block row offset / 8 by step & 7
 global,DS:DD25,copy_dst_y,u16,§2 gfx_copy_rect's destination bottom row
 func,15a4:0006,gfx_copy_rect,far u16(u16 x0 u16 x1 u16 y0 u16 y1 u16 dx u16 dy_bottom u16 src u16 dst),§2 page src -> page dst; destination by its bottom row
 func,14b5:000d,gfx_put_pixel,far u16(s16 x s16 y),§2 clipped to DD05..DD03 / DD09..DD07
-func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),§2 EGA/CGA palette entry; nothing in mode 13h
 global,DS:DD41,gfx_colour_map,u8[32],§1 gfx_set_colour's map of colours 0-1Fh to the mode's (copied by gfx_set_mode from DD61 / DD81 / DDA1)
 global,DS:DD61,colour_map_2,u8[32],§1 the map of the 2-colour modes (6; 0Bh / 0Ch; 11h): colour & 1
 global,DS:DD81,colour_map_4,u8[32],§1 the map of the CGA 4-colour modes 4 / 5: colour & 3
 global,DS:DDA1,colour_map_16,u8[32],§1 the map of the 16-colour modes (Tandy 8-0Ah; EGA 0Dh-10h / 12h): colour & 0Fh; also mode 12h's attribute palette (INT 10h AX=1002h)
-global,DS:DDC1,gfx_dither,u8[64],§2 per colour 0-1Fh: its fill on even rows and on odd rows (CGA / Tandy: a byte of pixels; EGA: a colour each); picture_hline fills with it; copied by gfx_set_mode from DE01 / DE41 / DE81; ega_pal_set sets entries
 global,DS:DE01,dither_2,u8[64],§2 gfx_dither of the 2-colour modes
 global,DS:DE41,dither_4,u8[64],§2 gfx_dither of the CGA 4-colour modes (colour c: c * 55h)
 global,DS:DE81,dither_16,u8[64],§2 gfx_dither of the 16-colour modes (Tandy: c * 11h; EGA: the colour)
@@ -63,3 +61,21 @@ global,DS:DEC1,dac_16,u8[48],§1 mode 12h's DAC colours 0-15 (INT 10h AX=1012h)
 global,DS:E0F4,herc_bda,u8[16],§1 the BIOS data (0040:0049..0058) of the Hercules modes 0Bh / 0Ch
 global,DS:E112,herc_crtc,u16[9],§1 the Hercules CRTC registers of modes 0Bh / 0Ch (index | value << 8)
 global,DS:E126,gfx_bitmap_pattern,u16,§2 the colour's pixel pattern (both bytes) of the CGA / Tandy bitmap paths (gfx_draw_bitmap / gfx_read_bitmap)
+func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),"§2 the colour pattern pair gfx_dither[index & 1Fh] by the library mode: CGA/Tandy 9/Hercules the byte and the byte rotated left by the value's high byte, EGA the low and high nibble, 11h bits 0 and 7; nothing in the others (13h); ported, test_modes_game"
+func,00f2:0fea,ega_pal_init,far void(),"§3 Tandy (9): ega_palette converted in place to IRGB ((v & 10h) >> 1 | v & 7); Tandy and EGA: gfx_set_ega_palette(ega_palette); then ega_pal_apply; ported, test_modes_game"
+func,148c:000d,gfx_set_ega_palette,far u16(u16 table_ds),"§2 16 palette registers from the low bytes of 16 words at DS:table: Tandy the gate array (3DAh/3DEh), EGA INT 10h AX=1002h through ega_palette_regs, 13h DAC 0..15 from rgbRGB through ega_palette_rgb (INT 10h AX=1012h); ported, test_modes_game"
+func,157d:0078,gfx_set_pal_reg,far u16(s16 index u16 r u16 g u16 b),"§2 dead (no callers in GB.EXE); its jump table is addressed for CS = 1584h (1584:0008, table 157d:012c): Tandy and EGA 0Dh/0Eh RGB bits + intensity from a negative index, 0Fh/10h rgbRGB from 2-bit levels (INT 10h AX=1000h), 11h-13h DAC (AX=1010h); ported, test_modes_game"
+global,DS:DDC1,gfx_dither,u8[64],§2 per colour 0-1Fh: its fill on even rows and on odd rows (CGA / Tandy: a byte of pixels; EGA: a colour each); picture_hline fills with it; copied by gfx_set_mode from DE01 / DE41 / DE81; ega_pal_set sets entries
+global,DS:E0D1,cga_background_bits,u8[6],§2 ega_pal_register CGA: OR-ed into the background colour (INT 10h AH=0Bh BH=0) by register
+global,DS:E0D7,cga_mode_bits,u8[6],§2 ega_pal_register CGA: mode register bit 2 (the third palette) by register
+global,DS:E0DD,cga_palette_select,u8[6],§2 ega_pal_register CGA: the palette (INT 10h AH=0Bh BH=1) by register
+global,DS:E0E3,ega_level_rgb,u8[4],"§2 the 6-bit DAC value of a 2-bit EGA level (primary | secondary << 1): 0, 2Ah, 15h, 3Fh"
+cglobal,148c:00f3,ega_palette_regs,u8[17],§2 gfx_set_ega_palette: the 16 registers and the overscan (never written: 0) for INT 10h AX=1002h (code-segment data)
+cglobal,148c:0104,ega_palette_rgb,u8[48],§2 gfx_set_ega_palette 13h: DAC 0..15 for INT 10h AX=1012h (code-segment data)
+global,DS:0924,ega_palette,u16[16],§3 palette file (palette_3d + 60h): the EGA palette registers (rgbRGB); Tandy: converted to IRGB in place by ega_pal_init
+global,DS:0944,ega_patterns,u16[16],§3 palette file: the colour patterns 10h..1Fh of EGA and Tandy (ega_pal_apply)
+global,DS:0964,cga_patterns,u16[32],§3 palette file: the CGA colour patterns 0..1Fh (ega_pal_apply)
+global,DS:DA0F,dissolve_ega_masks,u8[8],§4 EGA: the bit of the step's pixel by dissolve_order value
+global,DS:DA17,dissolve_cga_masks,u8[4],§4 CGA: the 2-bit pixel mask by dissolve_order & 3
+global,DS:DA1B,dissolve_tandy_masks,u8[2],§4 Tandy: the 4-bit pixel mask by dissolve_order & 1
+func,149f:0004,gfx_set_display_offset,far u16(s16 x s16 y),"§1 the display start (x, y) by the library mode: CGA 4-6 (y>>1)*40 + x>>3, Tandy 9 (y>>2)*80 + x>>2, 0Bh/0Ch Hercules, EGA 0Dh-12h y*row_bytes + x>>3 + visible page * page_bytes with the pel panning x & 7 (attribute 13h), 13h y*80 + x>>2; the CRTC at 0040:0063 after a retrace start and end, 0040:004E; returns 0; ported, test_modes_game"

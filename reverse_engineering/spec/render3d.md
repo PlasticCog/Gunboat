@@ -535,8 +535,10 @@ Level = `D9B5 & 3` in a 3D station (else 0); when it changes (the **raw** D9B5 i
 `D6E5`, which stores the level & 3, so a value ≥ 4 reprograms the DAC every frame; port-verified):
 VGA sets DAC register 8 to
 the RGB triple `DS:D6EA + 3·level` (INT 10h AX=1012h); EGA/Tandy set palette register 8 from
-`DS:D6E6[level]` through `147c:000f`. Together with the sky colour override in `terrain_setup`
-this is the whole-screen flash after hits and explosions.
+`DS:D6E6[level]` through `ega_pal_register` (`147c:000f`; Tandy first subtracts 8 from a colour
+with bit 4 set: the EGA's 200-line intensity becomes the Tandy's bit 3); CGA does nothing.
+Together with the sky colour override in `terrain_setup` this is the whole-screen flash after hits
+and explosions. The EGA/Tandy part is ported (`test_modes_game.test_palette_flash_*`).
 
 ### 7.2 Screen shake (`screen_shake_step`, 0919:2e57) **verified**
 
@@ -545,7 +547,9 @@ this is the whole-screen flash after hits and explosions.
 (`EED2 == 13h` skips it): the VGA version only flashes. `gfx_set_display_offset` (`149f:0004`)
 in mode 13h: CRTC start = y × 80 + x / 4, also to the BIOS page offset `0040:004E`, written after
 the start and the end of a vertical retrace (port 3DAh at the BIOS's CRTC base + 6); the text
-modes and modes 8/0Ah only return 0.
+modes and modes 8/0Ah only return 0. The other modes (CGA, Tandy, Hercules, EGA with its pel
+panning) are in video.md §8; ported, `test_modes_game.test_screen_shake_*` runs this routine on
+each machine.
 
 ## 8. Arrays (DGROUP) **verified**
 
