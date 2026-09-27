@@ -197,7 +197,11 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     editor `gunboat_sfx_editor` (tools/sfx_editor) runs the original driver (the core with the
     tests' stub host) on GB.EXE's programs for each effect's notes, plays them on the speaker or
     the instrument, and saves the player's bank and, when it runs from `gunboat-port/build`, also
-    `data/sfx.ini`, so the next build ships the edits.
+    `data/sfx.ini`, so the next build ships the edits. On the AdLib every effect has its own
+    channel: `sfx_play` notifies the host (`host_sfx_play`), and each effect runs its own copy of
+    the ported driver (one `sfx_timer_tick` per tick on a copy of DS:DA48-DB1D, the game's bytes
+    put back), so guns no longer cut the engine or explosions; at most three OPL2 channels per
+    effect, as in the editor.
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
 * **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects (the user's
