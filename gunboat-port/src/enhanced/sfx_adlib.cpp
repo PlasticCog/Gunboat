@@ -37,9 +37,8 @@ constexpr int EXPLOSION = 8;  // the mortar, the grenades, explosions
 constexpr u8 WRECK_WITH_SOUND = 0x4B;  // the wreck whose destruction plays effect 8 in the original
 
 // Object kinds (world.md §6.3). Enemy infantry: 0Ah-0Ch, and 14h in Vietnam (region 0) and the
-// practice world (3) (elsewhere a truck or a missile launcher). Flesh (no impact sound): those, the
-// civilians 19h-1Ah and 24h-26h (ex-POW, SEALs, US infantry), the bodies 33h-35h and in Vietnam the
-// water buffalo 2Fh and the dead beast 32h (statues elsewhere). Metal: tanks, APCs, boats, the machine gun, the missile,
+// practice world (3) (elsewhere a truck or a missile launcher). People: those, the civilians 19h-1Ah
+// and 24h-26h (ex-POW, SEALs, US infantry). Metal: tanks, APCs, boats, the machine gun, the missile,
 // mines, 14h outside Vietnam and practice, helicopters and their wreck, civilian boats, the car, the
 // PBR, buoys and the capsized boat. Everything else hit (huts, docks, forts, bridges, trees, rocks,
 // statues) is wood and stone.
@@ -49,11 +48,13 @@ bool enemy_infantry(u8 kind)
     return (kind >= 0x0A && kind <= 0x0C) || (kind == 0x14 && (region == 0 || region == 3));
 }
 bool person(u8 kind) { return enemy_infantry(kind) || kind == 0x19 || kind == 0x1A || (kind >= 0x24 && kind <= 0x26); }
-bool flesh(u8 kind)
-{
-    return person(kind) || (kind >= 0x33 && kind <= 0x35) ||
-           (ds_u16(DS_region) == 0 && (kind == 0x2F || kind == 0x32));
-}
+// The living: people and, in Vietnam, the water buffalo 2Fh (a statue elsewhere).
+bool alive(u8 kind) { return person(kind) || (kind == 0x2F && ds_u16(DS_region) == 0); }
+// The dead: the bodies 33h-35h and, in Vietnam, the dead beast 32h (rubble or a statue elsewhere).
+bool dead(u8 kind) { return (kind >= 0x33 && kind <= 0x35) || (kind == 0x32 && ds_u16(DS_region) == 0); }
+// Dead, destroyed or inanimate: the dead, the wrecks (the downed helicopter 18h, 30h-38h) and the
+// scenery (buoys, trees, stumps, statues, rocks: 28h and above).
+bool lifeless(u8 kind) { return kind == 0x18 || kind >= 0x28; }
 bool metal(u8 kind)
 {
     return (kind >= 0x01 && kind <= 0x07) || kind == 0x12 || kind == 0x13 || kind == 0x14 || kind == 0x17 ||
@@ -90,14 +91,16 @@ void stop_all()
 }
 
 // Effect `id` (program `program`) starts on its own driver: the game's driver's state with that
-// program requested, as sfx_play leaves it (voice 0's program, state 1), its speaker off.
-void start(int id, u16 program)
+// program requested, as sfx_play leaves it (voice 0's program, state 1), its speaker off; its notes
+// at `gain` percent of the instrument's volume.
+void start(int id, u16 program, int gain = 100)
 {
     if (ds_u16(DS_sound_muted) != 0 || ds_u8(DS_sfx_timer_on) == 0) return;
     if (id < 0 || synth.bank().fx[id].output != SfxOutput::Adlib) return;
     Driver &d = drivers[id];
     if (id == ENGINE && d.active) return;
     synth.silence(id);
+    synth.set_gain(id, gain);
     for (int i = 0; i < STATE_SIZE; i++) d.state[i] = ds_u8(u16(STATE + i));
     auto put16 = [&](u16 at, u16 v) {
         d.state[at - STATE] = u8(v);
@@ -123,14 +126,15 @@ void on_target_destroyed(u8 old, u8 wreck)
     else start(EXPLOSION, program_of(EXPLOSION));
 }
 
-// A shot has hit an object of kind `kind`: a bullet's impact on its material (not on flesh, not the
-// grenades and the mortar, whose own explosion sounds, not the wrecks the shot passes through).
+// A shot has hit an object of kind `kind`: a bullet's impact on its material, at half volume on what
+// is dead, destroyed or inanimate (the dead with the dull wood sound). Not on the living, not for the
+// grenades and the mortar (their own explosion sounds), not on the wrecks the shot passes through.
 void on_object_hit(u8 kind)
 {
     const u8 weapon = ds_u8(DS_vec_product_hi);  // hit_objects' weapon: 2 and 3 are the explosive ones
-    if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31 || flesh(kind)) return;
-    const int id = metal(kind) ? SFX_IMPACT_METAL : SFX_IMPACT_WOOD;
-    start(id, program_of(id));
+    if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31 || alive(kind)) return;
+    const int id = metal(kind) && !dead(kind) ? SFX_IMPACT_METAL : SFX_IMPACT_WOOD;
+    start(id, program_of(id), dead(kind) || lifeless(kind) ? 50 : 100);
 }
 
 // Every speaker change. A driver copy's: its effect's instrument plays it. The game's driver's: the

@@ -366,11 +366,12 @@ void SfxSynth::reset()
     for (Channel &c : channels_) c = Channel();
 }
 
-void SfxSynth::program(int ch, const SfxPatch &p)
+void SfxSynth::program(int ch, const SfxPatch &p, int gain)
 {
     static const u8 SLOT[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
     // The heard operators are attenuated by the patch's volume (in the chip's 0.75 dB steps).
-    const int extra = p.volume >= 100 ? 0 : p.volume <= 0 ? 63 : int(std::lround(-20.0 * std::log10(p.volume / 100.0) / 0.75));
+    const double volume = p.volume * gain / 100.0;
+    const int extra = volume >= 100 ? 0 : volume <= 0 ? 63 : int(std::lround(-20.0 * std::log10(volume / 100.0) / 0.75));
     auto set = [&](u8 o, const SfxOperator &x, bool heard) {
         w(u8(0x20 + o), u8(x.tremolo << 7 | x.vibrato << 6 | x.sustained << 5 | x.ksr << 4 | (x.multiple & 15)));
         w(u8(0x40 + o), u8((x.ksl & 3) << 6 | clamp_u8(x.level + (heard ? extra : 0), 63)));
@@ -452,7 +453,7 @@ void SfxSynth::speaker(int player, int id, u16 divisor, bool on)
     }
     silence(player);
     pl.ch = take_channel(player);
-    program(pl.ch, p);
+    program(pl.ch, p, gain_[player]);
     pl.divisor = divisor;
     pl.cents = 0;
     frequency(player, true);

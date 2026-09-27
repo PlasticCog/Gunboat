@@ -103,6 +103,8 @@ public:
     void silence(int player);   // the player's sounding note is released
     void silence_all();
     bool sounding(int player) const { return players_[player].key_on; }
+    // The player's next notes at `percent` of the patch's volume (100: as the patch).
+    void set_gain(int player, int percent) { gain_[player] = percent; }
 
 private:
     static constexpr int CHANNELS = 9;
@@ -120,13 +122,14 @@ private:
         u32 since = 0;     // when it was keyed on or off
     };
     void w(u8 reg, u8 value) { write_(ctx_, reg, value); }
-    void program(int ch, const SfxPatch &p);
+    void program(int ch, const SfxPatch &p, int gain);
     void frequency(int player, bool key);
     int take_channel(int player);
     Write write_;
     void *ctx_;
     SfxBank bank_{};
     Player players_[PLAYERS];
+    int gain_[PLAYERS] = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
     Channel channels_[CHANNELS];
     u32 clock_ = 0;
     u32 rng_ = 0x1990u;
