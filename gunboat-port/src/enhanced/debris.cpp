@@ -16,7 +16,8 @@ namespace gb {
 namespace {
 
 constexpr double PI = 3.14159265358979323846;
-constexpr double SIZE = 1.8;  // the particles' size, times the table's
+constexpr double SIZE = 2.5;     // the particles' size, times the table's
+constexpr double LINGER = 0.25;  // seconds a particle lies on the ground, fading, before it is gone
 
 // What a shot hit.
 enum class Stuff : u8 { Ground, Water, Grass, Dirt, Metal, Wood, Flesh, Stone, Sand, COUNT };
@@ -39,6 +40,7 @@ struct Particle {
     u32 rgb;
     double size;        // height units
     bool streak;        // drawn as a short line back along its path (sparks)
+    bool sinks;         // gone when it falls back (water drops), else it lies there a moment
 };
 
 // How each stuff flies apart: particles for a bullet (an explosive shot makes three times as many,
@@ -50,15 +52,15 @@ struct Spec {
     bool streak;
 };
 const Spec SPECS[int(Stuff::COUNT)] = {
-    {0, {0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, false},                                         // Ground
-    {12, {0xFFFFFF, 0xDDEEFF, 0xB0D4F0}, 5, 16, 22, 40, 100, 0.8, 0.35, 0.6, 0.6, false},      // Water
-    {9, {0x4E8A2E, 0x6FAE3C, 0x3A6A22}, 10, 24, 10, 24, 60, 1.0, 0.35, 0.6, 0.6, false},        // Grass
-    {10, {0, 0, 0}, 6, 18, 6, 16, 35, 2.5, 0.45, 0.8, 0.9, false},                              // Dirt
-    {9, {0xFFF4C8, 0xFFD050, 0xFF9A28}, 30, 70, 12, 34, 70, 0, 0.18, 0.4, 0.45, true},          // Metal
-    {7, {0x8A5A2B, 0xA87840, 0x5C3A1C}, 14, 34, 12, 28, 60, 0.5, 0.5, 0.9, 0.8, false},         // Wood
-    {9, {0xA00A0A, 0xCC1A1A, 0x6E0606}, 10, 26, 5, 18, 65, 0.5, 0.3, 0.55, 0.6, false},        // Flesh
-    {8, {0x9A968C, 0xBAB6AC, 0x6C6862}, 16, 38, 10, 24, 65, 0.3, 0.4, 0.7, 0.65, false},        // Stone
-    {10, {0xC8B07A, 0xB09460, 0xDCC894}, 8, 20, 5, 14, 30, 2.0, 0.45, 0.8, 1.0, false},        // Sand
+    {0, {0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, false},                                          // Ground
+    {16, {0xFFFFFF, 0xDDEEFF, 0xB0D4F0}, 5, 16, 24, 44, 85, 0.8, 0.55, 0.9, 0.65, false},       // Water
+    {12, {0x4E8A2E, 0x6FAE3C, 0x3A6A22}, 10, 24, 12, 26, 48, 1.0, 0.55, 0.9, 0.65, false},      // Grass
+    {13, {0, 0, 0}, 6, 18, 7, 18, 28, 2.5, 0.7, 1.2, 0.95, false},                               // Dirt
+    {12, {0xFFF4C8, 0xFFD050, 0xFF9A28}, 30, 70, 14, 36, 56, 0, 0.3, 0.6, 0.5, true},           // Metal
+    {10, {0x8A5A2B, 0xA87840, 0x5C3A1C}, 14, 34, 14, 30, 48, 0.5, 0.75, 1.3, 0.85, false},      // Wood
+    {16, {0xE01C1C, 0xFF3A3A, 0xA80C0C}, 12, 30, 8, 24, 50, 0.5, 0.55, 0.95, 0.8, false},       // Flesh
+    {10, {0x9A968C, 0xBAB6AC, 0x6C6862}, 16, 38, 12, 26, 52, 0.3, 0.6, 1.05, 0.7, false},       // Stone
+    {13, {0xC8B07A, 0xB09460, 0xDCC894}, 8, 20, 6, 16, 24, 2.0, 0.7, 1.2, 1.05, false},         // Sand
 };
 
 std::vector<Impact> impacts;
@@ -149,6 +151,7 @@ void spawn(const Impact &im, Stuff stuff, u32 ground)
         p.rgb = colour[i % 3];
         p.size = sp.size * SIZE * big * between(0.7, 1.3);
         p.streak = sp.streak;
+        p.sinks = stuff == Stuff::Water;
         particles.push_back(p);
     }
 }
@@ -160,6 +163,13 @@ void position(const Particle &p, double age, double &x, double &y, double &h)
     x = p.x + p.vx * k;
     y = p.y + p.vy * k;
     h = std::max(0.0, p.h + p.vh * age - 0.5 * p.gravity * age * age);
+}
+
+// When particle p falls back to the ground (height 0).
+double landing_time(const Particle &p)
+{
+    if (p.gravity <= 0) return 1e9;
+    return (p.vh + std::sqrt(p.vh * p.vh + 2 * p.gravity * p.h)) / p.gravity;
 }
 
 void blend(u32 *row, int x, u32 c, double a)
@@ -218,11 +228,18 @@ void debris_draw(const ViewProjection &proj, const ViewTarget &target, u32 *rgb,
         const double age = (now - p.born) / 1e9;
         double x, y, h;
         position(p, age, x, y, h);
-        if (h <= 0 && age > 0.05) continue;  // it has fallen back to the ground
+        // Back on the ground: a drop is gone into the water; the rest lies there, fading, a moment.
+        double fade = 1.0;
+        if (h <= 0 && age > 0.05) {
+            if (p.sinks) continue;
+            const double land = landing_time(p);
+            fade = 1.0 - (age - land) / LINGER;
+            if (fade <= 0) continue;
+        }
         double px, py, tx, ty;
         const double s = proj.point(x, y, h, px, py);
         if (!to_target(px, py, tx, ty)) continue;
-        const double a = age < 0.6 * p.life ? 1.0 : std::max(0.0, (p.life - age) / (0.4 * p.life));
+        const double a = fade * (age < 0.6 * p.life ? 1.0 : std::max(0.0, (p.life - age) / (0.4 * p.life)));
         const int size = std::max(1, int(std::lround(s * p.size / 256.0 * target.sy)));
         auto dot = [&](double cx, double cy, double alpha) {
             const int x0 = int(cx - size / 2.0), y0 = int(cy - size / 2.0);
