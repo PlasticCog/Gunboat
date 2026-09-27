@@ -169,8 +169,62 @@ void frame_hook()
     }
 }
 
+// ---- F12: a screenshot. The next picture shown is saved in the settings folder's Screenshots:
+// shot_NNNN.bmp (the window as shown), shot_NNNN_original.bmp (the game's own picture) and
+// shot_NNNN.mem (the game's memory then, for looking into what the picture shows). The window's title
+// names it a few seconds.
+bool shot_pending;
+Uint64 title_until;
+
+void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
+{
+    if (!shot_pending) return;
+    shot_pending = false;
+    char *pref = SDL_GetPrefPath("", "Gunboat");
+    if (!pref) return;
+    const std::string dir = std::string(pref) + "Screenshots/";
+    SDL_free(pref);
+    SDL_CreateDirectory(dir.c_str());
+    int n = 1;
+    char name[32];
+    for (;; n++) {
+        std::snprintf(name, sizeof name, "shot_%04d", n);
+        SDL_PathInfo info;
+        if (!SDL_GetPathInfo((dir + name + ".bmp").c_str(), &info)) break;
+    }
+    const std::string base = dir + name;
+    if (SDL_Surface *shown = SDL_RenderReadPixels(r, nullptr)) {
+        SDL_SaveBMP(shown, (base + ".bmp").c_str());
+        SDL_DestroySurface(shown);
+    }
+    if (SDL_Surface *orig = SDL_CreateSurfaceFrom(w, h, SDL_PIXELFORMAT_XRGB8888, const_cast<u32 *>(frame), w * 4)) {
+        SDL_SaveBMP(orig, (base + "_original.bmp").c_str());
+        SDL_DestroySurface(orig);
+    }
+    if (std::FILE *f = std::fopen((base + ".mem").c_str(), "wb")) {
+        std::fwrite(mem, 1, MEM_SIZE, f);
+        std::fclose(f);
+    }
+    if (SDL_Window *win = host_window()) {
+        SDL_SetWindowTitle(win, (std::string("Gunboat - saved ") + name + " in " + dir).c_str());
+        title_until = SDL_GetTicksNS() + 4 * SDL_NS_PER_SECOND;
+    }
+}
+
+void title_back()
+{
+    if (title_until && SDL_GetTicksNS() > title_until) {
+        title_until = 0;
+        if (SDL_Window *win = host_window()) SDL_SetWindowTitle(win, "Gunboat");
+    }
+}
+
 bool hotkey(int scancode)
 {
+    if (scancode == SDL_SCANCODE_F12) {
+        shot_pending = true;  // the host redraws after a hotkey: the shot is taken there
+        return true;
+    }
     if (scancode != SDL_SCANCODE_F11) return false;
     enhanced_on = !enhanced_on;
     cur->valid = prev->valid = false;
@@ -555,6 +609,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
         }
     }
     snapshot(r);
+    take_shot(r, frame, w, h);
     SDL_RenderPresent(r);
     return true;
 }
@@ -562,6 +617,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 bool present(const u32 *frame, int w, int h, bool changed)
 {
     icon_frame(frame, w, h);
+    title_back();
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
@@ -710,6 +766,7 @@ bool present(const u32 *frame, int w, int h, bool changed)
     }
     snapshot(r);
     stats(now, live, animating);
+    take_shot(r, frame, w, h);
     SDL_RenderPresent(r);
     return true;
 }

@@ -257,6 +257,11 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Release 1.1.3 (2026-09-27):** controller support and `gunboat_controller` (in the packages),
   the icons, "hills stop bullets" (off by default), the bridge clang, lifeless impacts at 75%, the
   lighter haze. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.
+* **Screenshots (F12, 2026-09-27):** the presenter saves, in the settings folder's `Screenshots`,
+  `shot_NNNN.bmp` (the window as shown), `shot_NNNN_original.bmp` (the game's 320 x 200 picture) and
+  `shot_NNNN.mem` (the whole `mem[]`), for bug reports; `tools/inspect_shot.py N` lists the game
+  state of a shot (region, station, camera, the visible list's objects: kind, flags and damage bits,
+  class, position). The .mem files hold game data: local only, never in git. Controller action f12.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

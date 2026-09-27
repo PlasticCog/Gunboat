@@ -61,6 +61,7 @@ const Action ACTIONS[] = {
     {"s", "Game", "S: sound on / off", {SDL_SCANCODE_S, NO}},
     {"ctrl_q", "Game", "Ctrl+Q: quit to DOS", {SDL_SCANCODE_LCTRL, SDL_SCANCODE_Q}},
     {"f11", "Game", "F11: enhanced / original picture", {SDL_SCANCODE_F11, NO}},
+    {"f12", "Game", "F12: screenshot", {SDL_SCANCODE_F12, NO}},
     {"y", "Keys", "Y (answers)", {SDL_SCANCODE_Y, NO}},
     {"key_n", "Keys", "N (answers; the midship gun in a mission)", {SDL_SCANCODE_N, NO}},
     {"a", "Keys", "A", {SDL_SCANCODE_A, NO}},

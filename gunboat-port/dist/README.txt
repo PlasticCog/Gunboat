@@ -72,8 +72,9 @@ enhancements only change how its frames are shown.
                  original is silent: explosions for destroyed targets, soldiers killed, and
                  the impacts of your bullets on metal, wood and stone.
 
-In the game: F11 switches between the enhanced and the original picture, Alt+Enter toggles full
-screen.
+In the game: F11 switches between the enhanced and the original picture, F12 saves a screenshot
+(in the settings folder's Screenshots: the window as shown, the game's own picture, and the game's
+memory at that moment, which helps with bug reports), Alt+Enter toggles full screen.
 
 gunboat --help (gunboat.exe on Windows) lists the command-line options (for example --no-launcher,
 --original, --enhanced, --game-dir FOLDER, --fullscreen, --video ega, --effects adlib).
