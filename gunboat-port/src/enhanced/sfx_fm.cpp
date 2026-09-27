@@ -34,6 +34,9 @@ const Info INFO[SFX_COUNT] = {
     {"Incoming", "Incoming fire"},
     {"Incoming 2", "Incoming fire, the longer call"},
     {"Silence", "Plays nothing: the key handler uses it to stop the current effect"},
+    {"Soldier killed", "Added for the AdLib (the original is silent): enemy infantry killed. Plays the notes of the light hit (a falling sweep)"},
+    {"Impact: metal", "Added for the AdLib: a bullet hits a vehicle, a boat, a gun, a helicopter, a mine or a buoy. Plays the key click's note"},
+    {"Impact: wood", "Added for the AdLib: a bullet hits a hut, a dock, a fort, a bridge, a tree or a rock. Plays the key click's note"},
 };
 
 SfxOperator op(u8 attack, u8 decay, u8 sustain, u8 release, u8 multiple, u8 level, u8 waveform = 0,
@@ -153,6 +156,16 @@ void bank_parse(std::istream &in, SfxBank &b)
 static SfxPatch factory_patch(int id);
 
 const char *sfx_name(int id) { return id >= 0 && id < SFX_COUNT ? INFO[id].name : "?"; }
+
+int sfx_program_of(int id)
+{
+    switch (id) {
+    case SFX_SOLDIER_KILLED: return 9;
+    case SFX_IMPACT_METAL:
+    case SFX_IMPACT_WOOD: return 0;
+    default: return id >= 0 && id < SFX_PROGRAMS ? id : 0;
+    }
+}
 const char *sfx_description(int id) { return id >= 0 && id < SFX_COUNT ? INFO[id].description : ""; }
 
 // The first instruments of the port: each program's notes (sound.md §2.1) played by a voice that suits
@@ -230,6 +243,28 @@ SfxPatch factory_patch(int id)
         p.mod = op(15, 15, 15, 15, 1, 63);
         p.car = op(15, 2, 0, 8, 1, 4);
         p.volume = 80;
+        break;
+    case SFX_SOLDIER_KILLED:  // a short falling cry, lower than the clank's notes
+        p.mod = op(14, 3, 3, 5, 1, 22);
+        p.car = op(13, 3, 2, 5, 1, 0);
+        p.car.vibrato = true;
+        p.feedback = 3;
+        p.transpose = -19;
+        p.volume = 85;
+        break;
+    case SFX_IMPACT_METAL:  // plink: an inharmonic ping ringing on after the two-tick note
+        p.mod = op(15, 5, 15, 7, 7, 22);
+        p.car = op(15, 6, 15, 7, 1, 0, 0, false);
+        p.feedback = 2;
+        p.volume = 70;
+        break;
+    case SFX_IMPACT_WOOD:  // a dull, noisy knock
+        p.mod = op(15, 8, 15, 9, 1, 10);
+        p.car = op(15, 8, 15, 9, 1, 0, 0, false);
+        p.feedback = 6;
+        p.transpose = -24;
+        p.jitter = 200;
+        p.volume = 75;
         break;
     default:  // 12: silence
         p.mod = op(15, 4, 4, 6, 1, 20);
@@ -309,10 +344,10 @@ std::string sfx_source_bank_path()
     return (port / "data" / "sfx.ini").string();
 }
 
-int sfx_effect_of(u16 pc, const u16 starts[SFX_COUNT])
+int sfx_effect_of(u16 pc, const u16 starts[SFX_PROGRAMS])
 {
     int best = -1;
-    for (int i = 0; i < SFX_COUNT; i++)
+    for (int i = 0; i < SFX_PROGRAMS; i++)
         if (starts[i] <= pc && (best < 0 || starts[i] > starts[best])) best = i;
     if (best >= 0 && pc - starts[best] > 0x100) best = -1;
     return best;

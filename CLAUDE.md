@@ -201,7 +201,12 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     channel: `sfx_play` notifies the host (`host_sfx_play`), and each effect runs its own copy of
     the ported driver (one `sfx_timer_tick` per tick on a copy of DS:DA48-DB1D, the game's bytes
     put back), so guns no longer cut the engine or explosions; at most three OPL2 channels per
-    effect, as in the editor.
+    effect, as in the editor. Additions where the original is silent (AdLib only; the game
+    notifies `host_object_hit` / `host_target_destroyed` from hit_objects, PORT, no memory
+    change): the Explosion (8) for targets destroyed by a shot (the original plays it only for
+    wreck 4Bh), and three new bank effects 13-15 playing the notes of original programs:
+    "Soldier killed" (enemy infantry; effect 9's notes), "Impact: metal" and "Impact: wood" (a
+    bullet's hit by the object's material; effect 0's note; not on flesh, not grenades/mortar).
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
 * **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects (the user's

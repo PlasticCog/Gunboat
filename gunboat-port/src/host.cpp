@@ -37,6 +37,8 @@ void (*frame_hook)();
 bool (*speaker_filter)(u16, bool &, bool);
 void (*tick_observer)();
 void (*sfx_play_observer)(u16);
+void (*target_destroyed_observer)(u8, u8);
+void (*object_hit_observer)(u8);
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
@@ -445,6 +447,16 @@ void host_set_sfx_play_observer(void (*observer)(u16)) { sfx_play_observer = obs
 void host_sfx_play(u16 program)
 {
     if (sfx_play_observer) sfx_play_observer(program);
+}
+void host_set_target_destroyed_observer(void (*observer)(u8, u8)) { target_destroyed_observer = observer; }
+void host_target_destroyed(u8 old, u8 wreck)
+{
+    if (target_destroyed_observer) target_destroyed_observer(old, wreck);
+}
+void host_set_object_hit_observer(void (*observer)(u8)) { object_hit_observer = observer; }
+void host_object_hit(u8 kind)
+{
+    if (object_hit_observer) object_hit_observer(kind);
 }
 
 void host_pump()

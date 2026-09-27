@@ -17,7 +17,15 @@
 
 namespace gb {
 
-constexpr int SFX_COUNT = 13;  // the effect programs of the driver (sound.md §2.1)
+constexpr int SFX_PROGRAMS = 13;  // the effect programs of the driver (sound.md §2.1)
+// The bank's effects: the driver's 13, then the port's additions for the AdLib, sounded where the
+// original has none (sfx_adlib.cpp), each playing the notes of one of the driver's programs.
+constexpr int SFX_SOLDIER_KILLED = 13;  // enemy infantry killed: effect 9's falling sweep
+constexpr int SFX_IMPACT_METAL = 14;    // a bullet hits a vehicle, boat, gun, helicopter: effect 0's note
+constexpr int SFX_IMPACT_WOOD = 15;     // a bullet hits a hut, dock, fort, tree, rock: effect 0's note
+constexpr int SFX_COUNT = 16;
+// The driver's program (0..12) whose notes effect `id` plays.
+int sfx_program_of(int id);
 // The effects' chip is mixed at twice its output: one FM voice against the speaker's full square wave.
 constexpr int SFX_GAIN = 2;
 
@@ -73,7 +81,7 @@ std::string sfx_bank_path();  // sfx.ini in the settings folder
 // The effect whose program holds `pc` (the driver's program counter, a DGROUP offset): the one with
 // the largest start not above it, from the driver's table of program starts; -1 if pc is before
 // them all or far past them.
-int sfx_effect_of(u16 pc, const u16 starts[SFX_COUNT]);
+int sfx_effect_of(u16 pc, const u16 starts[SFX_PROGRAMS]);
 
 // The FM voices of the effects, writing OPL2 registers through `write`. A player is one effects
 // driver's speaker (the game runs one driver per effect, sfx_adlib.cpp, so the effects sound

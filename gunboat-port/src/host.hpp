@@ -73,6 +73,12 @@ bool host_speaker_effects(bool effects);
 // PORT: sfx_play tells the host that an effect's program starts (its DGROUP address); the presentation
 // layer's AdLib effects follow it (host_set_sfx_play_observer).
 void host_sfx_play(u16 program);
+// PORT: hit_objects tells the host that a shot destroyed an object of kind `old` into its wreck
+// `wreck` (the AdLib effects add an explosion there, host_set_target_destroyed_observer).
+void host_target_destroyed(u8 old, u8 wreck);
+// PORT: hit_objects tells the host that a shot hit an object of kind `kind` (before the damage; wrecks
+// 30h/31h let the shot on) (host_set_object_hit_observer).
+void host_object_hit(u8 kind);
 // The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
 // moment it is read.
 u8 host_pit2_low();
@@ -118,6 +124,8 @@ void host_sfx_opl_write(u8 reg, u8 value);
 void host_set_sfx_gain(int gain);  // the second chip's output is mixed times this
 void host_set_tick_observer(void (*observer)());
 void host_set_sfx_play_observer(void (*observer)(u16 program));
+void host_set_target_destroyed_observer(void (*observer)(u8 old, u8 wreck));
+void host_set_object_hit_observer(void (*observer)(u8 kind));
 // Restarts the timer clock from now (the game starts after the launcher, not at host_init).
 void host_reset_clock();
 

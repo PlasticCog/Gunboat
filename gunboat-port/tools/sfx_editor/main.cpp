@@ -110,7 +110,7 @@ Score capture(int id, int throttle)
         engine_sound_update();
         limit = ENGINE_TICKS;
     } else {
-        sfx_play(u16(id));
+        sfx_play(u16(sfx_program_of(id)));
     }
     for (int t = 0; t < limit; t++) {
         const size_t before = host_stub_speaker_log().size();

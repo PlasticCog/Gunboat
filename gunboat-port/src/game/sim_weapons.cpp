@@ -2,6 +2,7 @@
 #include "game/sim.hpp"
 
 #include "game/flow.hpp"
+#include "host.hpp"
 #include "hud/hud.hpp"
 #include "mem.hpp"
 #include "platform/gfx.hpp"
@@ -388,6 +389,9 @@ void hit_objects()
         if (al != 0x12 && si < 0x48) continue;
         if (al == 0 || al >= 0x3F) continue;
         if (hit_test(bx) == 0) continue;
+        // PORT: tells the host that the shot hit an object of kind `al` (the AdLib effects option sounds
+        // the impact, sfx_adlib.cpp); nothing in mem[] changes.
+        host_object_hit(al);
         if (al > 0x31) return;
         if (al >= 0x30) continue;
         const u16 word = object_word(si);
@@ -447,6 +451,9 @@ void hit_objects()
             }
             const u8 old = ds_u8(u16(DS_object_word + si));
             const u8 kind = ds_u8(DS_scratch_b7e2);
+            // PORT: tells the host that object kind `old` is destroyed into `kind` (the AdLib effects
+            // option sounds an explosion, sfx_adlib.cpp); nothing in mem[] changes.
+            host_target_destroyed(old, kind);
             ds_u8(u16(DS_object_word + si)) = kind;
             terrain_structure_break(old, si);
             u8 ah_left = old;  // AH: the old kind, or 04h after the fire object (MOV AX,0448h)
