@@ -152,6 +152,7 @@ void host_reset_clock();
 //   GB_KEYS="<seconds>:<xt>[+<xt>...],..."  presses (in order) and releases (in reverse) the XT
 //                         keys at that many seconds after start-up; "p" after the codes only
 //                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.
-//                         Grey keys are written with their E0 prefix, as e048.
+//                         Grey keys are written with their E0 prefix, as e048. F11 (57) and
+//                         F12 (58) go to the presentation layer's hotkeys, as when pressed.
 
 } // namespace gb

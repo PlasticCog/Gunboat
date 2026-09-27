@@ -62,7 +62,7 @@ def main():
         cls = u8(OBJECT_CLASS + 2 * kind)
         print('  %4d  %04X  %02X    %-33s %02X    %d   %02X    %4d  %3d     %04X   %04X'
               % (e, obj, kind, KINDS.get(kind, 'effect' if kind >= 0x3F else '?')[:33], flags, (flags >> 3) & 7, cls,
-                 u8(VISIBLE_DISTANCE + e), u8(VISIBLE_BEARING + e), u16(OBJECT_X + obj), u16(OBJECT_Y + obj)))
+                 u8(VISIBLE_DISTANCE + 2 * e), u8(VISIBLE_BEARING + e), u16(OBJECT_X + obj), u16(OBJECT_Y + obj)))
 
 
 if __name__ == '__main__':

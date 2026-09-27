@@ -262,6 +262,15 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   `shot_NNNN.mem` (the whole `mem[]`), for bug reports; `tools/inspect_shot.py N` lists the game
   state of a shot (region, station, camera, the visible list's objects: kind, flags and damage bits,
   class, position). The .mem files hold game data: local only, never in git. Controller action f12.
+  A note "Screenshot saved: shot_NNNN" shows 3 s in the picture's top right (drawn after the shot,
+  so not in it; the title bar can't be seen in full screen). `GB_KEYS` sends F11/F12 (57h/58h) to
+  the hotkeys as a real press does, so it can take shots headless.
+* **The "bunker" that won't blow up (2026-09-27, from the user's F12 shots): faithful.** It was a
+  mortar nest (kind 08h, armour class 2): the bow's .50s and minigun only OR in damage bit 08h
+  (level 1, never destroyed; "Good shot." every hit), the M60 does nothing; the midship's mortar
+  destroys it in one hit, the stern's M129 in 7. The original's hit_objects on the shot's memory
+  agrees with the port; the manual says "go for your own mortar". The decoded damage matrix:
+  simulation.md §7.2.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

@@ -171,10 +171,11 @@ void frame_hook()
 
 // ---- F12: a screenshot. The next picture shown is saved in the settings folder's Screenshots:
 // shot_NNNN.bmp (the window as shown), shot_NNNN_original.bmp (the game's own picture) and
-// shot_NNNN.mem (the game's memory then, for looking into what the picture shows). The window's title
-// names it a few seconds.
+// shot_NNNN.mem (the game's memory then, for looking into what the picture shows). A note on the
+// picture (drawn after the shot, so not in it) and the window's title name it a few seconds.
 bool shot_pending;
 Uint64 title_until;
+char shot_name[32];
 
 void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
 {
@@ -193,6 +194,8 @@ void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
         if (!SDL_GetPathInfo((dir + name + ".bmp").c_str(), &info)) break;
     }
     const std::string base = dir + name;
+    std::snprintf(shot_name, sizeof shot_name, "%s", name);
+    title_until = SDL_GetTicksNS() + 3 * SDL_NS_PER_SECOND;
     if (SDL_Surface *shown = SDL_RenderReadPixels(r, nullptr)) {
         SDL_SaveBMP(shown, (base + ".bmp").c_str());
         SDL_DestroySurface(shown);
@@ -205,18 +208,40 @@ void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
         std::fwrite(mem, 1, MEM_SIZE, f);
         std::fclose(f);
     }
-    if (SDL_Window *win = host_window()) {
+    if (SDL_Window *win = host_window())
         SDL_SetWindowTitle(win, (std::string("Gunboat - saved ") + name + " in " + dir).c_str());
-        title_until = SDL_GetTicksNS() + 4 * SDL_NS_PER_SECOND;
-    }
 }
 
-void title_back()
+// While the note is up, and once more when it goes (the picture without it): the picture is drawn
+// again even when the game's frame has not changed.
+bool title_back()
 {
-    if (title_until && SDL_GetTicksNS() > title_until) {
+    if (!title_until) return false;
+    if (SDL_GetTicksNS() > title_until) {
         title_until = 0;
         if (SDL_Window *win = host_window()) SDL_SetWindowTitle(win, "Gunboat");
     }
+    return true;
+}
+
+// The note in the picture's top right corner, in SDL's debug font at about the game's text size.
+void shot_note(SDL_Renderer *r, int ow, int oh)
+{
+    if (!title_until) return;
+    char text[64];
+    std::snprintf(text, sizeof text, "Screenshot saved: %s", shot_name);
+    const float s = float(std::max(1, oh / 400));
+    const float cw = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE;
+    const float tw = std::strlen(text) * cw, pad = 4;
+    const float x = ow / s - tw - 2 * pad - 8, y = 8;
+    SDL_SetRenderScale(r, s, s);
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(r, 0, 0, 0, 192);
+    const SDL_FRect box = {x, y, tw + 2 * pad, cw + 2 * pad};
+    SDL_RenderFillRect(r, &box);
+    SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
+    SDL_RenderDebugText(r, x + pad, y + pad, text);
+    SDL_SetRenderScale(r, 1, 1);
 }
 
 bool hotkey(int scancode)
@@ -608,8 +633,9 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
             SDL_RenderFillRect(r, &band);
         }
     }
-    snapshot(r);
     take_shot(r, frame, w, h);
+    shot_note(r, ow, oh);
+    snapshot(r);
     SDL_RenderPresent(r);
     return true;
 }
@@ -617,7 +643,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 bool present(const u32 *frame, int w, int h, bool changed)
 {
     icon_frame(frame, w, h);
-    title_back();
+    if (title_back() || shot_pending) changed = true;
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
@@ -764,9 +790,10 @@ bool present(const u32 *frame, int w, int h, bool changed)
             SDL_RenderFillRect(r, &band);
         }
     }
-    snapshot(r);
     stats(now, live, animating);
     take_shot(r, frame, w, h);
+    shot_note(r, l.ow, l.oh);
+    snapshot(r);
     SDL_RenderPresent(r);
     return true;
 }

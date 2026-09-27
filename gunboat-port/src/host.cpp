@@ -167,13 +167,23 @@ void scripted_keys()
         if (*p != '+') break;
         p++;
     }
+    // F11 and F12 go to the presentation layer's hotkeys first, as when pressed (a taken key's
+    // release goes nowhere).
+    bool taken[8] = {};
+    for (int i = 0; i < n; i++) {
+        const SDL_Scancode sc = keys[i] == 0x57 ? SDL_SCANCODE_F11 : keys[i] == 0x58 ? SDL_SCANCODE_F12
+                                                                                      : SDL_SCANCODE_UNKNOWN;
+        taken[i] = sc != SDL_SCANCODE_UNKNOWN && hotkey_handler && (!press || hotkey_handler(sc));
+    }
     if (press)
         for (int i = 0; i < n; i++) {
+            if (taken[i]) continue;
             if (keys[i] >> 8) kbd_handler(u8(keys[i] >> 8));
             kbd_handler(u8(keys[i]));
         }
     if (release)
         for (int i = n - 1; i >= 0; i--) {
+            if (taken[i]) continue;
             if (keys[i] >> 8) kbd_handler(u8(keys[i] >> 8));
             kbd_handler(u8(keys[i] | 0x80));
         }

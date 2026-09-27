@@ -853,6 +853,24 @@ go on to the next entry). **verified** (port, differential test)
   class byte `c`: `c & 7` = 0–3 → 30h + n; 4 → 0 (the object vanishes); 5 → 38h; 6 → 37h;
   7 → 4Bh if `c == 7`, else 18h. Variant 4Bh also sets flags 1 and plays sound 8;
   class 1 has a separate rule for weapons 2 and 3 (kind becomes 31h, or 30h below kind 2Ah).
+* The matrix (`CS:378F`, 32 bytes, read from the image) decoded, with the weapon IDs of §6.1 and the
+  number of hits that destroy an undamaged object (damage levels 0..7, 7 = destroyed; "OR" = sets
+  bit 08h, i.e. one level up from an even level only, so on its own it stops at level 1, but it
+  finishes an object another weapon brought to level 6). Every hit below level 7 says "Good shot.",
+  also when nothing changed. Armour classes of the fortifications (class bytes, the same in the four
+  regions' `DATnB.DAT`): machine gun 07h C8h → 1, mortar nest 08h D0h → 2, enemy fortification
+  (bunker) 09h 98h → 3. The manual says the same (p. 35, 42): "Don't bother firing [the M60] at
+  bunkers or houses", the grenades can't do much to bunkers, and for mortar nests "go for your own
+  mortar". The stations' weapons: §6.1 (the midship's default fit is the mortar, the stern's the
+  M129: game_flow.md, the armament menu).
+
+  | Armour (`class & 18h`) | 1 M60 | 2 M129 grenade | 3 mortar | 4 M2HB .50 | 5 minigun |
+  |---|---|---|---|---|---|
+  | 0 (00h) | +2 (4 hits) | destroyed | destroyed | +4 (2 hits) | destroyed |
+  | 1 (08h) | 0 (never) | +2 (4 hits) | destroyed | +1 (7 hits) | OR |
+  | 2 (10h) | 0 (never) | +1 (7 hits) | destroyed | OR | OR |
+  | 3 (18h) | 0 (never) | OR | +1 (7 hits) | OR | OR |
+
 * On destruction (`0919:3aba..3b26`): `terrain_structure_break` (`0919:3c51`); a fire object
   (word 0448h: kind 48h, flags 4) is placed at the wreck unless the wreck is 32h, 33h or 37h or
   the old kind was 12h/13h (when the temporary slots are full it avoids the hunter's slot
