@@ -23,6 +23,7 @@ from gbdiff import DS_BASE, GAME_DIR, MEM_SIZE, Mismatch, put8, put16, randomize
 from test_modes import after_original, machine, mode_state
 
 SCRATCH = 0xF000                 # DS offset of a table the tests build (BSS, below the stack)
+NO_POLL = ((), 'tick_counter')   # the original has no poll point: a host_pump of the port shows as a tick
 PALETTE_TABLES = (0x0924, 0x80)  # ega_palette, ega_patterns, cga_patterns (the palette file after the DAC part)
 
 # The library modes each machine is tested in: the game's (EGA 0Dh, CGA 4, Tandy 9, Hercules 4 on
@@ -58,6 +59,14 @@ def game_state(h, rng, lib_mode=None, game_mode=None):
     randomize(m, DS_BASE + PALETTE_TABLES[0], PALETTE_TABLES[1], rng)
     put16(m, 0xEED2, GAME_MODE[h.machine] if game_mode is None else game_mode)
     return m
+
+
+def random_status(h, rng):
+    """The card state with the status ports' toggle in either phase (a retrace wait then reads it
+    once or twice)."""
+    s = bytearray(h.card_state)
+    s[cardmodel.STATUS] = rng.randrange(2)
+    h.card_state = bytes(s)
 
 
 def random_planes(h, rng):
@@ -158,7 +167,8 @@ def display_offset(h, rng, scale):
                 put8(m, 0xDCFD, rng.randrange(256))
                 put16(m, 0xDF45, rng.randrange(0x10000))
                 put16(m, 0xDF1B, rng.randrange(0x10000))
-            h.check('gfx_set_display_offset', m, stack_args=[x, y], outputs=['ax'],
+            random_status(h, rng)
+            h.check('gfx_set_display_offset', m, stack_args=[x, y], outputs=['ax'], tick=NO_POLL,
                     label='mode %X x %X y %X' % (mode, x, y))
             n += 1
     return n
@@ -196,7 +206,7 @@ def palette_flash(h, rng, scale):
             for i in range(4):
                 m[DS_BASE + 0xD6E6 + i] = rng.randrange(0x40)
         if game_mode != 0x13:
-            h.check('palette_flash', m, label='game mode %X case %d' % (game_mode, k))
+            h.check('palette_flash', m, tick=NO_POLL, label='game mode %X case %d' % (game_mode, k))
             n += 1
     return n
 
@@ -206,7 +216,8 @@ def screen_shake(h, rng, scale):
     for k in range(40 * scale):
         m = game_state(h, rng)
         put8(m, 0xB7F2, rng.choice([0, 1, 2, 3, 8, rng.randrange(256)]))
-        h.check('screen_shake_step', m, label='case %d' % k)
+        random_status(h, rng)
+        h.check('screen_shake_step', m, tick=NO_POLL, label='case %d' % k)
         n += 1
     return n
 
@@ -234,7 +245,7 @@ def text_ega(h, rng, scale):
         put8(m, 0xD9C2, rng.choice([0, 0xC0, rng.randrange(0xC1), rng.randrange(256)]))
         ch = rng.choice([rng.randrange(0x20, 0x80), rng.randrange(256)])
         put8(m, SCRATCH, ch)
-        h.check('text_draw_char', m, stack_args=[SCRATCH], label='char %02X case %d' % (ch, k))
+        h.check('text_draw_char', m, stack_args=[SCRATCH], tick=NO_POLL, label='char %02X case %d' % (ch, k))
         n += 1
     return n
 
@@ -269,7 +280,7 @@ def dissolve(h, rng, scale):
         m = dissolve_state(h, rng, k)
         if h.machine in ('cga', 'hercules') and k % 2:
             put16(m, 0xEED2, 0x0C)  # the CGA path's other mode
-        h.check('dissolve_page1_to_0', m, tick=([poll], 'tick_counter') if poll else None,
+        h.check('dissolve_page1_to_0', m, tick=([poll], 'tick_counter') if poll else NO_POLL,
                 label='game mode %X case %d' % (get16(m, 0xEED2), k))
         n += 1
     return n
