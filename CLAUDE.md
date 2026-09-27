@@ -254,6 +254,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   option's handler is set) and the loaded terrain's triangles are sampled along the line from the gun
   (height 32) to the target (its ground + 8): a hill above the line stops the shot; the debris of a
   miss behind a hill flies off the hill.
+* **Release 1.1.3 (2026-09-27):** controller support and `gunboat_controller` (in the packages),
+  the icons, "hills stop bullets" (off by default), the bridge clang, lifeless impacts at 75%, the
+  lighter haze. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
