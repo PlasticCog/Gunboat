@@ -5,9 +5,11 @@
 // gives the speaker sounds with the effect's FM instrument, at the same pitch, for as long as the
 // speaker would sound it. Only what reaches the ear changes.
 //
-// The instruments are a bank of 13 patches. The player edits them with the sound-effects editor
-// (tools/sfx_editor), which saves sfx.ini in the settings folder next to gunboat.ini; the game reads
-// it at start-up. This file has no SDL or game dependencies apart from the settings folder, so the
+// The instruments are a bank of 13 patches. The port ships with the bank in gunboat-port/data/sfx.ini,
+// built into the program. The player edits it with the sound-effects editor (tools/sfx_editor), which
+// saves sfx.ini in the settings folder next to gunboat.ini (and, run from a build in the source
+// tree, data/sfx.ini too, so the next build ships the edits); the game reads the player's file at
+// start-up, the built-in bank for what it lacks. This file has no SDL or game dependencies apart from the settings folder, so the
 // editor shares it.
 #include <string>
 
@@ -54,11 +56,16 @@ struct SfxBank {
 
 const char *sfx_name(int id);         // a short name: "Key click"
 const char *sfx_description(int id);  // what plays it in the game
+// The defaults: the instruments the port ships with (gunboat-port/data/sfx.ini, built into the
+// program), over the port's first instruments for anything that file lacks.
 SfxPatch sfx_default_patch(int id);
 void sfx_bank_defaults(SfxBank &b);
 // Reads a bank (the defaults for what the file lacks); false when there is no file.
 bool sfx_bank_load(const std::string &path, SfxBank &b);
 bool sfx_bank_save(const std::string &path, const SfxBank &b);
+// The shipped bank's file when the program runs from a build in the port's source tree
+// (gunboat-port/build): gunboat-port/data/sfx.ini, which the next build builds in; else empty.
+std::string sfx_source_bank_path();
 // The patch as the lines sfx.ini keeps it ("key = value", one per line); equal patches, equal text.
 std::string sfx_patch_text(const SfxPatch &p);
 std::string sfx_bank_path();  // sfx.ini in the settings folder

@@ -1,0 +1,81 @@
+# The Linux package of a release: gunboat-port/Release.sh on Ubuntu 22.04 (glibc 2.35, so that it runs
+# on most current distributions), with SDL3 built from its source as a static library, then attached
+# to the release. Runs when a release is published, or by hand for an existing release's tag.
+# No game files are involved: the package's Game folder is empty.
+name: Linux release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag (for example v1.1.0)
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  SDL_VERSION: 3.4.16
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+    steps:
+      - name: Tools and SDL3's system libraries
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates curl build-essential ninja-build \
+            pkg-config python3-pip file \
+            libasound2-dev libpulse-dev libpipewire-0.3-dev libx11-dev libxext-dev libxrandr-dev \
+            libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev \
+            wayland-protocols libdecor-0-dev libdrm-dev libgbm-dev libegl1-mesa-dev libgl1-mesa-dev \
+            libgles2-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev
+          pip3 install cmake   # the port needs CMake 3.24+; Ubuntu 22.04 has 3.22
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: SDL3 ${{ env.SDL_VERSION }} (static)
+        run: |
+          curl -fsSL -o sdl.tar.gz "https://github.com/libsdl-org/SDL/releases/download/release-$SDL_VERSION/SDL3-$SDL_VERSION.tar.gz"
+          tar xzf sdl.tar.gz
+          cmake -S "SDL3-$SDL_VERSION" -B sdl-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_INSTALL_PREFIX="$HOME/sdl3"
+          cmake --build sdl-build
+          cmake --install sdl-build
+
+      - name: Build and package
+        run: |
+          CMAKE_ARGS="-DCMAKE_PREFIX_PATH=$HOME/sdl3" SDL_LICENSE="$PWD/SDL3-$SDL_VERSION/LICENSE.txt" \
+            bash gunboat-port/Release.sh
+
+      - name: Smoke test (no display, no game files)
+        run: |
+          b=gunboat-port/build-linux
+          file $b/gunboat $b/gunboat_sfx_editor
+          $b/gunboat --version
+          SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy $b/gunboat --host-test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-package
+          path: gunboat-port/release/*.tar.gz
+
+  attach:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-package
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" *.tar.gz --clobber --repo "$GITHUB_REPOSITORY"

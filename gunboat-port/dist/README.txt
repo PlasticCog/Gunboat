@@ -2,7 +2,7 @@ GUNBOAT - the faithful C++ / SDL3 port, version @VERSION@
 =========================================================
 
 Accolade's Gunboat: River Combat Simulation (DOS, 1990), rebuilt function by function from the
-original GB.EXE in C++ and running natively on Windows. It is not an emulator. It reads the
+original GB.EXE in C++ and running natively on Windows and Linux. It is not an emulator. It reads the
 original game's files at run time; they are NOT included: you need your own copy of the DOS game.
 
 Source code, documentation and issues: https://github.com/PlasticCog/Gunboat
@@ -12,28 +12,38 @@ HOW TO PLAY
 -----------
 
 1. Copy the files of your original DOS Gunboat (the contents of its disks, or of the folder it was
-   installed in) into the folder "Game" that is next to gunboat.exe. Game\README.txt lists the
+   installed in) into the folder "Game" that is next to the program. Game/README.txt lists the
    files the port reads (GB.EXE, DATAA.DAT, DATAB.DAT, DATAC.DAT, VALK12.MUS, VALKPC.MUS, and
    optionally ADLIB.COM for the AdLib music).
 
-       Gunboat\
-       +-- Game\          <- your original game files
-       +-- gunboat.exe
-       +-- SDL3.dll
+       Gunboat/
+       +-- Game/                    <- your original game files
+       +-- gunboat.exe              (Linux: gunboat)
+       +-- gunboat_sfx_editor.exe   (Linux: gunboat_sfx_editor) the sound effects editor
+       +-- SDL3.dll                 (Windows only)
        +-- README.txt
 
-2. Double-click gunboat.exe. The launcher opens: check that it says "Game found", choose your
-   settings and press Play. Your choices are remembered (%APPDATA%\Gunboat\gunboat.ini).
+2. Start the game: on Windows double-click gunboat.exe; on Linux run ./gunboat (or open it from
+   your file manager). The launcher opens: check that it says "Game found", choose your settings
+   and press Play. Your choices are remembered (Windows: %APPDATA%\Gunboat\gunboat.ini, Linux:
+   ~/.local/share/Gunboat/gunboat.ini).
 
-Keep the folder somewhere you can write to (Documents or the Desktop, not Program Files): the game
-saves its roster (GBROSTER.DAT) in the Game folder. If Windows says "Windows protected your PC",
-click "More info", then "Run anyway" (the program is not signed).
+Keep the folder somewhere you can write to (on Windows Documents or the Desktop, not Program
+Files): the game saves its roster (GBROSTER.DAT) in the Game folder. If Windows says "Windows
+protected your PC", click "More info", then "Run anyway" (the program is not signed).
 
-Requirements: 64-bit Windows 10 or 11.
+Requirements: 64-bit Windows 10 or 11, or 64-bit Linux (x86-64, glibc 2.35 or newer, as in Ubuntu
+22.04, Debian 12, Fedora 36 and later) with X11 or Wayland and PulseAudio, PipeWire or ALSA. The
+files in Game may have their names in any case (GB.EXE or gb.exe).
 
 
 THE LAUNCHER AND THE ENHANCEMENTS
 ---------------------------------
+
+The first setting is the video card the game runs on, as in the original's setup: VGA (256
+colours), EGA or Tandy (16 colours), CGA (4 colours) or Hercules (monochrome, 640 x 300). Each
+one draws the game exactly as the original did on that card. The enhancements below need VGA;
+with the other cards you see the original picture at the scaling you choose.
 
 Every enhancement is optional. The "Original" preset shows the picture exactly as the DOS game
 drew it; "Enhanced" turns them all on. The game itself plays the same either way: the
@@ -51,13 +61,29 @@ enhancements only change how its frames are shown.
                  Off: black borders.
   Picture        4:3 as on a VGA monitor, or square pixels.
   Scaling        Sharp pixels, nearest, smooth, or CRT scanlines.
-  Sound          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
+  Music          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
+  Sound effects  PC speaker, as in the original, or AdLib: every effect plays its original
+                 notes on an FM instrument instead (see the editor below).
 
 In the game: F11 switches between the enhanced and the original picture, Alt+Enter toggles full
 screen.
 
-gunboat.exe --help lists the command-line options (for example --no-launcher, --original,
---enhanced, --game-dir FOLDER, --fullscreen).
+gunboat --help (gunboat.exe on Windows) lists the command-line options (for example --no-launcher,
+--original, --enhanced, --game-dir FOLDER, --fullscreen, --video ega, --effects adlib).
+
+
+THE SOUND EFFECTS EDITOR
+------------------------
+
+gunboat_sfx_editor.exe edits the AdLib sound effects, one by one: the key click, the guns, the
+engine, hits and explosions, incoming fire and the others. For each one you can hear the original
+PC speaker version and the AdLib version, change its FM instrument (two operators: attack,
+decay, sustain, release, level, waveform, feedback and so on, plus transpose, volume and a random
+pitch jitter for noisy sounds) and choose whether the game plays it on AdLib, on the speaker or
+not at all. The notes of each effect come from the original game itself, so their timing and
+pitch are always the original's. Save writes sfx.ini next to gunboat.ini (see above); the game
+uses it when "Sound effects" is set to AdLib in the launcher. The instruments the port ships with
+are built into the program: "All defaults" in the editor goes back to them.
 
 
 CONTROLS (from the original)
@@ -82,10 +108,11 @@ WHAT IS DIFFERENT FROM THE ORIGINAL
 -----------------------------------
 
 * The copy protection is removed (the game runs as after a correct answer) and there are no disk
-  prompts. The configuration questions are answered for VGA.
-* VGA graphics only (the EGA, CGA, Tandy and Hercules modes are not ported). Music on the AdLib
-  (through the original ADLIB.COM driver, translated to C++, with the Nuked-OPL3 chip emulator)
-  or the PC speaker; the MT-32 and Game Blaster devices are not ported.
+  prompts. The configuration questions are answered by the launcher (the video card).
+* All five graphics cards of the original are there (VGA, EGA, Tandy, CGA, Hercules). Music on the
+  AdLib (through the original ADLIB.COM driver, translated to C++, with the Nuked-OPL3 chip
+  emulator) or the PC speaker; the MT-32 and Game Blaster devices and the Tandy sound chip are
+  not ported. The AdLib sound effects are an addition of this port (optional).
 * The 3D stations run at 15 frames per second, so that the mission clock runs in real time (the
   original ran as fast as the PC could draw).
 * Everything else, including the original's quirks, is kept on purpose.
@@ -98,6 +125,7 @@ Gunboat is (c) 1990 Accolade. This project is not affiliated with the rights hol
 data is distributed with it.
 
 The host layer, VGA model and EXEPACK loader are adapted from the Test Drive III SDL3 port
-(MIT, (c) 2026 Krzysztof Kania). SDL 3 (zlib license). Nuked-OPL3 (LGPL 2.1 or later; built from
+(MIT, (c) 2026 Krzysztof Kania). SDL 3 (zlib license). Dear ImGui in the sound effects editor
+(MIT). Nuked-OPL3 (LGPL 2.1 or later; built from
 the unmodified source in the repository, which also has everything needed to rebuild and relink
 the program). The licenses are in the "licenses" folder, THIRD_PARTY.md lists the details.

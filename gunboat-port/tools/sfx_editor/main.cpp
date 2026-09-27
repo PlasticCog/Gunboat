@@ -271,15 +271,19 @@ void preview(bool fm)
     play(fm ? render_fm(sc, sel, bank.fx[sel]) : render_speaker(sc), sel, sc);
 }
 
+// The player's bank; run from a build in the port's source tree, also the shipped bank
+// (gunboat-port/data/sfx.ini), which the next build builds into the game and the editor.
 void save()
 {
-    const std::string path = sfx_bank_path();
-    if (sfx_bank_save(path, bank)) {
-        saved = bank;
-        say("Saved " + path);
-    } else {
+    const std::string path = sfx_bank_path(), source = sfx_source_bank_path();
+    if (!sfx_bank_save(path, bank)) {
         say("Could not write " + path);
+        return;
     }
+    saved = bank;
+    if (source.empty()) say("Saved " + path);
+    else if (sfx_bank_save(source, bank)) say("Saved " + path + " and " + source + " (the next build ships it)");
+    else say("Saved " + path + "; could not write " + source);
 }
 
 std::mutex picked_mutex;
@@ -405,7 +409,9 @@ void ui(SDL_Window *window, bool &quit_asked)
 
     // The top bar.
     if (ImGui::Button("Save")) save();
-    tip("Write the instruments to sfx.ini, where the game reads them.");
+    tip(sfx_source_bank_path().empty()
+            ? "Write the instruments to sfx.ini, where the game reads them."
+            : "Write the instruments to sfx.ini, where the game reads them, and to the port's data/sfx.ini: the next build ships them.");
     ImGui::SameLine();
     if (ImGui::Button("Revert")) {
         sfx_bank_load(sfx_bank_path(), bank);
@@ -418,7 +424,7 @@ void ui(SDL_Window *window, bool &quit_asked)
         sfx_bank_defaults(bank);
         say("Every effect has its default instrument (not saved yet).");
     }
-    tip("The port's default instrument for every effect.");
+    tip("The instruments the port ships with (data/sfx.ini, built in) for every effect.");
     ImGui::SameLine();
     if (ImGui::Button("Game folder...")) SDL_ShowOpenFolderDialog(folder_picked, nullptr, window, game_dir.c_str(), false);
     tip("The folder with the original GB.EXE: the notes of the effects come from it.");
@@ -427,6 +433,7 @@ void ui(SDL_Window *window, bool &quit_asked)
     tip("Play the AdLib version whenever a setting is changed.");
     ImGui::SameLine();
     ImGui::TextDisabled("%s", sfx_bank_path().c_str());
+    if (!sfx_source_bank_path().empty()) ImGui::TextDisabled("and the build's bank %s", sfx_source_bank_path().c_str());
     if (!game_loaded) ImGui::TextColored(ImVec4(1, 0.55f, 0.4f, 1), "%s", game_error.c_str());
     ImGui::Separator();
 

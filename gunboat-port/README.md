@@ -2,44 +2,57 @@
 
 The faithful port of `GB.EXE`, rebuilt one original function at a time on the original memory
 layout (see `/CLAUDE.md` for the method and `PORTING.md` for how the code is organised).
-**The whole game runs natively** in VGA: the title and its music, the menu and the demo, the
-practice missions, the headquarters, the front end, every campaign mission with its stations, map
-and damage report, the debrief and the roster. `Run Port.cmd` starts it; the launcher opens first.
+**The whole game runs natively** (Windows and Linux) on every graphics card of the original, VGA, EGA, Tandy, CGA and
+Hercules (the player's choice, as the original's setup asked): the title and its music, the menu and
+the demo, the practice missions, the headquarters, the front end, every campaign mission with its
+stations, map and damage report, the debrief and the roster. `Run Port.cmd` starts it; the launcher
+opens first.
 
 **Enhancements, all optional** (`src/enhanced/`; the launcher, the command line, F11 in the game):
 the 3D view drawn again at the window's resolution under the original cockpit, smooth 60 fps motion
 in the 3D view, an extended draw distance (the terrain and objects out to 5 cells instead of the
 game's 3 x 3), in a wide window the cockpit widened to its edges (or the world continued beside
 the picture), the picture's aspect (4:3 like the VGA monitor, or square pixels) and scaling (sharp,
-nearest, smooth, CRT scanlines). With the
-**Original** preset the picture is the faithful one. The game is the same either way: the
-enhancements only read what it drew.
+nearest, smooth, CRT scanlines) and, optionally, the sound effects on AdLib FM instruments instead
+of the PC speaker, edited effect by effect with the sound-effects editor
+(`tools/sfx_editor`, `gunboat_sfx_editor.exe`). With the **Original** preset the picture is the
+faithful one. The game is the same either way: the enhancements only read what it drew (the
+3D-view enhancements are for VGA).
 
 ```text
 gunboat.exe [--launcher | --no-launcher] [--game-dir DIR] [--original | --enhanced]
             [--view original|hires] [--motion original|smooth] [--draw-distance original|extended]
             [--widescreen off|world|cockpit] [--aspect 4:3|square] [--filter sharp|nearest|smooth|crt] [--fullscreen | --window]
-            [--scale N] [--fps N] [--sound adlib|speaker] [--check] [--host-test]
+            [--scale N] [--fps N] [--sound adlib|speaker] [--effects speaker|adlib]
+            [--video vga|ega|tandy|cga|hercules] [--check] [--host-test]
 ```
 
 The game's files go in `Game/` at the top of the repository (or a `Game` folder next to
 `gunboat.exe`), which the program finds by itself. The settings are saved in
-`%APPDATA%\Gunboat\gunboat.ini`; options given on the command line apply to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
+`%APPDATA%\Gunboat\gunboat.ini` (Linux: `~/.local/share/Gunboat/`); options given on the command
+line apply to that run. `--fps N` is the 3D stations' frame rate (the mission clock, default 15).
+
+Builds: Windows with `Build.ps1` (MSYS2 UCRT64 GCC, CMake, Ninja, SDL3) and `Release.ps1` (the
+zip); Linux with `Release.sh` (CMake 3.24+, Ninja, GCC, SDL3), which the GitHub workflow
+`.github/workflows/release-linux.yml` runs on Ubuntu 22.04 for each published release. The AdLib
+instruments the port ships with are `data/sfx.ini`, built into the game: the sound-effects editor
+saves it when it runs from `build/`, so an edit is in the next build.
 
 | Part | State |
 | --- | --- |
 | Memory model and loader (`src/mem.*`) | GB.EXE (EXEPACK) unpacked, relocated and checked in C++ |
-| Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio, files; hooks for the presentation layer |
-| Presentation layer (`src/enhanced/`) | the launcher and settings; the frame capture, the enhanced 3D view (`view3d`) and the presenter: every enhancement optional |
-| Platform (`src/platform/`) | DOS files and memory, the C runtime models, the BIOS model, the graphics library (VGA), palette, LZW pictures, text, keyboard and timer interrupts, joystick (host gamepad) |
+| Host layer (`src/host.*`, `src/platform/vga.*`) | TD3's SDL3 host in C++: window, the PIT rates GB.EXE programs, keyboard, gamepad, OPL2 + speaker audio (and a second OPL2 for the AdLib effects), files; hooks for the presentation layer |
+| Video cards (`src/platform/card.*`) | the emulated machine's card when it is not a VGA: EGA planes, latches, sequencer, graphics controller and attribute palette; CGA and Tandy registers; the Hercules CRTC; the picture each one shows |
+| Presentation layer (`src/enhanced/`) | the launcher and settings; the frame capture, the enhanced 3D view (`view3d`) and the presenter; the AdLib sound effects (`sfx_fm`, `sfx_adlib`): every enhancement optional |
+| Platform (`src/platform/`) | DOS files and memory, the C runtime models, the BIOS model, the graphics library (every mode Gunboat sets), palettes, LZW pictures, text, keyboard and timer interrupts, joystick (host gamepad) |
 | Game flow (`src/game/flow_*`) | main, config_load, the archive and far buffers, keys and the demo script, the title sequence, the credits, the menu, the headquarters quiz, the roster file, the whole front end (office, roster, personnel files, briefings, maps, spec sheets, outfitting, debrief) |
 | Simulation (`src/game/sim_*`) | game_frame, keys and controls, crew pilot and gunners, routes, engines and propulsion, motion, weapons and projectiles, enemies and incoming fire, damage, messages, the mission clock |
-| 3D renderer (`src/render/`) | camera, terrain window and projection, primitives and VGA spans, visible objects, the sprite cache and blitter, spotlights, flash and shake |
+| 3D renderer (`src/render/`) | camera, terrain window and projection, primitives and the spans of each card (`mode_ega/cga/tandy.cpp`), visible objects, the sprite cache and blitter, spotlights, flash and shake |
 | Cockpit (`src/hud/`) | lamps, switches, gauges, radar, the view copies, the gun frames, window cracks, map, damage report and assignment screens |
 | Mission (`src/mission/`) | mission_run, mission_load and mission_setup, the station screens, view_present, view_restore |
 | Sound (`src/sound/`) | the effects driver, the music sequencer, the title music on the PC speaker or on an AdLib through the translated Ad Lib driver `ADLIB.COM` (`--sound adlib\|speaker`, default adlib when the game folder has it), the device detection (MT-32, CMS parked) |
-| Ported functions | 433 GB.EXE functions and 52 ADLIB.COM routines, each matching the original on all memory (not ported by design: the EGA/CGA/Tandy/Hercules paths, MT-32/CMS, the text console) |
-| Differential tests (`tests/difftest/`) | 214 tests, 174,770 cases, 0 mismatches: memory, registers, DAC writes, speaker, timer and OPL events, open and written files; whole missions and front-end runs |
+| Ported functions | 485 GB.EXE functions and 52 ADLIB.COM routines, each matching the original on all memory (not ported by design: MT-32/CMS and the Tandy sound chip, the text console) |
+| Differential tests (`tests/difftest/`) | 359 tests, 193,273 cases, 0 mismatches: memory, registers, DAC writes, speaker, timer and OPL events, open and written files, the video card's state; whole missions and front-end runs, on VGA and on each other card (`test_modes_whole.py`: the original untouched against the port) |
 | Scene checks (`tests/scenes/`) | the title screens match DOSBox captures on 100% of pixels, the pilot's cockpit on 99.47% and the map on 99.97% (`scene_mission.py`: the rest is the moment: water marks, clock, boat marker) |
 | Enhancement checks (`tests/scenes/scene_enhanced.py`) | the enhanced view drawn at 1x equals the original's view on 94.7% (pilot practice) and 97.0% (night gunnery) of its pixels; no capture changes the game's memory; 60 presents/s while the game runs at 15.0 frames/s |
 

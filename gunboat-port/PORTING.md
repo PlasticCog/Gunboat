@@ -20,7 +20,8 @@ src/symbols.hpp         generated from reverse_engineering/symbols.csv (never ed
 src/platform/           platform.md and video.md: dos (DOS memory, files, the C runtime models),
                         bios (INT 10h / 1Ah model), gfx (graphics library, pictures), pal (palette,
                         RLE pictures, dissolve), text, lzw, kbd (INT 9), timer (INT 8, the host's
-                        timer dispatch, BIOS waits), joystick, vga (DAC/CRTC model), helpers
+                        timer dispatch, BIOS waits), joystick, vga (DAC/CRTC model), card (the EGA,
+                        CGA, Tandy and Hercules cards: "Video cards" below), gfx_palette, helpers
 src/game/               the game: flow_* (game_flow.md: main, files, keys, screens, title, music,
                         flow_hq the headquarters (020d), flow_office and flow_front the front end
                         (02d2); flow_util.hpp: idioms the flow code repeats), sim_* (simulation.md:
@@ -32,12 +33,14 @@ src/mission/            world.md: the mission segment 05bd (mission.hpp); view_p
 src/sound/              sound.md: effects and music; adlib_driver.cpp: the resident Ad Lib driver
                         ADLIB.COM (adlib_driver.md), not part of GB.EXE
 src/render/             render3d.md: the 3D renderer (camera, terrain window and projection, terrain
-                        primitives and VGA spans, visible-object list, sprite cache and blitter,
+                        primitives and VGA spans (mode_ega/cga/tandy.cpp: the other cards' twins),
+                        visible-object list, sprite cache and blitter,
                         spotlights, flash; terrain_frame.cpp the terrain pass with the shore contact);
                         platform/gfx_display.cpp: gfx_set_display_offset
 src/mission/            world.md: the mission (mission_load.cpp: mission_load, mission_setup)
-tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py (the machine for the original),
-                        bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
+tests/difftest/         gbdiff.py (harness), dosmodel.py / biosmodel.py / cardmodel.py (the machine for
+                        the original), bridge*.cpp (the core as a DLL), host_stub.cpp, test_*.py
+tools/sfx_editor/       gunboat_sfx_editor: the AdLib sound effects' instruments (C++, SDL3, Dear ImGui)
 ```
 
 CMake builds `gbcore` (everything in `src/` except `main.cpp`, `host.cpp` and `enhanced/`, no SDL),
@@ -180,6 +183,31 @@ alerted and shooting); `test_render.capture` snapshots registers and memory wher
 frame enters any routine; `test_frame.loop_capture` does the same across whole `mission_run`
 runs. Night states come from the missions' start times, not from a flag.
 
+## Video cards (`src/platform/card.*`, video.md §6-§8)
+
+The player picks the machine's card (launcher "Video card", `--video`): VGA, EGA, Tandy, CGA or
+Hercules. `main` sets `card_set_machine` and gives `config_load` the matching video mode (PORT: the
+configuration's answer), so the game takes its own path for that card: the graphics library's
+handler of the mode, the renderer's twins (`render/mode_*.cpp`), the view copies' twins
+(`hud/views_*.cpp`), the palette code. The card is hardware, not game state, so it lives outside
+`mem[]` (like the VGA DAC):
+
+* Ported code reaches it where the original executes `OUT`/`IN` on a video port (`card_out`,
+  `card_out16` for `OUT DX, AX`, `card_in`) and where it reads or writes a page that may be the EGA
+  screen (`vmem_read` / `vmem_write`: on an EGA machine A000:0000-FFFF goes through the planes,
+  latches, write and read modes; everything else is `mem[]`: RAM pages, CGA/Tandy memory at
+  B800h, Hercules memory). On the EGA the game's pages 1 and 2 are the card's (A200h, A400h).
+* The BIOS model sets the card up on a mode set and serves the palette services (INT 10h AH=0Bh,
+  AX=1000h-1002h) and the EGA information (AH=12h); on the other machines it fills the BIOS data
+  the detection reads (equipment word, 0040:0087, the Tandy ID byte).
+* `card_compose` makes the picture the card shows (EGA and Tandy 16 colours through the palette
+  registers, CGA through its palette, Hercules 640 x 300 through its CRTC).
+* The tests: `cardmodel.py` is the same card for the original in Unicorn (EGA memory as MMIO);
+  `Harness(machine=...)`, a test's `machine` attribute (`test_modes.py`: `@machine('ega')`);
+  every check starts both sides from `h.card_state` and compares the whole card state (planes,
+  latches, registers) with the memory; the per-card tests are `test_modes_*.py`, the whole runs
+  (title, missions, front end) on each card `test_modes_whole.py` and `test_modes_game.py`.
+
 ## The enhancement layer
 
 `src/enhanced/` is the presentation layer: it is linked into `gunboat.exe` only (not into `gbcore`
@@ -211,6 +239,11 @@ original's.
 * The extended draw distance: `scene_capture` also loads the far cells (tile_load on the scratch
   memory, per cell, with the structures), keeps them while the window's centre and colours stay,
   and builds the far objects' images by kind and view; `view3d` draws them before group B.
+* `sfx_fm.*`, `sfx_adlib.*`: the AdLib sound effects. The timer dispatch tells the host when the
+  effects driver's handler runs (`host_speaker_effects`); the host passes its speaker changes to
+  the filter, which finds the effect from the driver's program counter and plays the note on the
+  effect's FM instrument (a second OPL2, `host_sfx_opl_write`), keeps it on the speaker or mutes it,
+  from the bank `sfx.ini` that `tools/sfx_editor` edits. The driver itself runs unchanged.
 * `present.*`: the host's presenter: the 320x200 frame as a texture (the player's filter and
   aspect), with holes where the frame still shows the captured view; the view drawn under it at the
   window's resolution per rectangle of one offset, and beside the picture in a wider window; F11

@@ -31,7 +31,10 @@ core.
 | --- | --- |
 | `gunboat-port/` | The C++ port (CMake + SDL3). **`gunboat-port/PORTING.md`**: code layout, memory API, how to port and test a function |
 | `gunboat-port/tests/difftest/` | Differential tests: `gbdiff.py` harness, `bridge.cpp`, `test_*.py` |
-| `gunboat-port/src/enhanced/` | The presentation layer: launcher, settings, the enhanced 3D view and presenter (PORTING.md, "The enhancement layer") |
+| `gunboat-port/src/enhanced/` | The presentation layer: launcher, settings, the enhanced 3D view and presenter, the AdLib sound effects (PORTING.md, "The enhancement layer") |
+| `gunboat-port/tools/sfx_editor/` | `gunboat_sfx_editor`: the AdLib sound effects' instruments (C++, SDL3, Dear ImGui) |
+| `gunboat-port/data/sfx.ini` | The AdLib instruments the port ships with, built into the game; the editor saves it when run from `gunboat-port/build` |
+| `.github/workflows/release-linux.yml` | Builds the Linux package of a published release (Ubuntu 22.04, SDL3 static) and attaches it |
 | `reverse_engineering/RE_GUIDE.md` | **Read first**: addresses, segment map, files, how to regenerate |
 | `reverse_engineering/symbols.csv` | The single name list for functions and globals |
 | `reverse_engineering/map/` | Function index and TD3 matches (generated, tracked) |
@@ -63,8 +66,9 @@ core.
   speaker, AdLib) go through the host layer. SDL is included only by the host (`src/host.cpp`)
   and the presentation layer (`src/enhanced/`); the core (`gbcore`) never includes it.
   Every busy-wait loop of the original calls the host pump once per iteration.
-* Copy protection: take the "passed" path (`// PORT:`). Only VGA mode 13h is ported first;
-  EGA/Tandy/CGA paths and the CMS driver are parked.
+* Copy protection: take the "passed" path (`// PORT:`). Every video card of the original is ported
+  (VGA, EGA, Tandy, CGA, Hercules: the player's choice, `platform/card.*`); the CMS and MT-32
+  drivers and the Tandy sound chip are parked.
 
 ## Verification (required for every ported function)
 
@@ -82,7 +86,9 @@ core.
 ```text
 # toolchain: MSYS2 UCRT64 (GCC 15, CMake, Ninja) at C:\msys64\ucrt64\bin; Python 3.13 with capstone, unicorn, pillow
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
-powershell -File gunboat-port/Release.ps1                      # release zip (exe, SDL3.dll, empty Game/)
+powershell -File gunboat-port/Release.ps1                      # Windows release zip (exes, SDL3.dll, empty Game/)
+bash gunboat-port/Release.sh                                   # Linux release tar.gz (CI: .github/workflows/release-linux.yml)
+gunboat-port/build/gunboat_sfx_editor.exe [--wav DIR]          # the AdLib effects editor; --wav renders every effect
 gunboat-port/build/gunboat.exe --check                         # finds Game/ by itself
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
 python gunboat-port/tests/scenes/scene_enhanced.py             # the enhancements, headless (needs the game)
@@ -100,22 +106,37 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 
 * **Phases 1–3 (map, specs, core): done.** 597 functions indexed; eight subsystem specs plus
   `adlib_driver.md`; `mem[]`, the EXEPACK loader, the SDL3 host, the differential harness.
-* **Phase 4, the faithful port: done for VGA.** The whole game runs natively in `gunboat.exe`:
+* **Phase 4, the faithful port: done, on every video card.** The whole game runs natively in `gunboat.exe`:
   start-up, the title with its music (PC speaker, or AdLib through a translation of the user's
   `ADLIB.COM`), the menu and the demo, the headquarters, the front end, every mission (the four
   regions and the practice missions: simulation, 3D view, cockpit, all stations, map, damage
-  report), the debrief and the roster file. 433 GB.EXE functions and 52 ADLIB.COM routines are
-  ported. Not ported, by design: the EGA/CGA/Tandy/Hercules drawing paths (parked, VGA only),
-  the MT-32 and CMS sound back ends (parked), the text-mode console of segment 17f0 (PORT: the
+  report), the debrief and the roster file. 485 GB.EXE functions and 52 ADLIB.COM routines are
+  ported. Not ported, by design: the MT-32 and CMS sound back ends and the Tandy sound chip (parked), the text-mode console of segment 17f0 (PORT: the
   configuration questions are answered with Enter, fatal messages go to a message box), the C
   runtime internals (modelled), dead code.
-* **Verification:** 214 differential tests, 174,770 cases, 0 mismatches (all memory, registers
-  where callers use them, DAC writes, speaker/timer/OPL events, open and written files), including
+* **Verification:** 359 differential tests, 193,273 cases, 0 mismatches (all memory, registers
+  where callers use them, DAC writes, speaker/timer/OPL events, open and written files, and on the
+  other video cards the whole card state), including
   whole missions (the demo, and missions touring every station) and whole front-end runs. Scene
   checks against the DOSBox captures: the title screens 100%, the pilot's cockpit 99.47% and the
   map 99.97% (the differences are the moments: water marks, the clock, the boat marker). How the
   work was split and merged: packages ported by parallel agents in git worktrees
   (`.claude/worktrees/pkg-*`), each function tested before merging.
+* **The other video cards (2026-09-26)**: EGA (mode 0Dh), Tandy (9), CGA (4) and Hercules (the
+  game's CGA mode 4 shown by the Hercules CRTC, 640 x 300), chosen in the launcher ("Video card") or
+  with `--video`; `config_load` gets the matching mode (PORT: the configuration's answer). The card
+  is a model outside `mem[]` (`platform/card.*`: EGA planes, latches, sequencer, graphics
+  controller, attribute palette; CGA/Tandy registers; Hercules CRTC; the picture each shows), with
+  its twin `cardmodel.py` for the original in Unicorn (EGA memory as MMIO); every check compares the
+  whole card state. Ported by five parallel packages: the library's handlers of each mode, the
+  palette routines, the display offset, the EGA text, the dissolve, the renderer's twins
+  (`render/mode_ega/cga/tandy.cpp`), the view copies' twins (`hud/views_*.cpp`), the EGA plane
+  set-ups; 52 more functions. Tests `test_modes*.py` (card by card) and, end to end, the title, the
+  demo, three practice missions touring the stations and five whole front ends on each card with
+  the original untouched (`test_modes_whole.py`, 52 cases) and with the port's library
+  (`test_modes_game.py`). Headless runs reach the title, the menu and the cockpit on each card.
+  Not done: DOSBox captures of those cards (none exist; the whole-run tests stand in), the EGA
+  pel panning in the picture (the sub-byte part of the screen shake).
 * **Register flows** matter across Gunboat's assembly routines: several callees take and leave
   AX/SI that later code stores (cockpit lamps store AH, `caller_si` DS:D6F6 stores SI, the view
   copies leave SI). They are threaded as parameters and return values (simulation.md §13,
@@ -167,9 +188,22 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     itself, one or two folders up (a build in `gunboat-port/build`), then in the current folder;
     the launcher or `--game-dir` can point elsewhere. The files were copied there from the local
     `Original DOS version/`.
+  * the AdLib sound effects (launcher "Sound effects", `--effects adlib`): the effects driver runs
+    unchanged; the timer dispatch tells the host when its handler runs, and the host passes its
+    speaker changes to a filter (`sfx_adlib.cpp`) that finds the effect from the driver's program
+    counter and plays the notes on the effect's FM instrument on a second OPL2 (`sfx_fm.cpp`), on
+    the speaker, or not at all. The instruments: `gunboat-port/data/sfx.ini` built in (CMake makes
+    it a string; a change reconfigures), under the player's `sfx.ini` next to `gunboat.ini`. The
+    editor `gunboat_sfx_editor` (tools/sfx_editor) runs the original driver (the core with the
+    tests' stub host) on GB.EXE's programs for each effect's notes, plays them on the speaker or
+    the instrument, and saves the player's bank and, when it runs from `gunboat-port/build`, also
+    `data/sfx.ini`, so the next build ships the edits.
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
-* **Next:** optionally the parked video modes and sound devices; more enhancements only as
-  player options.
+* **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects and their editor, the
+  horizon haze; Windows (`Release.ps1`, built here) and Linux (`Release.sh` on GitHub Actions when
+  the release is published: Ubuntu 22.04, SDL3 3.4.16 built static; untested by us on a Linux
+  desktop, the CI runs `--version` and `--host-test` headless).
+* **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

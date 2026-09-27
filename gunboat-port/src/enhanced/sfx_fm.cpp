@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
@@ -97,15 +98,68 @@ std::string trim(const std::string &s)
     return s.substr(a, b - a + 1);
 }
 
+// The instruments the port ships with: gunboat-port/data/sfx.ini, built in (CMake writes it into
+// sfx_bank_default.inc as a string; the editor saves that file when it runs from the source tree).
+#if __has_include("sfx_bank_default.inc")
+const char *const SHIPPED_BANK =
+#include "sfx_bank_default.inc"
+    ;
+#else
+const char *const SHIPPED_BANK = "";
+#endif
+
+// A bank's text over b: the effects and keys it has replace b's.
+void bank_parse(std::istream &in, SfxBank &b)
+{
+    std::string line;
+    int cur = -1;
+    while (std::getline(in, line)) {
+        line = trim(line);
+        if (line.empty() || line[0] == '#' || line[0] == ';') continue;
+        if (line[0] == '[') {
+            cur = std::atoi(line.c_str() + 1);
+            if (cur < 0 || cur >= SFX_COUNT) cur = -1;
+            continue;
+        }
+        const size_t eq = line.find('=');
+        if (cur < 0 || eq == std::string::npos) continue;
+        const std::string k = trim(line.substr(0, eq)), v = trim(line.substr(eq + 1));
+        SfxPatch &p = b.fx[cur];
+        const int n = std::atoi(v.c_str());
+        if (k == "output")
+            p.output = v == "speaker" ? SfxOutput::Speaker : v == "silent" ? SfxOutput::Silent : SfxOutput::Adlib;
+        else if (k == "modulator")
+            op_parse(v, p.mod);
+        else if (k == "carrier")
+            op_parse(v, p.car);
+        else if (k == "feedback")
+            p.feedback = clamp_u8(n, 7);
+        else if (k == "connection")
+            p.additive = v == "additive";
+        else if (k == "transpose")
+            p.transpose = n < -36 ? -36 : n > 36 ? 36 : n;
+        else if (k == "volume")
+            p.volume = n < 0 ? 0 : n > 100 ? 100 : n;
+        else if (k == "retrigger")
+            p.retrigger = n != 0;
+        else if (k == "jitter")
+            p.jitter = n < 0 ? 0 : n > 1200 ? 1200 : n;
+    }
+}
+
 } // namespace
+
+// The first instruments of the port, for what the shipped bank lacks.
+static SfxPatch factory_patch(int id);
 
 const char *sfx_name(int id) { return id >= 0 && id < SFX_COUNT ? INFO[id].name : "?"; }
 const char *sfx_description(int id) { return id >= 0 && id < SFX_COUNT ? INFO[id].description : ""; }
 
-// The starting instruments: each program's notes (sound.md §2.1) played by a voice that suits what
-// the effect is. Guns and explosions are very short low notes on the speaker: they get a noisy
-// modulator (feedback 7, jitter) and a release that rings on after the note.
-SfxPatch sfx_default_patch(int id)
+// The first instruments of the port: each program's notes (sound.md §2.1) played by a voice that suits
+// what the effect is. Guns and explosions are very short low notes on the speaker: they get a noisy
+// modulator (feedback 7, jitter) and a release that rings on after the note. The shipped bank
+// (data/sfx.ini) replaces them.
+SfxPatch factory_patch(int id)
 {
     SfxPatch p;
     switch (id) {
@@ -188,7 +242,16 @@ SfxPatch sfx_default_patch(int id)
 
 void sfx_bank_defaults(SfxBank &b)
 {
-    for (int i = 0; i < SFX_COUNT; i++) b.fx[i] = sfx_default_patch(i);
+    for (int i = 0; i < SFX_COUNT; i++) b.fx[i] = factory_patch(i);
+    std::istringstream in(SHIPPED_BANK);
+    bank_parse(in, b);
+}
+
+SfxPatch sfx_default_patch(int id)
+{
+    SfxBank b;
+    sfx_bank_defaults(b);
+    return b.fx[id >= 0 && id < SFX_COUNT ? id : 0];
 }
 
 std::string sfx_patch_text(const SfxPatch &p)
@@ -211,40 +274,7 @@ bool sfx_bank_load(const std::string &path, SfxBank &b)
     sfx_bank_defaults(b);
     std::ifstream in(path);
     if (!in) return false;
-    std::string line;
-    int cur = -1;
-    while (std::getline(in, line)) {
-        line = trim(line);
-        if (line.empty() || line[0] == '#' || line[0] == ';') continue;
-        if (line[0] == '[') {
-            cur = std::atoi(line.c_str() + 1);
-            if (cur < 0 || cur >= SFX_COUNT) cur = -1;
-            continue;
-        }
-        const size_t eq = line.find('=');
-        if (cur < 0 || eq == std::string::npos) continue;
-        const std::string k = trim(line.substr(0, eq)), v = trim(line.substr(eq + 1));
-        SfxPatch &p = b.fx[cur];
-        const int n = std::atoi(v.c_str());
-        if (k == "output")
-            p.output = v == "speaker" ? SfxOutput::Speaker : v == "silent" ? SfxOutput::Silent : SfxOutput::Adlib;
-        else if (k == "modulator")
-            op_parse(v, p.mod);
-        else if (k == "carrier")
-            op_parse(v, p.car);
-        else if (k == "feedback")
-            p.feedback = clamp_u8(n, 7);
-        else if (k == "connection")
-            p.additive = v == "additive";
-        else if (k == "transpose")
-            p.transpose = n < -36 ? -36 : n > 36 ? 36 : n;
-        else if (k == "volume")
-            p.volume = n < 0 ? 0 : n > 100 ? 100 : n;
-        else if (k == "retrigger")
-            p.retrigger = n != 0;
-        else if (k == "jitter")
-            p.jitter = n < 0 ? 0 : n > 1200 ? 1200 : n;
-    }
+    bank_parse(in, b);
     return true;
 }
 
@@ -265,6 +295,18 @@ std::string sfx_bank_path()
     std::string p = dir ? std::string(dir) + "sfx.ini" : std::string("sfx.ini");
     SDL_free(dir);
     return p;
+}
+
+std::string sfx_source_bank_path()
+{
+    namespace fs = std::filesystem;
+    const char *base = SDL_GetBasePath();  // the program's folder: gunboat-port/build/ in the tree
+    if (!base) return {};
+    std::error_code ec;
+    const fs::path port = fs::path(base).parent_path().parent_path();
+    if (!fs::exists(port / "src" / "enhanced" / "sfx_fm.hpp", ec) || !fs::exists(port / "CMakeLists.txt", ec))
+        return {};
+    return (port / "data" / "sfx.ini").string();
 }
 
 int sfx_effect_of(u16 pc, const u16 starts[SFX_COUNT])
