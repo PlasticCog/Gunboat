@@ -214,6 +214,8 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   release packages (the user's decision); Windows (`Release.ps1`, built here) and Linux (`Release.sh` on GitHub Actions when
   the release is published: Ubuntu 22.04, SDL3 3.4.16 built static; untested by us on a Linux
   desktop, the CI runs `--version` and `--host-test` headless).
+* **Release 1.1.1 (2026-09-26):** the AdLib effects on separate channels, the explosion, soldier
+  and impact sounds, the user's instruments; Windows and Linux as for 1.1.0.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

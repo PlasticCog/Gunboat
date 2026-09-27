@@ -62,7 +62,10 @@ enhancements only change how its frames are shown.
   Scaling        Sharp pixels, nearest, smooth, or CRT scanlines.
   Music          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
   Sound effects  PC speaker, as in the original, or AdLib: every effect plays its original
-                 notes on an FM instrument instead.
+                 notes on an FM instrument instead, each on its own channel (the guns no
+                 longer cut the engine and the explosions), and AdLib adds sounds where the
+                 original is silent: explosions for destroyed targets, soldiers killed, and
+                 the impacts of your bullets on metal, wood and stone.
 
 In the game: F11 switches between the enhanced and the original picture, Alt+Enter toggles full
 screen.
