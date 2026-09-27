@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 
+#include "enhanced/icon_image.hpp"
 #include "enhanced/settings.hpp"
 #include "enhanced/sfx_fm.hpp"
 #include "host_stub.hpp"
@@ -689,6 +690,11 @@ int main(int argc, char **argv)
         return 1;
     }
     SDL_SetRenderVSync(renderer, 1);
+    if (SDL_Surface *icon = SDL_CreateSurfaceFrom(ICON_SIZE, ICON_SIZE, SDL_PIXELFORMAT_RGBA32,
+                                                  const_cast<u8 *>(ICON_RGBA), ICON_SIZE * 4)) {
+        SDL_SetWindowIcon(window, icon);  // the port's own icon
+        SDL_DestroySurface(icon);
+    }
     const SDL_AudioSpec spec = {SDL_AUDIO_S16, 2, RATE};
     audio = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
     if (audio) SDL_ResumeAudioStreamDevice(audio);

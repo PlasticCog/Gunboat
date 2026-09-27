@@ -44,6 +44,7 @@
 #include <filesystem>
 #include <string>
 
+#include "enhanced/icon.hpp"
 #include "enhanced/launcher.hpp"
 #include "enhanced/present.hpp"
 #include "enhanced/settings.hpp"
@@ -204,6 +205,7 @@ int main(int argc, char **argv)
     bool window = false;
     if (!check && (force_launcher || (st.launcher && !no_launcher))) {
         if (!host_init(".", st.window_scale, st.fullscreen)) return 1;
+        icon_install();
         window = true;
         if (!launcher_run(st)) {
             host_shutdown();
@@ -251,6 +253,7 @@ int main(int argc, char **argv)
     dos_heap_init();
     bios_init();
     if (!window && !host_init(dir.c_str(), st.window_scale, st.fullscreen)) return 1;
+    if (!window) icon_install();
     host_set_game_dir(dir.c_str());
     vga_init();
     enhanced_install(st);

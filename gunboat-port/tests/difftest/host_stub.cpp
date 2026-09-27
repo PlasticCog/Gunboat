@@ -102,6 +102,7 @@ void host_sfx_play(u16) {}
 void host_target_destroyed(u8, u8) {}
 void host_object_hit(u8, u16) {}
 void host_shot_landed(u16, u16, u8) {}
+void host_title_shown() {}
 const std::vector<SpeakerEvent> &host_stub_speaker_log() { return speaker_log; }
 void host_stub_speaker_clear() { speaker_log.clear(); }
 

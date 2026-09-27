@@ -23,6 +23,7 @@
 
 #include "enhanced/capture.hpp"
 #include "enhanced/debris.hpp"
+#include "enhanced/icon.hpp"
 #include "enhanced/sfx_adlib.hpp"
 #include "enhanced/view3d.hpp"
 #include "enhanced/widen.hpp"
@@ -552,6 +553,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 
 bool present(const u32 *frame, int w, int h, bool changed)
 {
+    icon_frame(frame, w, h);
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);

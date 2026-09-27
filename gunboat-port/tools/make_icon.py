@@ -1,0 +1,107 @@
+"""The port's own icon (not the game's art): a gunboat on a jungle river at dusk, drawn as 64 x 64
+pixel art in the VGA game's style. Writes dist/gunboat.ico (16..256 pixels, for the executables),
+dist/gunboat.png (256, for the Linux package) and src/enhanced/icon_image.hpp (the 64 x 64 image the
+program sets as its window icon until the player's own title screen is available).
+
+    python tools/make_icon.py
+"""
+import pathlib
+
+from PIL import Image, ImageDraw
+
+HERE = pathlib.Path(__file__).resolve().parent.parent
+N = 64
+
+
+def lerp(a, b, t):
+    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(3))
+
+
+def draw():
+    im = Image.new('RGBA', (N, N), (0, 0, 0, 0))
+    px = im.load()
+    horizon = 36
+    # the sky: deep violet at the top to orange at the horizon, in bands (the VGA's few colours)
+    top, mid, low = (38, 22, 70), (150, 52, 88), (250, 150, 60)
+    for y in range(horizon):
+        t = y / (horizon - 1)
+        c = lerp(top, mid, t / 0.55) if t < 0.55 else lerp(mid, low, (t - 0.55) / 0.45)
+        band = tuple(v - v % 12 for v in c)  # posterized bands
+        for x in range(N):
+            px[x, y] = band + (255,)
+    # the sun, half down behind the far bank
+    d = ImageDraw.Draw(im)
+    d.ellipse((22, horizon - 13, 42, horizon + 7), fill=(255, 214, 110, 255))
+    d.ellipse((25, horizon - 10, 39, horizon + 4), fill=(255, 238, 170, 255))
+    # the river
+    for y in range(horizon, N):
+        t = (y - horizon) / (N - horizon)
+        c = lerp((70, 44, 70), (18, 22, 40), t)
+        for x in range(N):
+            px[x, y] = c + (255,)
+    # the sun's reflection: broken orange streaks
+    for y in range(horizon + 1, N - 6, 2):
+        w = max(2, 10 - (y - horizon) // 3)
+        x0 = 32 - w // 2 + ((y * 7) % 5) - 2
+        d.line((x0, y, x0 + w, y), fill=(255, 170, 70, 255))
+    # the jungle on both banks: dark tree lines, and a palm leaning over each
+    jungle = (16, 20, 18, 255)
+    d.polygon([(0, horizon + 2), (0, 25), (3, 24), (6, 26), (9, 25), (13, 28), (16, 31), (19, 34), (21, horizon),
+               (21, horizon + 2)], fill=jungle)
+    d.polygon([(N, horizon + 3), (N, 24), (61, 25), (58, 24), (55, 27), (51, 30), (47, 33), (44, horizon),
+               (44, horizon + 3)], fill=jungle)
+    for (bx, by, tx, ty) in ((4, 28, 8, 14), (60, 28, 55, 13)):  # trunk base, top
+        d.line((bx, by, (bx + tx) // 2 + (1 if tx > bx else -1), (by + ty) // 2, tx, ty), fill=jungle, width=1)
+        for (dx, dy) in ((-7, 4), (-5, 7), (7, 4), (5, 7), (-6, 1), (6, 1), (0, -2)):  # drooping fronds
+            mx, my = tx + dx // 2, ty + (dy // 2) - 2
+            d.line((tx, ty, mx, my, tx + dx, ty + dy), fill=jungle, width=1)
+    # the gunboat (a PBR, side on, bow to the right): the hull rising to the bow, the canopy and
+    # cabin, the bow gun tub with the twin .50s, the stern gun, the mast with its radar and flag
+    boat = (10, 12, 16, 255)
+    d.polygon([(6, 47), (49, 47), (60, 42), (58, 47), (53, 51), (9, 51), (6, 49)], fill=boat)   # hull
+    d.rectangle((19, 40, 34, 47), fill=boat)                                                    # cabin
+    d.rectangle((17, 39, 36, 39), fill=boat)                                                    # canopy
+    d.rectangle((22, 42, 25, 44), fill=(255, 190, 90, 255))                                     # lit windows
+    d.rectangle((28, 42, 31, 44), fill=(255, 190, 90, 255))
+    d.rectangle((43, 43, 47, 47), fill=boat)                                                    # bow gun tub
+    d.line((45, 43, 53, 39), fill=boat, width=1)                                                # twin .50s
+    d.line((46, 44, 54, 40), fill=boat, width=1)
+    d.rectangle((9, 44, 12, 47), fill=boat)                                                     # stern gun
+    d.line((10, 44, 5, 41), fill=boat, width=1)
+    d.line((27, 39, 27, 27), fill=boat, width=1)                                                # mast
+    d.rectangle((25, 30, 29, 31), fill=boat)                                                    # radar
+    d.rectangle((20, 27, 26, 30), fill=(210, 40, 40, 255))                                      # flag, trailing aft
+    d.line((20, 28, 26, 28), fill=(240, 240, 240, 255))
+    d.rectangle((20, 27, 22, 28), fill=(40, 60, 170, 255))
+    # the bow wave and the wake
+    foam = (230, 238, 245, 255)
+    d.line((57, 48, 63, 51), fill=foam)
+    d.line((53, 51, 61, 54), fill=foam)
+    d.line((0, 51, 9, 51), fill=foam)
+    d.line((0, 54, 8, 53), fill=(170, 190, 210, 255))
+    d.line((12, 53, 48, 53), fill=(120, 140, 170, 255))
+    return im
+
+
+def main():
+    im = draw()
+    dist = HERE / 'dist'
+    big = im.resize((256, 256), Image.NEAREST)
+    big.save(dist / 'gunboat.png')
+    sizes = [(256, 256), (128, 128), (64, 64), (48, 48), (32, 32), (24, 24), (16, 16)]
+    big.save(dist / 'gunboat.ico', sizes=sizes)
+    # the window icon, compiled in: 64 x 64 RGBA, row by row
+    data = im.tobytes()
+    lines = ['#pragma once', '// Generated by tools/make_icon.py: the port\'s own icon (a gunboat on a river at dusk), 64 x 64',
+             '// RGBA, the window icon until the player\'s title screen is available (icon.cpp).',
+             '#include "types.hpp"', '', 'namespace gb {', '', 'constexpr int ICON_SIZE = %d;' % N,
+             'inline const u8 ICON_RGBA[ICON_SIZE * ICON_SIZE * 4] = {']
+    for i in range(0, len(data), 24):
+        lines.append('    ' + ', '.join(str(b) for b in data[i:i + 24]) + ',')
+    lines += ['};', '', '} // namespace gb', '']
+    (HERE / 'src' / 'enhanced' / 'icon_image.hpp').write_text('\n'.join(lines), encoding='utf-8', newline='\n')
+    print('wrote dist/gunboat.ico, dist/gunboat.png, src/enhanced/icon_image.hpp')
+
+
+if __name__ == '__main__':
+    main()

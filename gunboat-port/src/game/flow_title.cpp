@@ -236,6 +236,9 @@ u16 title_menu()
             picture_draw(PIC, 0x2E98, 0x140);
             screen_present();
         }
+        // PORT: tells the host that the title screen is on (the window icon is made from it, icon.cpp);
+        // nothing in mem[] changes.
+        host_title_shown();
         engine_sound_off();
         music_start();
         ds_u16(DS_title_delay) = 1;

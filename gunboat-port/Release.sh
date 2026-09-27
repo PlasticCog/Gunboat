@@ -25,6 +25,7 @@ strip -o "$top/gunboat" "$build/gunboat"
 sed "s/@VERSION@/$version/g" "$source/dist/README.txt" > "$top/README.txt"
 cp "$source/dist/Game/README.txt" "$top/Game/README.txt"
 cp "$source/THIRD_PARTY.md" "$top/"
+cp "$source/dist/gunboat.png" "$top/gunboat.png"  # the port's own icon, for a desktop entry
 cp "$source/licenses/test-drive-3-sdl3-MIT.txt" "$top/licenses/"
 cp "$source/vendor/nuked-opl3/LICENSE" "$top/licenses/Nuked-OPL3-LGPL-2.1.txt"
 cp "${SDL_LICENSE:-$source/deps/SDL3-3.4.16/LICENSE.txt}" "$top/licenses/SDL3-zlib.txt"

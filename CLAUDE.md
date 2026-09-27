@@ -229,6 +229,12 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   bow dipping as the boat slows in a turn); the smooth-motion view adds no jumps (measured over
   2,068 presents: no step of a row except within one interpolated glide); the physics routines
   match the original in the differential tests.
+* **Icons (2026-09-27):** the executables carry the port's own icon (`tools/make_icon.py`: a
+  gunboat on a jungle river at dusk; `dist/gunboat.ico`, `.png`, `src/enhanced/icon_image.hpp`),
+  which is also the window icon until the game has shown its title: then `icon.cpp` shrinks the
+  player's own title screen (TITLE1, `host_title_shown`, PORT notification) into the window icon
+  and keeps it in the settings folder (`title_icon.bmp`). The original's art is never built in or
+  distributed (the user's rule).
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
