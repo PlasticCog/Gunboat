@@ -39,7 +39,6 @@ struct Particle {
     u32 rgb;
     double size;        // height units
     bool streak;        // drawn as a short line back along its path (sparks)
-    bool rests;         // stays on the ground when it lands (chips), else it is gone (drops)
 };
 
 // How each stuff flies apart: particles for a bullet (an explosive shot makes three times as many,
@@ -48,18 +47,18 @@ struct Spec {
     int n;
     u32 colour[3];
     double speed0, speed1, up0, up1, gravity, drag, life0, life1, size;
-    bool streak, rests;
+    bool streak;
 };
 const Spec SPECS[int(Stuff::COUNT)] = {
-    {0, {0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, false, false},                                         // Ground
-    {12, {0xFFFFFF, 0xDDEEFF, 0xB0D4F0}, 5, 16, 22, 40, 100, 0.8, 0.35, 0.6, 0.6, false, false},      // Water
-    {9, {0x4E8A2E, 0x6FAE3C, 0x3A6A22}, 10, 24, 10, 24, 60, 1.0, 0.35, 0.6, 0.6, false, true},        // Grass
-    {10, {0, 0, 0}, 6, 18, 6, 16, 35, 2.5, 0.45, 0.8, 0.9, false, false},                              // Dirt
-    {9, {0xFFF4C8, 0xFFD050, 0xFF9A28}, 30, 70, 12, 34, 70, 0, 0.18, 0.4, 0.45, true, false},          // Metal
-    {7, {0x8A5A2B, 0xA87840, 0x5C3A1C}, 14, 34, 12, 28, 60, 0.5, 0.5, 0.9, 0.8, false, true},         // Wood
-    {9, {0xA00A0A, 0xCC1A1A, 0x6E0606}, 10, 26, 5, 18, 65, 0.5, 0.3, 0.55, 0.6, false, false},        // Flesh
-    {8, {0x9A968C, 0xBAB6AC, 0x6C6862}, 16, 38, 10, 24, 65, 0.3, 0.4, 0.7, 0.65, false, true},        // Stone
-    {10, {0xC8B07A, 0xB09460, 0xDCC894}, 8, 20, 5, 14, 30, 2.0, 0.45, 0.8, 1.0, false, false},        // Sand
+    {0, {0, 0, 0}, 0, 0, 0, 0, 0, 0, 0, 0, 0, false},                                         // Ground
+    {12, {0xFFFFFF, 0xDDEEFF, 0xB0D4F0}, 5, 16, 22, 40, 100, 0.8, 0.35, 0.6, 0.6, false},      // Water
+    {9, {0x4E8A2E, 0x6FAE3C, 0x3A6A22}, 10, 24, 10, 24, 60, 1.0, 0.35, 0.6, 0.6, false},        // Grass
+    {10, {0, 0, 0}, 6, 18, 6, 16, 35, 2.5, 0.45, 0.8, 0.9, false},                              // Dirt
+    {9, {0xFFF4C8, 0xFFD050, 0xFF9A28}, 30, 70, 12, 34, 70, 0, 0.18, 0.4, 0.45, true},          // Metal
+    {7, {0x8A5A2B, 0xA87840, 0x5C3A1C}, 14, 34, 12, 28, 60, 0.5, 0.5, 0.9, 0.8, false},         // Wood
+    {9, {0xA00A0A, 0xCC1A1A, 0x6E0606}, 10, 26, 5, 18, 65, 0.5, 0.3, 0.55, 0.6, false},        // Flesh
+    {8, {0x9A968C, 0xBAB6AC, 0x6C6862}, 16, 38, 10, 24, 65, 0.3, 0.4, 0.7, 0.65, false},        // Stone
+    {10, {0xC8B07A, 0xB09460, 0xDCC894}, 8, 20, 5, 14, 30, 2.0, 0.45, 0.8, 1.0, false},        // Sand
 };
 
 std::vector<Impact> impacts;
@@ -112,15 +111,13 @@ void on_shot_landed(u16 x, u16 y, u8 weapon)
     impacts.push_back({x * 4.0, y * 4.0, 0, Stuff::Ground, weapon == 2 || weapon == 3, SDL_GetTicksNS()});
 }
 
-// The shot that just landed hit object `obj` of kind `kind`: its debris flies off the object, a little
-// above the ground (trees higher up).
-void on_object_hit(u8 kind, u16 obj)
+// The shot that just landed hit an object of kind `kind`: its debris is the object's stuff, flying
+// out of the game's own dust puff at the landing point (projectile_impact's explosion object).
+void on_object_hit(u8 kind, u16)
 {
     if (impacts.empty() || kind == 0x30 || kind == 0x31) return;  // the shot passes wrecks 30h/31h
     Impact &im = impacts.back();
-    im.x = ds_u16(u16(DS_object_x + obj)) * 4.0;
-    im.y = ds_u16(u16(DS_object_y + obj)) * 4.0;
-    im.h = kind >= 0x2A && kind <= 0x2D ? between(6, 16) : between(2, 7);
+    im.h = between(1, 4);
     im.stuff = stuff_of(kind);
 }
 
@@ -152,7 +149,6 @@ void spawn(const Impact &im, Stuff stuff, u32 ground)
         p.rgb = colour[i % 3];
         p.size = sp.size * SIZE * big * between(0.7, 1.3);
         p.streak = sp.streak;
-        p.rests = sp.rests;
         particles.push_back(p);
     }
 }
@@ -222,7 +218,7 @@ void debris_draw(const ViewProjection &proj, const ViewTarget &target, u32 *rgb,
         const double age = (now - p.born) / 1e9;
         double x, y, h;
         position(p, age, x, y, h);
-        if (h <= 0 && !p.rests && age > 0.05) continue;  // a drop that has landed
+        if (h <= 0 && age > 0.05) continue;  // it has fallen back to the ground
         double px, py, tx, ty;
         const double s = proj.point(x, y, h, px, py);
         if (!to_target(px, py, tx, ty)) continue;
