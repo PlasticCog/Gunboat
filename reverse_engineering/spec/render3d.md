@@ -449,7 +449,7 @@ and explosions. The EGA/Tandy part is ported (`test_modes_game.test_palette_flas
 in mode 13h: CRTC start = y × 80 + x / 4, also to the BIOS page offset `0040:004E`, written after
 the start and the end of a vertical retrace (port 3DAh at the BIOS's CRTC base + 6); the text
 modes and modes 8/0Ah only return 0. The other modes (CGA, Tandy, Hercules, EGA with its pel
-panning) are in video.md §7; ported, `test_modes_game.test_screen_shake_*` runs this routine on
+panning) are in video.md §8; ported, `test_modes_game.test_screen_shake_*` runs this routine on
 each machine.
 
 ## 8. Arrays (DGROUP) **verified**

@@ -28,8 +28,8 @@ func,00f2:0eec,pal_apply_vga,far void(),video,spec:video,§3 wrapper of 121b:087
 func,00f2:0efa,pal_black_vga,far void(),video,spec:video,§3
 func,00f2:0f08,pal_fade_in_vga,far void(),video,spec:video,§3
 func,00f2:0f16,pal_fade_out_vga,far void(),video,spec:video,§3
-func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),video,spec:video,§3 ega_pal_set with the value's low byte only in Tandy mode 9; ported | §3 parked
-func,00f2:0f46,ega_pal_apply,far void(),video,spec:video,"§3 CGA (4): colour patterns 0..1Fh from cga_patterns; Tandy (9): 10h..1Fh from ega_patterns & 0Fh * 11h; EGA (0Dh): 10h..1Fh from ega_patterns; ported, test_modes_game | §3 parked"
+func,00f2:0f24,ega_pal_entry,far void(u16 index u16 value),video,spec:video,§3 ega_pal_set with the value's low byte only in Tandy mode 9; ported
+func,00f2:0f46,ega_pal_apply,far void(),video,spec:video,"§3 CGA (4): colour patterns 0..1Fh from cga_patterns; Tandy (9): 10h..1Fh from ega_patterns & 0Fh * 11h; EGA (0Dh): 10h..1Fh from ega_patterns; ported, test_modes_game"
 func,00f2:0fea,ega_pal_init,far void(),video,td3-match+spec:video,"§3 Tandy (9): ega_palette converted in place to IRGB ((v & 10h) >> 1 | v & 7); Tandy and EGA: gfx_set_ega_palette(ega_palette); then ega_pal_apply; ported, test_modes_game | TD3 01f4:1c9c ega_pal_init, score 0.56; low score: confirm in the spec"
 func,00f2:103e,kbd_flush_key,far void(),game_flow,spec:game_flow,§3 isr_key_code = 0
 func,00f2:1044,music_start,far void(),game_flow,spec:game_flow,§3.1 the title music | §3.1 VALKPC/VALK12/VALK3V
@@ -391,10 +391,10 @@ func,146a:000b,joystick_axis,far u16(u16 axis),platform,spec:platform,§3 port 2
 func,146e:000e,joystick_calibrate,far void(u16),platform,spec:platform,§3
 func,1473:0008,joystick_read,far void(u16 stick u8 *code u8 *dir),platform,spec:platform,§3
 func,147b:000c,gfx_move_to,far void(u16 x u16 y),video,spec:video,§2 DS:DCFF/DD01
-func,147c:000f,ega_pal_register,far void(u16 reg u16 value),video,spec:video,"§2 one palette register by the library mode: CGA 4/5 INT 10h AH=0Bh twice and the mode register (3D8h and 0040:0065) from the tables E0D1/E0DD/E0D7 by reg, mode 6 the background, Tandy the gate array (3DAh/3DEh), EGA INT 10h AX=1000h, 13h the DAC from rgbRGB (INT 10h AX=1010h); ported, test_modes_game | §2 parked"
+func,147c:000f,ega_pal_register,far void(u16 reg u16 value),video,spec:video,"§2 one palette register by the library mode: CGA 4/5 INT 10h AH=0Bh twice and the mode register (3D8h and 0040:0065) from the tables E0D1/E0DD/E0D7 by reg, mode 6 the background, Tandy the gate array (3DAh/3DEh), EGA INT 10h AX=1000h, 13h the DAC from rgbRGB (INT 10h AX=1010h); ported, test_modes_game"
 func,148c:000d,gfx_set_ega_palette,far u16(u16 table_ds),video,td3-match+spec:video,"§2 16 palette registers from the low bytes of 16 words at DS:table: Tandy the gate array (3DAh/3DEh), EGA INT 10h AX=1002h through ega_palette_regs, 13h DAC 0..15 from rgbRGB through ega_palette_rgb (INT 10h AX=1012h); ported, test_modes_game | TD3 18f3:0002 gfx_set_ega_palette, score 1.00"
 func,149f:0004,gfx_set_display_offset,far u16(s16 x s16 y),video,td3-match+spec:video,"§1 the display start (x, y) by the library mode: CGA 4-6 (y>>1)*40 + x>>3, Tandy 9 (y>>2)*80 + x>>2, 0Bh/0Ch Hercules, EGA 0Dh-12h y*row_bytes + x>>3 + visible page * page_bytes with the pel panning x & 7 (attribute 13h), 13h y*80 + x>>2; the CRTC at 0040:0063 after a retrace start and end, 0040:004E; returns 0; ported, test_modes_game | TD3 1776:0008 gfx_set_display_offset, score 1.00"
-func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),video,spec:video,"§2 the colour pattern pair colour_patterns[index & 1Fh] by the library mode: CGA/Tandy 9/Hercules the byte and the byte rotated left by the value's high byte, EGA the low and high nibble, 11h bits 0 and 7; nothing in the others (13h); ported, test_modes_game | §2 EGA/CGA palette entry; nothing in mode 13h | §2 parked"
+func,14ae:0005,ega_pal_set,far u16(u16 index u16 value),video,spec:video,"§2 the colour pattern pair gfx_dither[index & 1Fh] by the library mode: CGA/Tandy 9/Hercules the byte and the byte rotated left by the value's high byte, EGA the low and high nibble, 11h bits 0 and 7; nothing in the others (13h); ported, test_modes_game"
 func,14b5:000d,gfx_put_pixel,far u16(s16 x s16 y),video,td3-match+spec:video,"§2 clipped to DD05..DD03 / DD09..DD07 | TD3 173c:0005 gfx_put_pixel, score 0.89"
 func,14cf:0008,gfx_fill_rect,,video,td3-match,"TD3 1785:000b gfx_fill_rect, score 0.57; low score: confirm in the spec"
 func,14ff:0001,text_exit_clear,,video,td3-match,"TD3 16fc:000b text_exit_clear, score 0.69; low score: confirm in the spec"
@@ -1068,7 +1068,7 @@ global,DS:DD2B,gfx_copy_seg,u16,video,spec:video,§1
 global,DS:DD2D,gfx_draw_seg,u16,video,spec:video,§1
 global,DS:DD2F,gfx_visible_seg,u16,video,spec:video,§1
 global,DS:DD31,gfx_page_seg,u16[8],video,spec:video,§1 page segments (mode 13h: 0 = A000h)
-global,DS:DDC1,colour_patterns,u8[32][2],video,spec:video,"§2 per colour 0..1Fh the fill byte of even and odd rows (picture_hline): CGA/Tandy pixel patterns, EGA two colours; defaults copied by gfx_set_mode, set by ega_pal_set"
+global,DS:DDC1,gfx_dither,u8[64],video,spec:video,§2 per colour 0-1Fh: its fill on even rows and on odd rows (CGA / Tandy: a byte of pixels; EGA: a colour each); picture_hline fills with it; copied by gfx_set_mode from DE01 / DE41 / DE81; ega_pal_set sets entries
 global,DS:DEF1,mode_interleave,u16[21],video,spec:video,§1 [0] current; [1 + mode] per mode
 global,DS:DF1B,mode_page_bytes,u16[21],video,spec:video,§1 FA00h in mode 13h
 global,DS:DF45,mode_row_bytes,u16[21],video,spec:video,§1 140h in mode 13h

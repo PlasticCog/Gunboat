@@ -101,7 +101,7 @@ a window crack's record from the table `08e1:00DF` (AL = column, AH = row | pict
 | `text_set_colours` `121b:0397` (TD3) | `(fg, bg)`: `D9BF` = fg << 8, `D9BD` = bg << 8 |
 | `text_goto_cell` `121b:03b0` | `(row, col)`: `D9C2` = row × 8 (the glyph's top pixel row), `D9C1` = col |
 | `text_goto` `121b:03c7` | `(y, col)`: `D9C2` = y in pixels, `D9C1` = col (the message line) |
-| `text_draw_char` `121b:03d8` | fixed 8 × 8 cell: glyph `CS:006E` + 8·(c − 20h), bottom row first, drawn with `gfx_draw_bitmap` at x = col·8, rows y+7 up to y in `D9BF`, then (if `D9BC` = 0) the inverted glyph in `D9BD`; `D9C1`++. Characters below 20h only advance. EGA (`EED2` = 0Dh) has its own planar path (`121b:049c`, video.md §7.3), ported |
+| `text_draw_char` `121b:03d8` | fixed 8 × 8 cell: glyph `CS:006E` + 8·(c − 20h), bottom row first, drawn with `gfx_draw_bitmap` at x = col·8, rows y+7 up to y in `D9BF`, then (if `D9BC` = 0) the inverted glyph in `D9BD`; `D9C1`++. Characters below 20h only advance. EGA (`EED2` = 0Dh) has its own planar path (`121b:049c`, video.md §8.3), ported |
 | `121b:0581` | used by `screen_present` (557 bytes; see video.md §4) |
 | `print_records` / `print_text` / `print_chars` (`00f2`) | TD3 game_flow §4.6 |
 | `17f0` segment | BIOS text output for the configuration questions and fatal messages (the string printer `17f0:0002` handles CR/LF with the cursor in `DS:E84F..E85B`); INT 10h helpers |

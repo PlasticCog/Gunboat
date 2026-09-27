@@ -61,7 +61,7 @@ using a 96-byte buffer at `121b:000E`:
 | `00f2:0f16` | `121b:07ae` pal_fade_out | levels 15..0, same |
 
 `ega_pal_init` (`00f2:0fea`, TD3) and `ega_pal_apply` (`00f2:0f46`) set the EGA/Tandy palette
-registers and the colour patterns (ported, §7.4).
+registers and the colour patterns (ported, §8.4).
 The time-of-day colours of the 3D view are palette **indices** chosen by the renderer
 (`D94F..D952`, render3d §2), not DAC changes; at night `mission_load` darkens palette bytes
 15h..1Ah and 39h..47h by 8 before applying (world §4). The explosion flash reprograms DAC register
@@ -70,7 +70,7 @@ The time-of-day colours of the 3D view are palette **indices** chosen by the ren
 ## 4. Screen transitions
 
 `screen_present` (`00f2:0ece`, TD3): the page 1 → page 0 dissolve. The title and front end use
-it; missions copy directly (hud §1). Every mode's dissolve is ported (§7.3).
+it; missions copy directly (hud §1). Every mode's dissolve is ported (§8.3).
 
 ## 5. PORT
 
@@ -78,14 +78,14 @@ Mode 13h only: a 320 × 200 byte frame in the emulated memory at A000:0000 plus 
 the DAC model and presentation from TD3's `platform/vga.c`. EGA, Tandy, CGA and CGA composite
 paths are not ported (`// PORT:` at each mode dispatch).
 
-## 7. Palettes, display start and the game side of the other modes **verified**, **ported**
+## 8. Palettes, display start and the game side of the other modes **verified**, **ported**
 
 Ported for every mode with its branch (package pkg-game); tests `test_modes_game.py` on the EGA,
 CGA, Tandy, Hercules and VGA machines, all memory and the whole card state compared.
 
-### 7.1 The library's palette routines (`platform/gfx_palette.cpp`)
+### 8.1 The library's palette routines (`platform/gfx_palette.cpp`)
 
-The library keeps a **colour pattern pair** per colour 0..1Fh (`colour_patterns`, DS:DDC1, the
+The library keeps a **colour pattern pair** per colour 0..1Fh (`gfx_dither`, DS:DDC1, the
 fill bytes of even and odd rows that `picture_hline` uses; the defaults are copied by
 `gfx_set_mode`). Dispatch on the library mode (`DCF8`):
 
@@ -103,7 +103,7 @@ each through `ega_level_rgb` = {0, 2Ah, 15h, 3Fh}. The CGA tables by reg (0..5):
 (Tandy / EGA 0Dh, 0Eh: RGB bits with the intensity from a negative index; 0Fh/10h: 2-bit levels
 as rgbRGB; 11h-13h: the DAC).
 
-### 7.2 The display start (`gfx_set_display_offset` `149f:0004`, `platform/gfx_display.cpp`)
+### 8.2 The display start (`gfx_set_display_offset` `149f:0004`, `platform/gfx_display.cpp`)
 
 Start address: CGA 4-6 `(y >> 1)·40 + (x >> 3)`; Tandy 9 `(y >> 2)·80 + (x >> 2)`; 0Bh
 `(y >> 2)·45 + (x >> 3)`, 0Ch the same of (x·2, y + y/2); EGA 0Dh-12h `y·row_bytes + (x >> 3) +
@@ -114,7 +114,7 @@ by `OUT DX, AX`, and with a pel panning a wait for the next retrace and the attr
 register 13h (index 33h). PORT: outside 13h the status port is read as the original reads it
 (each read reaches the card), after one `host_wait_vretrace` for the pace of a real retrace.
 
-### 7.3 Text and the dissolve (`platform/text.cpp`, `platform/pal.cpp`)
+### 8.3 Text and the dissolve (`platform/text.cpp`, `platform/pal.cpp`)
 
 `text_draw_char`'s EGA path (`121b:049c`, EED2 = 0Dh) writes straight into the game's draw page
 (`page_segments[DS:007A]`, in the card's memory): map mask 0Fh, write mode 0, set/reset on all
@@ -131,7 +131,7 @@ mask `dissolve_ega_masks`; **no timer wait**: the EGA dissolve runs as fast as t
 above 0Dh VGA, the others (9) the Tandy path (4-bit pixels, `dissolve_tandy_masks`, the row
 `dissolve_rows / 40` by DIV into its bank). CGA, Tandy and VGA wait for a `DS:08C0` tick per step.
 
-### 7.4 The game's palette code
+### 8.4 The game's palette code
 
 `ega_pal_entry` (`00f2:0f24`) calls `ega_pal_set` with the low byte only in Tandy mode 9.
 `ega_pal_apply` (`00f2:0f46`): CGA the patterns 0..1Fh from `cga_patterns` (the palette file's

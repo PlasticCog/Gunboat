@@ -79,7 +79,7 @@ VGA (13h): DS:0078 = 1, DS:0074 = 0 (the view page is 0); otherwise DS:0074 = 2 
 ```
 
 CGA (EED2 = 4, not Hercules) also sets `ega_pal_register(1, 0)` after the mode: the bright palette
-1 on black (video.md §7.1). `DS:0076` (hercules_mode) is written here and read nowhere in GB.EXE
+1 on black (video.md §8.1). `DS:0076` (hercules_mode) is written here and read nowhere in GB.EXE
 (no instruction reads DS:0076): the Hercules card shows the CGA picture because `hercules_setup`
 programs its CRTC, nothing else of the game differs from CGA.
 

@@ -36,7 +36,7 @@ u8 level_rgb(u8 level) { return ds_u8(u16(DS_ega_level_rgb + level)); }
 } // namespace
 
 // 14ae:0005 ega_pal_set (video.md §2): the fill pattern pair of colour index & 1Fh
-// (colour_patterns, used by picture_hline) by the library's mode (jump table 14ae:0055):
+// (gfx_dither, used by picture_hline) by the library's mode (jump table 14ae:0055):
 //  * CGA 4-6, Tandy 9, Hercules 0Bh/0Ch (0025): the value's low byte for even rows, that byte
 //    rotated left by the high byte for odd rows;
 //  * EGA 0Dh-10h, 12h (0030): the low nibble and the high nibble (two colours);
@@ -45,7 +45,7 @@ u8 level_rgb(u8 level) { return ds_u8(u16(DS_ega_level_rgb + level)); }
 // The caller gets AX = 0.
 void ega_pal_set(u16 index, u16 value)
 {
-    const u16 di = u16(DS_colour_patterns + ((index & 0x1F) << 1));
+    const u16 di = u16(DS_gfx_dither + ((index & 0x1F) << 1));
     const u8 al = u8(value), ah = u8(value >> 8);
     switch (ds_u16(DS_gfx_mode_x2) >> 1) {
     case 4: case 5: case 6: case 9: case 0x0B: case 0x0C:  // 0025
