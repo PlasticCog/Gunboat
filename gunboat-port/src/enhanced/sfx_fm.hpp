@@ -12,6 +12,7 @@
 // start-up, the built-in bank for what it lacks. This file has no SDL or game dependencies apart from the settings folder, so the
 // editor shares it.
 #include <string>
+#include <vector>
 
 #include "types.hpp"
 
@@ -41,6 +42,8 @@ int sfx_program_of(int id);
 // volume takes back some of the headroom: the heard operators' levels only, so the sound keeps its
 // envelope and timbre.
 constexpr int SFX_HEADROOM = 16;
+// The effects driver's tick (sound.md §2.2: the effects timer): 236.7 a second.
+constexpr double SFX_TICK_HZ = 1193182.0 / 0x13B1;
 constexpr int SFX_MAX_VOLUME = 400;
 constexpr int SFX_GAIN = 8;
 
@@ -62,6 +65,16 @@ struct SfxOperator {
     bool ksr = false;       // key scale rate
 };
 
+// A point of an effect's pitch bend: `ms` milliseconds after the effect starts, its notes sound `cents`
+// higher (lower when negative) than they are (with the transpose).
+struct SfxBendPoint {
+    int ms = 0;
+    int cents = 0;
+};
+constexpr int SFX_BEND_POINTS = 16;       // at most, per effect
+constexpr int SFX_BEND_MAX_MS = 10000;
+constexpr int SFX_BEND_MAX_CENTS = 4800;  // four octaves up or down
+
 struct SfxPatch {
     SfxOutput output = SfxOutput::Adlib;
     SfxOperator mod, car;
@@ -71,7 +84,13 @@ struct SfxPatch {
     int volume = 100;        // percent, 0-400 (SFX_HEADROOM)
     bool retrigger = false;  // a new pitch during a note attacks again (else it glides on)
     int jitter = 0;          // cents 0-1200: the pitch wobbles randomly on every driver tick (noise)
+    // The pitch bend, in time order (none: the notes as they are): between two points the bend moves
+    // in a straight line (in cents), before the first and after the last it holds. It goes on while
+    // the last note rings out.
+    std::vector<SfxBendPoint> bend;
 };
+// The bend of patch p at `ms` milliseconds after the effect starts, in cents.
+double sfx_bend_cents(const SfxPatch &p, double ms);
 
 struct SfxBank {
     SfxPatch fx[SFX_COUNT];
@@ -121,6 +140,11 @@ public:
     void silence(int player);   // the player's sounding note is released
     void silence_all();
     bool sounding(int player) const { return players_[player].key_on; }
+    // The player's effect starts now: its pitch bend's time begins.
+    void begin(int player)
+    {
+        if (player >= 0 && player < PLAYERS) players_[player].age = 0;
+    }
     // The player's next notes at `percent` of the patch's volume (100: as the patch).
     void set_gain(int player, int percent) { gain_[player] = percent; }
 
@@ -133,6 +157,7 @@ private:
         bool key_on = false;
         u16 divisor = 0;
         int cents = 0;     // the jitter now
+        int age = 0;       // driver ticks since its effect began (the pitch bend's time)
     };
     struct Channel {
         int player = -1;

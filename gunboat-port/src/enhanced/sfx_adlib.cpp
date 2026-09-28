@@ -112,6 +112,7 @@ void start(int id, u16 program, int gain = 100)
     if (id == ENGINE && d.active) return;
     synth.silence(id);
     synth.set_gain(id, gain);
+    synth.begin(id);  // the effect's pitch bend starts
     for (int i = 0; i < STATE_SIZE; i++) d.state[i] = ds_u8(u16(STATE + i));
     auto put16 = [&](u16 at, u16 v) {
         d.state[at - STATE] = u8(v);

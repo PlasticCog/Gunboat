@@ -4,7 +4,7 @@
 // It runs the original's effects driver (the port's, from the core library) on GB.EXE's own effect
 // programs, which gives each effect's notes exactly as the game plays them. Those notes can then be
 // heard on the PC speaker, as in the original, or on the FM instrument being edited, through the same
-// synthesizer the game uses. Save writes sfx.ini to the settings folder; the game reads it when its
+// synthesizer the game uses. A pitch bend drawn under the notes bends them (and their ring) over time. Save writes sfx.ini to the settings folder; the game reads it when its
 // "Sound effects" setting is AdLib (launcher, or --effects adlib).
 //
 // C++, SDL3 and Dear ImGui (vendor/imgui, MIT); the OPL2 is Nuked-OPL3 (vendor/nuked-opl3).
@@ -38,7 +38,7 @@ using namespace gb;
 namespace {
 
 constexpr int RATE = 44100;
-constexpr double TICK_HZ = 1193182.0 / 0x13B1;  // the effects timer (sound.md §2.2): 236.7 Hz
+constexpr double TICK_HZ = SFX_TICK_HZ;         // the effects timer (sound.md §2.2): 236.7 Hz
 constexpr int SPEAKER_AMPLITUDE = 5000;         // as the game's host mixes the speaker
 constexpr int MAX_TICKS = int(TICK_HZ * 10);    // an effect is cut after 10 s
 constexpr int ENGINE_TICKS = int(TICK_HZ * 3);  // the engine loops: 3 s of it
@@ -181,6 +181,7 @@ std::vector<s16> render_fm(const Score &sc, int id, const SfxPatch &patch)
     bank.fx[id] = patch;
     synth.set_bank(bank);
     synth.reset();
+    synth.begin(id);
     std::vector<s16> out;
     Ticker ticker;
     size_t k = 0;
@@ -199,13 +200,17 @@ std::vector<s16> render_fm(const Score &sc, int id, const SfxPatch &patch)
         generate(ticker.next());
     }
     synth.silence_all();
-    // the release, until it has died away (at most 3 s)
-    for (int block = 0; block < 3 * 20; block++) {
+    // the release, until it has died away for 50 ms (at most 3 s); the driver's ticks go on, as in the
+    // game (a pitch bend glides on)
+    int quiet = 0;
+    for (int t = 0; t < int(3 * TICK_HZ); t++) {
+        synth.tick();
         const size_t at = out.size();
-        generate(RATE / 20);
+        generate(ticker.next());
         int peak = 0;
         for (size_t i = at; i < out.size(); i++) peak = std::max(peak, std::abs(int(out[i])));
-        if (peak < 40) break;
+        quiet = peak < 40 ? quiet + 1 : 0;
+        if (quiet >= int(TICK_HZ / 20)) break;
     }
     return out;
 }
@@ -359,8 +364,28 @@ bool operator_editor(const char *id, SfxOperator &o)
     return c;
 }
 
-// The effect's notes as a piano roll: time across, pitch up; the cursor while it plays.
-void draw_score(const Score &sc)
+// The seconds the graph spans: the notes, the sound as rendered (their ring), the bend's last point.
+double graph_span(const Score &sc, const std::vector<s16> &pcm, const SfxPatch &p)
+{
+    double s = std::max(sc.ticks / TICK_HZ, double(pcm.size() / 2) / RATE);
+    if (!p.bend.empty()) s = std::max(s, p.bend.back().ms / 1000.0 + 0.05);
+    return std::max(s, 0.2);
+}
+
+// The play cursor at x of a graph spanning `span` seconds from x0 over w pixels.
+void draw_cursor(ImDrawList *dl, float x0, float y0, float w, float h, double span)
+{
+    if (!playing() || play_id != sel) return;
+    const double t = double(SDL_GetTicksNS() - play_start_ns) / SDL_NS_PER_SECOND;
+    if (t > span) return;
+    const float x = x0 + w * float(t / span);
+    dl->AddLine(ImVec2(x, y0), ImVec2(x, y0 + h), IM_COL32(255, 200, 80, 255));
+}
+
+// The effect's notes as a piano roll (time across, pitch up) over the whole time it sounds: behind
+// them the AdLib sound's loudness `pcm`, over them the pitch heard (the notes transposed and bent,
+// held while the last one rings); the cursor while it plays.
+void draw_score(const Score &sc, const SfxPatch &p, const std::vector<s16> &pcm, double span)
 {
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -368,35 +393,165 @@ void draw_score(const Score &sc)
     ImGui::Dummy(ImVec2(w, h));
     dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h), IM_COL32(20, 24, 36, 255));
     if (sc.ticks <= 0) return;
+    const int cols = std::max(1, int(w));
+    // the loudness: the peak of each column's samples
+    const size_t frames = pcm.size() / 2;
+    std::vector<float> loud(size_t(cols), 0.0f);
+    for (int x = 0; x < cols; x++) {
+        const size_t a = size_t(double(x) / cols * span * RATE), b = size_t(double(x + 1) / cols * span * RATE);
+        int peak = 0;
+        for (size_t i = a; i < b && i < frames; i++) peak = std::max(peak, std::abs(int(pcm[2 * i])));
+        loud[size_t(x)] = peak / 32768.0f;
+        if (peak > 0)
+            dl->AddLine(ImVec2(p0.x + x + 0.5f, p0.y + h),
+                        ImVec2(p0.x + x + 0.5f, p0.y + h - (h - 4) * std::min(1.0f, std::sqrt(loud[size_t(x)]))),
+                        IM_COL32(45, 55, 85, 255));
+    }
     const double lo = std::log2(25.0), hi = std::log2(5000.0);
-    auto y_of = [&](u16 div) {
-        const double f = 1193182.0 / (div ? div : 65536);
-        const double v = std::clamp((std::log2(f) - lo) / (hi - lo), 0.0, 1.0);
+    auto y_of_f = [&](double f) {
+        const double v = std::clamp((std::log2(std::max(f, 1.0)) - lo) / (hi - lo), 0.0, 1.0);
         return p0.y + h - 4 - float(v) * (h - 8);
     };
-    const float span = float(std::max(sc.ticks, 1));
+    auto freq = [](u16 div) { return 1193182.0 / (div ? div : 65536); };
+    auto x_of = [&](double ticks) { return p0.x + w * float(ticks / TICK_HZ / span); };
+    // the notes
     u16 div = 0;
     bool on = false;
     int from = 0;
     for (const Change &c : sc.changes) {
         if (on && c.tick > from) {
-            const float x0 = p0.x + w * from / span, x1 = p0.x + w * c.tick / span, y = y_of(div);
+            const float x0 = x_of(from), x1 = x_of(c.tick), y = y_of_f(freq(div));
             dl->AddRectFilled(ImVec2(x0, y - 2), ImVec2(std::max(x1 - 1, x0 + 1), y + 2), IM_COL32(120, 200, 255, 255));
         }
         from = c.tick;
         div = c.divisor;
         on = c.on;
     }
-    char label[96];
-    std::snprintf(label, sizeof label, "%.2f s, %zu speaker changes", sc.ticks / TICK_HZ, sc.changes.size());
+    // the pitch heard, where the sound is
+    size_t k = 0;
+    u16 note = 0;
+    bool have = false;
+    ImVec2 prev;
+    bool drawn = false;
+    for (int x = 0; x < cols; x++) {
+        const double t = (x + 0.5) / cols * span;  // seconds
+        while (k < sc.changes.size() && sc.changes[k].tick <= t * TICK_HZ) {
+            if (sc.changes[k].on) {
+                note = sc.changes[k].divisor;
+                have = true;
+            }
+            k++;
+        }
+        float near_loud = 0;  // audible: loud enough in or next to this column (noisy sounds flicker)
+        for (int d = -3; d <= 3; d++)
+            if (x + d >= 0 && x + d < cols) near_loud = std::max(near_loud, loud[size_t(x + d)]);
+        if (!have || near_loud < 0.002f) {
+            drawn = false;
+            continue;
+        }
+        const double f = freq(note) * std::pow(2.0, (p.transpose * 100 + sfx_bend_cents(p, t * 1000)) / 1200.0);
+        const ImVec2 pt(p0.x + x + 0.5f, y_of_f(f));
+        if (drawn) dl->AddLine(prev, pt, IM_COL32(255, 150, 60, 255), 1.5f);
+        prev = pt;
+        drawn = true;
+    }
+    char label[128];
+    std::snprintf(label, sizeof label, "notes %.2f s, %zu speaker changes; the AdLib sound %.2f s", sc.ticks / TICK_HZ,
+                  sc.changes.size(), double(frames) / RATE);
     dl->AddText(ImVec2(p0.x + 6, p0.y + 4), IM_COL32(150, 160, 180, 255), label);
-    if (playing() && play_id == sel) {
-        const double t = double(SDL_GetTicksNS() - play_start_ns) / SDL_NS_PER_SECOND * TICK_HZ;
-        if (t <= play_ticks_len) {
-            const float x = p0.x + w * float(t / span);
-            dl->AddLine(ImVec2(x, p0.y), ImVec2(x, p0.y + h), IM_COL32(255, 200, 80, 255));
+    const char *heard = "the pitch heard (transposed, bent)";
+    dl->AddText(ImVec2(p0.x + w - ImGui::CalcTextSize(heard).x - 6, p0.y + 4), IM_COL32(255, 150, 60, 255), heard);
+    draw_cursor(dl, p0.x, p0.y, w, h, span);
+}
+
+// The pitch bend lane under the piano roll, on the same time: the bend in semitones around the middle
+// line (none). Click to add a point, drag one to move it (Shift: whole semitones), right-click one to
+// remove it. Returns whether the bend changed.
+bool draw_bend(SfxPatch &p, double span, int range)
+{
+    ImDrawList *dl = ImGui::GetWindowDrawList();
+    const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    const float w = ImGui::GetContentRegionAvail().x, h = 96;
+    ImGui::InvisibleButton("bend", ImVec2(w, h), ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+    const bool hovered = ImGui::IsItemHovered();
+    dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h), IM_COL32(24, 20, 30, 255));
+    const float mid = p0.y + h / 2, half = h / 2 - 6;
+    auto x_of = [&](int ms) { return p0.x + w * float(ms / 1000.0 / span); };
+    auto y_of = [&](double cents) { return mid - float(std::clamp(cents / (range * 100.0), -1.0, 1.0)) * half; };
+    auto ms_at = [&](float x) { return std::clamp(int(std::lround((x - p0.x) / w * span * 1000)), 0, SFX_BEND_MAX_MS); };
+    auto cents_at = [&](float y, bool semitones) {
+        const double c = (mid - y) / half * range * 100.0;
+        const int step = semitones ? 100 : 5;
+        return std::clamp(int(std::lround(c / step)) * step, -SFX_BEND_MAX_CENTS, SFX_BEND_MAX_CENTS);
+    };
+    // the grid: the middle (no bend), every 12 semitones
+    for (int s = -range; s <= range; s += 12) {
+        const float y = y_of(s * 100.0);
+        dl->AddLine(ImVec2(p0.x, y), ImVec2(p0.x + w, y), s == 0 ? IM_COL32(110, 100, 130, 255) : IM_COL32(50, 45, 60, 255));
+        char t[16];
+        std::snprintf(t, sizeof t, "%+d", s);
+        if (s != -range && s != range) dl->AddText(ImVec2(p0.x + 4, y - 14), IM_COL32(110, 100, 130, 255), s == 0 ? "0" : t);
+    }
+    std::vector<SfxBendPoint> &b = p.bend;
+    bool changed = false;
+    static int drag = -1;
+    const ImVec2 m = ImGui::GetIO().MousePos;
+    int near = -1;
+    for (int i = 0; i < int(b.size()); i++) {
+        const float dx = x_of(b[size_t(i)].ms) - m.x, dy = y_of(b[size_t(i)].cents) - m.y;
+        if (dx * dx + dy * dy <= 64 && (near < 0 || std::fabs(dx) < std::fabs(x_of(b[size_t(near)].ms) - m.x))) near = i;
+    }
+    const bool shift = ImGui::GetIO().KeyShift;
+    if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
+        if (near >= 0) {
+            drag = near;
+        } else if (int(b.size()) < SFX_BEND_POINTS) {
+            const SfxBendPoint pt{ms_at(m.x), cents_at(m.y, shift)};
+            auto at = std::upper_bound(b.begin(), b.end(), pt.ms, [](int ms, const SfxBendPoint &q) { return ms < q.ms; });
+            drag = int(b.insert(at, pt) - b.begin());
+            changed = true;
         }
     }
+    if (drag >= 0 && drag < int(b.size()) && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        SfxBendPoint &pt = b[size_t(drag)];
+        const int lo_ms = drag > 0 ? b[size_t(drag - 1)].ms : 0;
+        const int hi_ms = drag + 1 < int(b.size()) ? b[size_t(drag + 1)].ms : SFX_BEND_MAX_MS;
+        const SfxBendPoint moved{std::clamp(ms_at(m.x), lo_ms, hi_ms), cents_at(m.y, shift)};
+        if (moved.ms != pt.ms || moved.cents != pt.cents) {
+            pt = moved;
+            changed = true;
+        }
+    } else {
+        drag = -1;
+    }
+    if (hovered && near >= 0 && ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+        b.erase(b.begin() + near);
+        near = -1;
+        changed = true;
+    }
+    // the curve: flat before the first point and after the last
+    if (!b.empty()) {
+        std::vector<ImVec2> line;
+        line.push_back(ImVec2(p0.x, y_of(b.front().cents)));
+        for (const SfxBendPoint &pt : b) line.push_back(ImVec2(x_of(pt.ms), y_of(pt.cents)));
+        line.push_back(ImVec2(p0.x + w, y_of(b.back().cents)));
+        dl->AddPolyline(line.data(), int(line.size()), IM_COL32(255, 150, 60, 255), 0, 2.0f);
+        for (int i = 0; i < int(b.size()); i++) {
+            const bool hot = i == drag || (drag < 0 && i == near && hovered);
+            dl->AddCircleFilled(ImVec2(x_of(b[size_t(i)].ms), y_of(b[size_t(i)].cents)), hot ? 6.0f : 4.5f,
+                                hot ? IM_COL32(255, 230, 120, 255) : IM_COL32(255, 150, 60, 255));
+        }
+    } else {
+        dl->AddText(ImVec2(p0.x + 40, p0.y + 6), IM_COL32(130, 120, 150, 255),
+                    "Pitch bend: click to add a point, drag to move it (Shift: whole semitones), right-click to remove it.");
+    }
+    const int show = drag >= 0 ? drag : hovered ? near : -1;
+    if (show >= 0 && show < int(b.size()))
+        ImGui::SetTooltip("%d ms, %+.2f semitones", b[size_t(show)].ms, b[size_t(show)].cents / 100.0);
+    else if (hovered && b.empty())
+        ImGui::SetTooltip("%d ms, %+.2f semitones", ms_at(m.x), cents_at(m.y, shift) / 100.0);
+    draw_cursor(dl, p0.x, p0.y, w, h, span);
+    return changed;
 }
 
 void ui(SDL_Window *window, bool &quit_asked)
@@ -482,9 +637,40 @@ void ui(SDL_Window *window, bool &quit_asked)
         sc_throttle = throttle;
         sc_dir = game_dir;
     }
-    draw_score(sc);
+    // the AdLib sound on show: rendered again when the instrument changes (not while dragging)
+    static std::vector<s16> shown;
+    static std::string shown_key = "-";
+    const std::string key = std::to_string(sel) + "|" + std::to_string(throttle) + "|" + game_dir + "|" + sfx_patch_text(p);
+    if (key != shown_key && !ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+        shown = game_loaded ? render_fm(sc, sel, p) : std::vector<s16>();
+        shown_key = key;
+    }
+    static double span = 1;  // kept while a bend point is dragged, so that the time axis stays put
+    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) span = graph_span(sc, shown, p);
+    draw_score(sc, p, shown, span);
 
     bool c = false;
+    static int bend_range = 24;
+    int need = 12;
+    for (const SfxBendPoint &pt : p.bend) need = std::max(need, (std::abs(pt.cents) + 99) / 100);
+    const int range = std::max(bend_range, need <= 12 ? 12 : need <= 24 ? 24 : 48);
+    c |= draw_bend(p, span, range);
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("+-48 semitones").x + ImGui::GetFrameHeight() * 1.6f);
+    static const char *const RANGES[] = {"+-12 semitones", "+-24 semitones", "+-48 semitones"};
+    int r = bend_range == 12 ? 0 : bend_range == 24 ? 1 : 2;
+    if (ImGui::Combo("Bend range", &r, RANGES, 3)) bend_range = r == 0 ? 12 : r == 1 ? 24 : 48;
+    tip("How far up and down the pitch bend lane reaches.");
+    ImGui::SameLine();
+    ImGui::BeginDisabled(p.bend.empty());
+    if (ImGui::Button("Clear bend")) {
+        p.bend.clear();
+        c = true;
+    }
+    ImGui::EndDisabled();
+    tip("No pitch bend: the notes as they are.");
+    ImGui::SameLine();
+    ImGui::TextDisabled("The bend starts with the effect and goes on while it rings out; on the AdLib only.");
+
     int out = int(p.output);
     ImGui::Text("In the game:");
     ImGui::SameLine();

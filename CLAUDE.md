@@ -233,7 +233,14 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     (`SFX_HEADROOM` 16 steps) below its levels at 100% and the mix gain is 8 (was 2), so the
     old volumes sound the same (checked: unchanged effects render the same RMS; 200% / 400% are
     x2.00 / x4.00 at every point of the envelope); only the heard operators' levels move, so the
-    envelope and timbre stay. The effects default to AdLib
+    envelope and timbre stay. Pitch bend (2026-09-28): each patch may have up to 16 points
+    (`bend = ms:cents ...` in sfx.ini, `none` without), the bend in cents after the effect starts,
+    straight between points and held outside them; the synth keeps each player's age in driver
+    ticks (`SfxSynth::begin` at an effect's start, `tick` counts and updates the pitch, also of the
+    last note while it rings); the editor draws the notes over the whole sound (its loudness behind,
+    the pitch heard over them) and a bend lane under them (click adds, drag moves, Shift semitones,
+    right-click removes); checked: a sine note bent -1200 cents over 300 ms measures 523 -> 261 Hz
+    along the bend. The effects default to AdLib
     (2026-09-28; the music's default stays Auto: AdLib when the game folder has ADLIB.COM).
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.

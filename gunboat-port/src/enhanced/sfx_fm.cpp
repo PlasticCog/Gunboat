@@ -121,6 +121,23 @@ const char *const SHIPPED_BANK =
 const char *const SHIPPED_BANK = "";
 #endif
 
+// "ms:cents ms:cents ..." (or "none"): a pitch bend, sorted by time, within the limits.
+void bend_parse(const std::string &v, std::vector<SfxBendPoint> &bend)
+{
+    bend.clear();
+    std::istringstream in(v);
+    std::string tok;
+    while (in >> tok && int(bend.size()) < SFX_BEND_POINTS) {
+        const size_t colon = tok.find(':');
+        if (colon == std::string::npos) continue;
+        SfxBendPoint pt;
+        pt.ms = std::clamp(std::atoi(tok.c_str()), 0, SFX_BEND_MAX_MS);
+        pt.cents = std::clamp(std::atoi(tok.c_str() + colon + 1), -SFX_BEND_MAX_CENTS, SFX_BEND_MAX_CENTS);
+        bend.push_back(pt);
+    }
+    std::stable_sort(bend.begin(), bend.end(), [](const SfxBendPoint &a, const SfxBendPoint &b) { return a.ms < b.ms; });
+}
+
 // A bank's text over b: the effects and keys it has replace b's.
 void bank_parse(std::istream &in, SfxBank &b)
 {
@@ -155,6 +172,8 @@ void bank_parse(std::istream &in, SfxBank &b)
             p.volume = n < 0 ? 0 : n > SFX_MAX_VOLUME ? SFX_MAX_VOLUME : n;
         else if (k == "retrigger")
             p.retrigger = n != 0;
+        else if (k == "bend")
+            bend_parse(v, p.bend);
         else if (k == "jitter")
             p.jitter = n < 0 ? 0 : n > 1200 ? 1200 : n;
     }
@@ -387,6 +406,10 @@ std::string sfx_patch_text(const SfxPatch &p)
     s += "volume = " + std::to_string(p.volume) + "\n";
     s += "retrigger = " + std::to_string(int(p.retrigger)) + "\n";
     s += "jitter = " + std::to_string(p.jitter) + "\n";
+    s += "bend =";
+    if (p.bend.empty()) s += " none";
+    for (const SfxBendPoint &pt : p.bend) s += " " + std::to_string(pt.ms) + ":" + std::to_string(pt.cents);
+    s += "\n";
     return s;
 }
 
@@ -405,7 +428,8 @@ bool sfx_bank_save(const std::string &path, const SfxBank &b)
     if (!out) return false;
     out << "# Gunboat: the AdLib sound effects (edit with gunboat_sfx_editor).\n"
            "# An operator is: attack decay sustain release multiple level waveform ksl tremolo vibrato\n"
-           "# sustained ksr (the OPL2's fields). output = adlib | speaker | silent.\n";
+           "# sustained ksr (the OPL2's fields). output = adlib | speaker | silent. bend = the pitch bend,\n"
+           "# ms:cents points after the effect starts (or none).\n";
     for (int i = 0; i < SFX_COUNT; i++) out << "\n[" << i << "]  # " << sfx_name(i) << "\n" << sfx_patch_text(b.fx[i]);
     return bool(out);
 }
@@ -437,6 +461,19 @@ int sfx_effect_of(u16 pc, const u16 starts[SFX_PROGRAMS])
         if (starts[i] <= pc && (best < 0 || starts[i] > starts[best])) best = i;
     if (best >= 0 && pc - starts[best] > 0x100) best = -1;
     return best;
+}
+
+double sfx_bend_cents(const SfxPatch &p, double ms)
+{
+    const std::vector<SfxBendPoint> &b = p.bend;
+    if (b.empty()) return 0;
+    if (ms <= b.front().ms) return b.front().cents;
+    for (size_t i = 1; i < b.size(); i++)
+        if (ms <= b[i].ms) {
+            const double span = b[i].ms - b[i - 1].ms;
+            return span <= 0 ? b[i].cents : b[i - 1].cents + (b[i].cents - b[i - 1].cents) * (ms - b[i - 1].ms) / span;
+        }
+    return b.back().cents;
 }
 
 // ---- the synthesizer
@@ -472,7 +509,8 @@ void SfxSynth::program(int ch, const SfxPatch &p, int gain)
     w(u8(0xC0 + ch), u8((p.feedback & 7) << 1 | (p.additive ? 1 : 0)));
 }
 
-// The player's channel's pitch: the speaker's frequency 1193182 / divisor, transposed and jittered.
+// The player's channel's pitch: the speaker's frequency 1193182 / divisor, transposed, jittered and
+// bent.
 void SfxSynth::frequency(int player, bool key)
 {
     const Player &pl = players_[player];
@@ -480,7 +518,8 @@ void SfxSynth::frequency(int player, bool key)
     if (ch < 0) return;
     const SfxPatch &p = bank_.fx[pl.id < 0 ? 0 : pl.id];
     double f = 1193182.0 / (pl.divisor ? pl.divisor : 65536);
-    f *= std::pow(2.0, (p.transpose * 100 + pl.cents) / 1200.0);
+    const double bend = sfx_bend_cents(p, pl.age * 1000.0 / SFX_TICK_HZ);
+    f *= std::pow(2.0, (p.transpose * 100 + pl.cents + bend) / 1200.0);
     int block = 0;
     double fnum = f * double(1 << 20) / 49716.0;
     while (fnum > 1023.0 && block < 7) {
@@ -548,18 +587,28 @@ void SfxSynth::speaker(int player, int id, u16 divisor, bool on)
     pl.key_on = true;
 }
 
+// One driver tick: the jitter of the sounding notes, and the pitch bend's time, which also bends the
+// last note while it rings out (its channel still the player's).
 void SfxSynth::tick()
 {
     for (int k = 0; k < PLAYERS; k++) {
         Player &pl = players_[k];
-        if (!pl.key_on || pl.id < 0) continue;
-        const int j = bank_.fx[pl.id].jitter;
-        if (j <= 0) continue;
-        rng_ ^= rng_ << 13;
-        rng_ ^= rng_ >> 17;
-        rng_ ^= rng_ << 5;
-        pl.cents = int(rng_ % u32(2 * j + 1)) - j;
-        frequency(k, true);
+        if (pl.id < 0) continue;
+        const SfxPatch &p = bank_.fx[pl.id];
+        if (pl.age < (1 << 30)) pl.age++;
+        const bool bending = !p.bend.empty() && pl.age * 1000.0 / SFX_TICK_HZ <= p.bend.back().ms + 1000.0 / SFX_TICK_HZ;
+        if (pl.key_on) {
+            const int j = p.jitter;
+            if (j > 0) {
+                rng_ ^= rng_ << 13;
+                rng_ ^= rng_ >> 17;
+                rng_ ^= rng_ << 5;
+                pl.cents = int(rng_ % u32(2 * j + 1)) - j;
+            }
+            if (j > 0 || bending) frequency(k, true);
+        } else if (bending && pl.ch >= 0 && channels_[pl.ch].player == k) {
+            frequency(k, false);  // the release glides with the bend
+        }
     }
 }
 
