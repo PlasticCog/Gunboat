@@ -19,6 +19,7 @@ constexpr double TARGET_UP = 8;     // a target's height above its ground that t
 constexpr double CLEAR = 48;        // quarter units at each end of the line that do not count (the boat
                                     // and the target stand on their own ground)
 constexpr double STEP = 24;         // quarter units between the samples of the line
+constexpr double FOOT = 2;          // height units: a hill's foot, where the ground is flat again
 
 // A 16-bit coordinate difference as the game's wrap-around.
 double wrap16(double v)
@@ -93,6 +94,26 @@ bool shot_blocked(u16 obj)
     return blocked(ds_u16(u16(DS_object_x + obj)) * 4.0, ds_u16(u16(DS_object_y + obj)) * 4.0, bx, by, bh);
 }
 
+// A grenade (weapon 2) or mortar shell (3) landing at (x, y) map units behind a hill bursts at the
+// hill's foot on the gun's side instead: back along the line from where the hill stops it to where
+// the ground is flat again (the game's objects stand at height 0: its explosion drawn on the hillside
+// would sink into the hill). Nothing behind the hill is hit (shot_blocked).
+bool shell_stopped(u8 weapon, u16 &x, u16 &y)
+{
+    if (weapon != 2 && weapon != 3) return false;
+    double bx, by, bh;
+    if (!blocked(x * 4.0, y * 4.0, bx, by, bh)) return false;
+    const double gx = ds_u16(DS_camera_qx), gy = ds_u16(DS_camera_qy);
+    const double dx = wrap16(bx - gx), dy = wrap16(by - gy), dist = std::hypot(dx, dy);
+    double s = dist;
+    while (s > CLEAR && terrain_height(gx + dx * s / dist, gy + dy * s / dist) > FOOT) s -= STEP / 3;
+    s = std::max(s, CLEAR);
+    auto map_unit = [](double q) { return u16(std::lround(std::fmod(q + 65536.0, 65536.0) / 4.0)); };
+    x = map_unit(gx + dx * s / dist);
+    y = map_unit(gy + dy * s / dist);
+    return true;
+}
+
 // A shot lands at (x, y) map units: behind a hill, its debris flies off the hill.
 void shot_landed(u16 x, u16 y, u8)
 {
@@ -106,6 +127,7 @@ void gameplay_install(const Settings &s)
 {
     if (s.hills_stop_bullets) {
         host_set_shot_blocked_handler(shot_blocked);
+        host_set_shell_stopped_handler(shell_stopped);
         host_add_shot_landed_observer(shot_landed);  // after the debris' own (debris_install)
     }
 }

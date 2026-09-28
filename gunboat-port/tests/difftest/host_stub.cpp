@@ -105,6 +105,7 @@ void host_shell_fired(u8) {}
 void host_shot_landed(u16, u16, u8) {}
 void host_title_shown() {}
 bool host_shot_blocked(u16) { return false; }  // the original's rule
+bool host_shell_stopped(u8, u16 &, u16 &) { return false; }  // the original's rule
 const std::vector<SpeakerEvent> &host_stub_speaker_log() { return speaker_log; }
 void host_stub_speaker_clear() { speaker_log.clear(); }
 

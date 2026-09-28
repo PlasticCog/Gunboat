@@ -3,6 +3,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -44,6 +45,8 @@ const Info INFO[SFX_COUNT] = {
     {"Impact: stone", "Added for the AdLib: a bullet hits a fortification, a statue, rubble or a rock. Plays the key click's note"},
     {"Impact: sandbags", "Added for the AdLib: a bullet hits a mortar nest's sandbags. Plays the key click's note"},
     {"Impact: flesh", "Added for the AdLib: a bullet hits a person, a body or an animal (not when it kills a soldier: then Soldier killed). Plays the key click's note"},
+    {"Grenade impact", "Added for the AdLib (the original is silent): a grenade bursts where it lands. Plays the explosion's notes"},
+    {"Mortar impact", "Added for the AdLib (the original is silent): a mortar shell bursts where it lands. Plays the explosion's notes"},
 };
 
 SfxOperator op(u8 attack, u8 decay, u8 sustain, u8 release, u8 multiple, u8 level, u8 waveform = 0,
@@ -149,7 +152,7 @@ void bank_parse(std::istream &in, SfxBank &b)
         else if (k == "transpose")
             p.transpose = n < -36 ? -36 : n > 36 ? 36 : n;
         else if (k == "volume")
-            p.volume = n < 0 ? 0 : n > 100 ? 100 : n;
+            p.volume = n < 0 ? 0 : n > SFX_MAX_VOLUME ? SFX_MAX_VOLUME : n;
         else if (k == "retrigger")
             p.retrigger = n != 0;
         else if (k == "jitter")
@@ -169,7 +172,9 @@ int sfx_program_of(int id)
     switch (id) {
     case SFX_SOLDIER_KILLED: return 9;
     case SFX_GRENADE_LAUNCHER:
-    case SFX_MORTAR: return 8;
+    case SFX_MORTAR:
+    case SFX_GRENADE_IMPACT:
+    case SFX_MORTAR_IMPACT: return 8;
     case SFX_IMPACT_METAL:
     case SFX_IMPACT_WOOD:
     case SFX_IMPACT_BRIDGE:
@@ -326,6 +331,19 @@ SfxPatch factory_patch(int id)
         p.jitter = 300;
         p.volume = 95;
         break;
+    case SFX_GRENADE_IMPACT:  // a sharp bang: the explosion's notes, shorter
+        p.mod = op(15, 5, 6, 5, 1, 0);
+        p.car = op(15, 5, 8, 5, 1, 0, 0, false);
+        p.feedback = 7;
+        p.jitter = 450;
+        break;
+    case SFX_MORTAR_IMPACT:  // a heavy blast, lower and longer than the grenade's
+        p.mod = op(15, 3, 4, 4, 1, 0);
+        p.car = op(15, 4, 6, 4, 1, 0, 0, false);
+        p.feedback = 7;
+        p.transpose = -5;
+        p.jitter = 500;
+        break;
     case SFX_IMPACT_FLESH:  // a soft, wet thwack
         p.mod = op(15, 9, 15, 9, 1, 24);
         p.car = op(15, 8, 15, 8, 1, 0, 0, false);
@@ -437,9 +455,11 @@ void SfxSynth::reset()
 void SfxSynth::program(int ch, const SfxPatch &p, int gain)
 {
     static const u8 SLOT[9] = {0, 1, 2, 8, 9, 10, 16, 17, 18};
-    // The heard operators are attenuated by the patch's volume (in the chip's 0.75 dB steps).
+    // The heard operators are attenuated by the headroom less the patch's volume (in the chip's 0.75 dB
+    // steps): 100% is the headroom below the patch's levels, 400% the levels themselves (SFX_HEADROOM).
     const double volume = p.volume * gain / 100.0;
-    const int extra = volume >= 100 ? 0 : volume <= 0 ? 63 : int(std::lround(-20.0 * std::log10(volume / 100.0) / 0.75));
+    const int louder = volume <= 0 ? -63 : int(std::lround(20.0 * std::log10(volume / 100.0) / 0.75));
+    const int extra = std::clamp(SFX_HEADROOM - louder, 0, 63);
     auto set = [&](u8 o, const SfxOperator &x, bool heard) {
         w(u8(0x20 + o), u8(x.tremolo << 7 | x.vibrato << 6 | x.sustained << 5 | x.ksr << 4 | (x.multiple & 15)));
         w(u8(0x40 + o), u8((x.ksl & 3) << 6 | clamp_u8(x.level + (heard ? extra : 0), 63)));

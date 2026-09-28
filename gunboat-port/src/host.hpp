@@ -96,7 +96,11 @@ void host_title_shown();
 // PORT: the gameplay option "hills stop bullets" (gameplay.cpp): hit_objects asks whether a hill stops
 // the shot before object `obj`; false unless the option's handler is set.
 bool host_shot_blocked(u16 obj);
+// PORT: the same option: projectile_impact asks whether a hill stops a shot of `weapon` landing at
+// (x, y) map units, and where it bursts then (x, y changed); false unless the option's handler is set.
+bool host_shell_stopped(u8 weapon, u16 &x, u16 &y);
 void host_set_shot_blocked_handler(bool (*handler)(u16 obj));
+void host_set_shell_stopped_handler(bool (*handler)(u8 weapon, u16 &x, u16 &y));
 // The low byte of PIT channel 2's counter (IN 42h): it counts down at 1.19 MHz, so it depends on the
 // moment it is read.
 u8 host_pit2_low();

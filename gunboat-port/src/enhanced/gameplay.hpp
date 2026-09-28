@@ -6,7 +6,8 @@
 // Hills stop bullets: in the original a shot hits whatever it lands on, whatever lies between (the
 // hit test sees the objects only). With this option on, the terrain the game has loaded (the 3 x 3
 // cells around the boat) stops a shot whose line from the gun to its target passes under the ground:
-// nothing behind the hill is hit, and the shot's debris flies off the hill.
+// nothing behind the hill is hit, and the shot's debris flies off the hill; a grenade or mortar shell
+// bursts at the hill's foot.
 namespace gb {
 
 struct Settings;

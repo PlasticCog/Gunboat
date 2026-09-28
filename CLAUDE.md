@@ -227,7 +227,13 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     "Grenade launcher", 18 "Mortar" (2026-09-28): the original fires both with effect 8, the
     explosion's; `fire_station4/3` tell the host first (`host_shell_fired`, PORT, no memory
     change) and the AdLib plays that effect 8 on the launcher's own instrument (the game's
-    driver's speaker follows the launch effect's output). The effects default to AdLib
+    driver's speaker follows the launch effect's output); 23 "Grenade impact", 24 "Mortar
+    impact" (2026-09-28; effect 8's notes where a shell lands, `host_shot_landed`: the original
+    is silent there). Volume goes to 400% (2026-09-28): the chip plays every effect 12 dB
+    (`SFX_HEADROOM` 16 steps) below its levels at 100% and the mix gain is 8 (was 2), so the
+    old volumes sound the same (checked: unchanged effects render the same RMS; 200% / 400% are
+    x2.00 / x4.00 at every point of the envelope); only the heard operators' levels move, so the
+    envelope and timbre stay. The effects default to AdLib
     (2026-09-28; the music's default stays Auto: AdLib when the game folder has ADLIB.COM).
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
@@ -268,7 +274,11 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   hills; with the option on, `hit_objects` asks the host (`host_shot_blocked`, PORT, false unless the
   option's handler is set) and the loaded terrain's triangles are sampled along the line from the gun
   (height 32) to the target (its ground + 8): a hill above the line stops the shot; the debris of a
-  miss behind a hill flies off the hill.
+  miss behind a hill flies off the hill. Grenades and mortar shells (2026-09-28): `projectile_impact`
+  asks the host (`host_shell_stopped`, PORT, false unless the option's handler is set) and a shell
+  landing behind a hill bursts at the hill's foot on the gun's side (back along the line to ground
+  <= 2: the game's objects stand at height 0, an explosion on the hillside would sink into it); its
+  explosion object, debris and sound are there.
 * **Release 1.1.3 (2026-09-27):** controller support and `gunboat_controller` (in the packages),
   the icons, "hills stop bullets" (off by default), the bridge clang, lifeless impacts at 75%, the
   lighter haze. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.

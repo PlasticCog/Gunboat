@@ -45,6 +45,7 @@ std::vector<void (*)(u8, u8)> target_destroyed_observers;
 std::vector<void (*)(u8)> shell_fired_observers;
 std::vector<void (*)()> title_shown_observers;
 bool (*shot_blocked_handler)(u16);
+bool (*shell_stopped_handler)(u8, u16 &, u16 &);
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
@@ -533,6 +534,8 @@ void host_shell_fired(u8 weapon)
 void host_add_title_shown_observer(void (*observer)()) { title_shown_observers.push_back(observer); }
 void host_set_shot_blocked_handler(bool (*handler)(u16)) { shot_blocked_handler = handler; }
 bool host_shot_blocked(u16 obj) { return shot_blocked_handler && shot_blocked_handler(obj); }
+void host_set_shell_stopped_handler(bool (*handler)(u8, u16 &, u16 &)) { shell_stopped_handler = handler; }
+bool host_shell_stopped(u8 weapon, u16 &x, u16 &y) { return shell_stopped_handler && shell_stopped_handler(weapon, x, y); }
 void host_title_shown()
 {
     for (auto f : title_shown_observers) f();

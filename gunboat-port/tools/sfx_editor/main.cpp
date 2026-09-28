@@ -508,7 +508,9 @@ void ui(SDL_Window *window, bool &quit_asked)
     p.additive = conn != 0;
     c |= slider("Feedback", p.feedback, 0, 7, "The modulator modulating itself: 0 pure, 7 close to noise (guns, explosions).");
     c |= slider("Transpose", p.transpose, -36, 36, "Semitones up or down from the original's notes.", "%d semitones");
-    c |= slider("Volume", p.volume, 0, 100, "The effect's loudness.", "%d%%");
+    c |= slider("Volume", p.volume, 0, SFX_MAX_VOLUME,
+                "The effect's loudness: 100% as the operators' levels; up to 400% (4 times, 12 dB) louder, "
+                "with the same envelope and timbre.", "%d%%");
     c |= slider("Jitter", p.jitter, 0, 1200, "The pitch jumps randomly by up to this much on every driver tick (236 a second): noise for shots and explosions.", "%d cents");
     c |= check("Retrigger", p.retrigger, "A new pitch in the middle of a note attacks again. Off: it glides on in the same note (the engine).");
     ImGui::PopItemWidth();

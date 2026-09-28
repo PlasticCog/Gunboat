@@ -30,11 +30,19 @@ constexpr int SFX_IMPACT_TREE = 19;       // a bullet hits a tree: effect 0's no
 constexpr int SFX_IMPACT_STONE = 20;      // a bullet hits a fort, statue, rubble, rock: effect 0's note
 constexpr int SFX_IMPACT_SANDBAGS = 21;   // a bullet hits a mortar nest's sandbags: effect 0's note
 constexpr int SFX_IMPACT_FLESH = 22;      // a bullet hits a person, a body, an animal: effect 0's note
-constexpr int SFX_COUNT = 23;
+constexpr int SFX_GRENADE_IMPACT = 23;    // a grenade bursts where it lands: effect 8's notes
+constexpr int SFX_MORTAR_IMPACT = 24;     // a mortar shell bursts where it lands: effect 8's notes
+constexpr int SFX_COUNT = 25;
 // The driver's program (0..12) whose notes effect `id` plays.
 int sfx_program_of(int id);
-// The effects' chip is mixed at twice its output: one FM voice against the speaker's full square wave.
-constexpr int SFX_GAIN = 2;
+// A patch's volume goes up to 400%: the chip plays every effect SFX_HEADROOM steps (0.75 dB each: 12 dB)
+// below its levels at 100%, and its output is mixed at SFX_GAIN, four times the twice it needs (one FM
+// voice against the speaker's full square wave). So 100% sounds as the patch's levels, and a louder
+// volume takes back some of the headroom: the heard operators' levels only, so the sound keeps its
+// envelope and timbre.
+constexpr int SFX_HEADROOM = 16;
+constexpr int SFX_MAX_VOLUME = 400;
+constexpr int SFX_GAIN = 8;
 
 // Where an effect is heard: on its FM instrument, on the PC speaker as in the original, or not at all.
 enum class SfxOutput : u8 { Adlib, Speaker, Silent };
@@ -60,7 +68,7 @@ struct SfxPatch {
     u8 feedback = 0;         // 0-7, the modulator's self-modulation (7: noise-like)
     bool additive = false;   // false: the modulator modulates the carrier (FM); true: both are heard
     int transpose = 0;       // semitones, -36..36
-    int volume = 100;        // percent, 0-100
+    int volume = 100;        // percent, 0-400 (SFX_HEADROOM)
     bool retrigger = false;  // a new pitch during a note attacks again (else it glides on)
     int jitter = 0;          // cents 0-1200: the pitch wobbles randomly on every driver tick (noise)
 };

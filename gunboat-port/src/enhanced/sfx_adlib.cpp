@@ -16,7 +16,8 @@
 // Each is its own driver copy, started as sfx_play would start the program whose notes it plays. And
 // where the original reuses a sound: the grenade launcher and the mortar fire with the explosion's
 // effect 8 (the game tells the host first, host_shell_fired); on the AdLib they play its notes on
-// their own instruments.
+// their own instruments; and where they land they burst with the Grenade impact and Mortar impact
+// effects (the explosion's notes; the original is silent there: host_shot_landed).
 //
 // The game's own driver runs as always, so the game's memory is the original's. Its speaker changes
 // are silenced, except for the effects the bank leaves on the speaker. The copies' steps run on the
@@ -141,6 +142,13 @@ void on_sfx_play(u16 program)
     start(id, program);
 }
 
+// A shot lands: a grenade (weapon 2) or a mortar shell (3) bursts.
+void on_shot_landed(u16, u16, u8 weapon)
+{
+    if (weapon == 2) start(SFX_GRENADE_IMPACT, program_of(SFX_GRENADE_IMPACT));
+    else if (weapon == 3) start(SFX_MORTAR_IMPACT, program_of(SFX_MORTAR_IMPACT));
+}
+
 // The grenade launcher (weapon 2) or the mortar (3) fires: its sound starts next.
 void on_shell_fired(u8 weapon) { launch = weapon == 2 ? SFX_GRENADE_LAUNCHER : SFX_MORTAR; }
 
@@ -244,6 +252,7 @@ void sfx_adlib_install()
     host_add_target_destroyed_observer(on_target_destroyed);
     host_add_object_hit_observer(on_object_hit);
     host_add_shell_fired_observer(on_shell_fired);
+    host_add_shot_landed_observer(on_shot_landed);
 }
 
 } // namespace gb

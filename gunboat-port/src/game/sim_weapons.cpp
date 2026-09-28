@@ -336,11 +336,15 @@ void projectile_impact(u16 bx, u16 si)
     ds_u8(DS_vec_product_hi) = record(bx, REC_WEAPON);
     ds_u16(DS_shot_bearing) = u16(record(bx, REC_HEADING) << 8 | record(bx, REC_FRACTION));
     ds_u8(DS_shot_range) = record(bx, REC_RANGE);
-    const u16 cx = u16(record(bx, REC_X + 1) << 8 | record(bx, REC_X));
-    const u16 dx = u16(record(bx, REC_Y + 1) << 8 | record(bx, REC_Y));
+    u16 cx = u16(record(bx, REC_X + 1) << 8 | record(bx, REC_X));
+    u16 dx = u16(record(bx, REC_Y + 1) << 8 | record(bx, REC_Y));
     const u16 slot = free_temp_object();
     u8 al = 0x42;
     const u8 weapon = ds_u8(DS_vec_product_hi);
+    // PORT: the gameplay option "hills stop bullets" (gameplay.cpp): a grenade or mortar shell whose
+    // line from the gun passes under a hill bursts at the hill's foot instead (the host moves the
+    // impact point). Off (the default), the host never does: the original's rule.
+    host_shell_stopped(weapon, cx, dx);
     // PORT: tells the host where the shot lands (the impact debris, debris.cpp); nothing in mem[]
     // changes.
     host_shot_landed(cx, dx, weapon);
