@@ -289,6 +289,11 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   keyboard or the controller (`key_input` tracks both Ctrls), in the launcher too; PORT: the original
   checks it in the mission loop only (`input_read_key` -> `quit_to_dos`, which writes no file). The
   scripted keys (`GB_KEYS`) still go to the game itself.
+* **Release 1.2.0 (2026-09-27):** macOS (universal apps; built and attached by `release-mac.yml`, as
+  Linux by `release-linux.yml`; Windows by `Release.ps1` here), Ctrl+Q anywhere, debris hidden by
+  hills, F12 screenshots with the note, the user's AdLib instruments. Build.ps1's ctest before it:
+  3/3 (the difftest suite included); the full suite on the merged tree: 359 tests, 193,273 cases,
+  0 mismatches; the macOS workflow's dry run on main passed (lipo x86_64 + arm64, --host-test).
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
