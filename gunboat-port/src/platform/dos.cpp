@@ -170,7 +170,9 @@ s16 dos_open_name(const char *name, const char *mode, bool create)
     s16 fh = DOS_FIRST_HANDLE;
     while (fh < DOS_MAX_HANDLES && dos_files[fh]) fh++;
     if (fh >= DOS_MAX_HANDLES) return -1;  // error 4: too many open files
-    char *path = host_game_path(dos_base_name(name), create);
+    const char *base = dos_base_name(name);
+    if (!*base) return -1;  // PORT: no file name: DOS finds nothing, POSIX fopen would open the folder
+    char *path = host_game_path(base, create);
     if (!path) return -1;  // error 2: file not found
     std::FILE *f = std::fopen(path, mode);
     host_free(path);

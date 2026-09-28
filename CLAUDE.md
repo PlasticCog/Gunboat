@@ -88,6 +88,7 @@ core.
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
 powershell -File gunboat-port/Release.ps1                      # Windows release zip (exes, SDL3.dll, empty Game/)
 bash gunboat-port/Release.sh                                   # Linux release tar.gz (CI: .github/workflows/release-linux.yml)
+bash gunboat-port/Release-mac.sh                               # macOS release zip (universal .apps, SDL3 static into deps/; brew install cmake ninja)
 gunboat-port/build/gunboat_sfx_editor.exe [--wav DIR]          # the AdLib effects editor; --wav renders every effect
 gunboat-port/build/gunboat.exe --check                         # finds Game/ by itself
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)
@@ -271,6 +272,12 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   destroys it in one hit, the stern's M129 in 7. The original's hit_objects on the shot's memory
   agrees with the port; the manual says "go for your own mortar". The decoded damage matrix:
   simulation.md §7.2.
+* **macOS build (2026-09-27):** `Release-mac.sh` makes `Gunboat-<version>-macos-universal.zip`:
+  `Gunboat.app` and `Gunboat Controller.app` (arm64 + x86_64, macOS 11+, SDL3 3.4.16 static, the
+  port's icon, ad-hoc signed, not notarized), staged in a temporary folder (iCloud's Documents sync
+  tags .app folders with Finder attributes, which break the signature). In a bundle the game folder
+  is looked for beside the .app (`default_game_dir`); settings in `~/Library/Application
+  Support/Gunboat/`. CMake skips `-static-libgcc/-static-libstdc++` on Apple.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

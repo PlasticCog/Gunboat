@@ -71,7 +71,13 @@ std::string default_game_dir()
 {
     namespace fs = std::filesystem;
     const char *base = SDL_GetBasePath();  // the folder of gunboat.exe (SDL owns the string)
-    const fs::path exe_dir = base ? fs::path(base) : fs::current_path();
+    fs::path exe_dir = base ? fs::path(base) : fs::current_path();
+#ifdef __APPLE__
+    // A macOS app bundle: SDL's base path is Gunboat.app/Contents/Resources/; Game sits beside Gunboat.app.
+    const std::string b = exe_dir.string();
+    if (const auto app = b.find(".app/Contents/"); app != std::string::npos)
+        exe_dir = fs::path(b.substr(0, app + 4)).parent_path();
+#endif
     std::error_code ec;
     for (const fs::path &p : {exe_dir / "Game", exe_dir / ".." / "Game", exe_dir / ".." / ".." / "Game",
                               fs::current_path(ec) / "Game"})

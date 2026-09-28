@@ -10,7 +10,7 @@ namespace {
 FarPtr far_arg(const u16 *a, int i) { return {a[i], a[i + 1]}; }
 } // namespace
 
-BRIDGE(random) { r.ax = random(); }
+BRIDGE(random) { r.ax = gb::random(); }
 
 BRIDGE(dos_seek) { r.ax = u16(dos_seek(s16(a[0]), a[1], a[2])); }
 BRIDGE(dos_open_read) { r.ax = u16(dos_open_read(a[0])); }

@@ -2,7 +2,7 @@ GUNBOAT - the faithful C++ / SDL3 port, version @VERSION@
 =========================================================
 
 Accolade's Gunboat: River Combat Simulation (DOS, 1990), rebuilt function by function from the
-original GB.EXE in C++ and running natively on Windows and Linux. It is not an emulator. It reads the
+original GB.EXE in C++ and running natively on Windows, macOS and Linux. It is not an emulator. It reads the
 original game's files at run time; they are NOT included: you need your own copy of the DOS game.
 
 Source code, documentation and issues: https://github.com/PlasticCog/Gunboat
@@ -18,23 +18,29 @@ HOW TO PLAY
 
        Gunboat/
        +-- Game/                    <- your original game files
-       +-- gunboat.exe              (Linux: gunboat)
-       +-- gunboat_controller.exe   (Linux: gunboat_controller) the controller mapping tool
+       +-- gunboat.exe              (Linux: gunboat; macOS: Gunboat.app)
+       +-- gunboat_controller.exe   (Linux: gunboat_controller; macOS: Gunboat Controller.app)
+                                    the controller mapping tool
        +-- SDL3.dll                 (Windows only)
        +-- README.txt
 
-2. Start the game: on Windows double-click gunboat.exe; on Linux run ./gunboat (or open it from
-   your file manager). The launcher opens: check that it says "Game found", choose your settings
-   and press Play. Your choices are remembered (Windows: %APPDATA%\Gunboat\gunboat.ini, Linux:
+2. Start the game: on Windows double-click gunboat.exe; on macOS open Gunboat.app; on Linux run
+   ./gunboat (or open it from your file manager). The launcher opens: check that it says "Game
+   found", choose your settings and press Play. Your choices are remembered (Windows:
+   %APPDATA%\Gunboat\gunboat.ini, macOS: ~/Library/Application Support/Gunboat/gunboat.ini, Linux:
    ~/.local/share/Gunboat/gunboat.ini).
 
 Keep the folder somewhere you can write to (on Windows Documents or the Desktop, not Program
 Files): the game saves its roster (GBROSTER.DAT) in the Game folder. If Windows says "Windows
 protected your PC", click "More info", then "Run anyway" (the program is not signed).
+On macOS the apps are not notarized, so macOS refuses to open them at first. Open the Terminal in
+the Gunboat folder and run  xattr -dr com.apple.quarantine .  once. (Or open Gunboat.app, then click
+"Open Anyway" in System Settings > Privacy & Security; macOS may then run the app from a hidden copy,
+so if the launcher says the game is not found, point it at your Game folder.)
 
-Requirements: 64-bit Windows 10 or 11, or 64-bit Linux (x86-64, glibc 2.35 or newer, as in Ubuntu
-22.04, Debian 12, Fedora 36 and later) with X11 or Wayland and PulseAudio, PipeWire or ALSA. The
-files in Game may have their names in any case (GB.EXE or gb.exe).
+Requirements: 64-bit Windows 10 or 11, macOS 11 or later (Apple silicon or Intel), or 64-bit Linux
+(x86-64, glibc 2.35 or newer, as in Ubuntu 22.04, Debian 12, Fedora 36 and later) with X11 or Wayland
+and PulseAudio, PipeWire or ALSA. The files in Game may have their names in any case (GB.EXE or gb.exe).
 
 
 THE LAUNCHER AND THE ENHANCEMENTS
@@ -77,8 +83,9 @@ In the game: F11 switches between the enhanced and the original picture, F12 sav
 memory at that moment, which helps with bug reports; a note in the corner says it was saved),
 Alt+Enter toggles full screen.
 
-gunboat --help (gunboat.exe on Windows) lists the command-line options (for example --no-launcher,
---original, --enhanced, --game-dir FOLDER, --fullscreen, --video ega, --effects adlib).
+gunboat --help (gunboat.exe on Windows, Gunboat.app/Contents/MacOS/gunboat on macOS) lists the
+command-line options (for example --no-launcher, --original, --enhanced, --game-dir FOLDER,
+--fullscreen, --video ega, --effects adlib).
 
 
 CONTROLLER
