@@ -34,7 +34,7 @@ constexpr int SFX_IMPACT_FLESH = 22;      // a bullet hits a person, a body, an 
 constexpr int SFX_GRENADE_IMPACT = 23;    // a grenade bursts where it lands: effect 8's notes
 constexpr int SFX_MORTAR_IMPACT = 24;     // a mortar shell bursts where it lands: effect 8's notes
 constexpr int SFX_COUNT = 25;
-// The driver's program (0..12) whose notes effect `id` plays.
+// The driver's program (0..12) whose notes effect `id` plays: its own.
 int sfx_program_of(int id);
 // A patch's volume goes up to 400%: the chip plays every effect SFX_HEADROOM steps (0.75 dB each: 12 dB)
 // below its levels at 100%, and its output is mixed at SFX_GAIN, four times the twice it needs (one FM
@@ -84,11 +84,16 @@ struct SfxPatch {
     int volume = 100;        // percent, 0-400 (SFX_HEADROOM)
     bool retrigger = false;  // a new pitch during a note attacks again (else it glides on)
     int jitter = 0;          // cents 0-1200: the pitch wobbles randomly on every driver tick (noise)
+    // The driver's program (0..12) whose notes the effect plays on the AdLib; -1: its own
+    // (sfx_program_of). Not for the engine, whose notes follow the throttles.
+    int notes = -1;
     // The pitch bend, in time order (none: the notes as they are): between two points the bend moves
     // in a straight line (in cents), before the first and after the last it holds. It goes on while
     // the last note rings out.
     std::vector<SfxBendPoint> bend;
 };
+// The program whose notes effect `id` plays with patch p (its notes, else its own).
+int sfx_notes_of(int id, const SfxPatch &p);
 // The bend of patch p at `ms` milliseconds after the effect starts, in cents.
 double sfx_bend_cents(const SfxPatch &p, double ms);
 

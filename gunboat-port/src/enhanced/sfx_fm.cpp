@@ -174,6 +174,8 @@ void bank_parse(std::istream &in, SfxBank &b)
             p.retrigger = n != 0;
         else if (k == "bend")
             bend_parse(v, p.bend);
+        else if (k == "notes")
+            p.notes = v == "own" ? -1 : std::clamp(n, 0, SFX_PROGRAMS - 1);
         else if (k == "jitter")
             p.jitter = n < 0 ? 0 : n > 1200 ? 1200 : n;
     }
@@ -406,6 +408,7 @@ std::string sfx_patch_text(const SfxPatch &p)
     s += "volume = " + std::to_string(p.volume) + "\n";
     s += "retrigger = " + std::to_string(int(p.retrigger)) + "\n";
     s += "jitter = " + std::to_string(p.jitter) + "\n";
+    s += "notes = " + (p.notes < 0 ? std::string("own") : std::to_string(p.notes)) + "\n";
     s += "bend =";
     if (p.bend.empty()) s += " none";
     for (const SfxBendPoint &pt : p.bend) s += " " + std::to_string(pt.ms) + ":" + std::to_string(pt.cents);
@@ -428,8 +431,9 @@ bool sfx_bank_save(const std::string &path, const SfxBank &b)
     if (!out) return false;
     out << "# Gunboat: the AdLib sound effects (edit with gunboat_sfx_editor).\n"
            "# An operator is: attack decay sustain release multiple level waveform ksl tremolo vibrato\n"
-           "# sustained ksr (the OPL2's fields). output = adlib | speaker | silent. bend = the pitch bend,\n"
-           "# ms:cents points after the effect starts (or none).\n";
+           "# sustained ksr (the OPL2's fields). output = adlib | speaker | silent. notes = own, or the\n"
+           "# driver program 0-12 whose notes it plays. bend = the pitch bend, ms:cents points after the\n"
+           "# effect starts (or none).\n";
     for (int i = 0; i < SFX_COUNT; i++) out << "\n[" << i << "]  # " << sfx_name(i) << "\n" << sfx_patch_text(b.fx[i]);
     return bool(out);
 }
@@ -461,6 +465,11 @@ int sfx_effect_of(u16 pc, const u16 starts[SFX_PROGRAMS])
         if (starts[i] <= pc && (best < 0 || starts[i] > starts[best])) best = i;
     if (best >= 0 && pc - starts[best] > 0x100) best = -1;
     return best;
+}
+
+int sfx_notes_of(int id, const SfxPatch &p)
+{
+    return p.notes >= 0 && p.notes < SFX_PROGRAMS && id != 6 ? p.notes : sfx_program_of(id);
 }
 
 double sfx_bend_cents(const SfxPatch &p, double ms)

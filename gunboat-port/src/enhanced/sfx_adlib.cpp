@@ -93,7 +93,8 @@ int effect_of(u16 pc)
     return sfx_effect_of(pc, starts);
 }
 
-u16 program_of(int id) { return ds_u16(u16(DS_sfx_programs + 2 * sfx_program_of(id))); }
+// The program whose notes effect `id` plays: its patch's notes, else its own.
+u16 program_of(int id) { return ds_u16(u16(DS_sfx_programs + 2 * sfx_notes_of(id, synth.bank().fx[id]))); }
 
 void stop_all()
 {
@@ -140,6 +141,8 @@ void on_sfx_play(u16 program)
     game_launch = -1;
     if (launch >= 0 && id == EXPLOSION) id = game_launch = launch;
     launch = -1;
+    // its copy plays the notes its patch chose instead of the program's (the game's driver keeps it)
+    if (id >= 0 && id != ENGINE && synth.bank().fx[id].notes >= 0) program = program_of(id);
     start(id, program);
 }
 

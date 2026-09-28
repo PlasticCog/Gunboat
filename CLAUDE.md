@@ -240,7 +240,10 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     last note while it rings); the editor draws the notes over the whole sound (its loudness behind,
     the pitch heard over them) and a bend lane under them (click adds, drag moves, Shift semitones,
     right-click removes); checked: a sine note bent -1200 cents over 300 ms measures 523 -> 261 Hz
-    along the bend. The effects default to AdLib
+    along the bend. The notes are part of a patch too (2026-09-28): `notes = own` or a driver
+    program 0-12 whose notes its AdLib copy plays (`sfx_notes_of`; not the engine's, which follow
+    the throttles; the game's own driver and the speaker keep the original's), so the editor's
+    Copy / Paste carries the whole effect (instrument, notes, bend, output). The effects default to AdLib
     (2026-09-28; the music's default stays Auto: AdLib when the game folder has ADLIB.COM).
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.

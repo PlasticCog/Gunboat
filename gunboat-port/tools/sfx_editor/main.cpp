@@ -91,10 +91,11 @@ bool load_game(const std::string &dir)
     return game_loaded = true;
 }
 
-// Runs the driver on effect `id` as the game starts it (the engine: from its throttles, as
-// engine_sound_update does each frame) and records the speaker. The driver's state is set up as
-// sfx_install leaves it, without the timer: each driver tick is one sfx_timer_tick.
-Score capture(int id, int throttle)
+// Runs the driver on effect `id` as the game starts it, playing program `program`'s notes (the
+// engine: from its throttles, as engine_sound_update does each frame) and records the speaker. The
+// driver's state is set up as sfx_install leaves it, without the timer: each driver tick is one
+// sfx_timer_tick.
+Score capture(int id, int throttle, int program)
 {
     Score sc;
     if (!game_loaded) return sc;
@@ -111,7 +112,7 @@ Score capture(int id, int throttle)
         engine_sound_update();
         limit = ENGINE_TICKS;
     } else {
-        sfx_play(u16(sfx_program_of(id)));
+        sfx_play(u16(program));
     }
     for (int t = 0; t < limit; t++) {
         const size_t before = host_stub_speaker_log().size();
@@ -273,7 +274,8 @@ void preview(bool fm)
         say("No game loaded: choose the game folder first.");
         return;
     }
-    const Score sc = capture(sel, throttle);
+    // the original speaker plays the effect's own notes; the AdLib the ones its instrument chose
+    const Score sc = capture(sel, throttle, fm ? sfx_notes_of(sel, bank.fx[sel]) : sfx_program_of(sel));
     play(fm ? render_fm(sc, sel, bank.fx[sel]) : render_speaker(sc), sel, sc);
 }
 
@@ -628,14 +630,16 @@ void ui(SDL_Window *window, bool &quit_asked)
         ImGui::SliderInt("Throttles", &throttle, 0, 103);
         tip("The engine effect follows the throttles (8 idle, 59 full, 103 with upgraded engines); at a sum below 4 it is off.");
     }
-    static Score sc;  // the notes on show: captured again when the effect or the throttles change
-    static int sc_sel = -1, sc_throttle = -1;
+    static Score sc;  // the notes on show: captured again when the effect, its notes or the throttles change
+    static int sc_sel = -1, sc_throttle = -1, sc_notes = -1;
     static std::string sc_dir;
-    if (sc_sel != sel || sc_throttle != throttle || sc_dir != game_dir) {
-        sc = capture(sel, throttle);
+    const int notes = sfx_notes_of(sel, p);
+    if (sc_sel != sel || sc_throttle != throttle || sc_dir != game_dir || sc_notes != notes) {
+        sc = capture(sel, throttle, notes);
         sc_sel = sel;
         sc_throttle = throttle;
         sc_dir = game_dir;
+        sc_notes = notes;
     }
     // the AdLib sound on show: rendered again when the instrument changes (not while dragging)
     static std::vector<s16> shown;
@@ -680,6 +684,32 @@ void ui(SDL_Window *window, bool &quit_asked)
     ImGui::SameLine();
     c |= ImGui::RadioButton("Silent", &out, int(SfxOutput::Silent));
     p.output = SfxOutput(out);
+    // the notes: its own, or another effect's (the driver's 13 programs)
+    ImGui::Text("Notes:");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::CalcTextSize("Its own: Heavy hit (7)").x + ImGui::GetFrameHeight() * 1.6f);
+    char own[64];
+    std::snprintf(own, sizeof own, "Its own: %s (%d)", sfx_name(sfx_program_of(sel)), sfx_program_of(sel));
+    ImGui::BeginDisabled(sel == 6);
+    if (ImGui::BeginCombo("##notes", p.notes < 0 ? own : sfx_name(p.notes))) {
+        if (ImGui::Selectable(own, p.notes < 0)) {
+            p.notes = -1;
+            c = true;
+        }
+        for (int i = 0; i < SFX_PROGRAMS; i++) {
+            if (i == 6) continue;  // the engine's notes follow the throttles
+            char item[64];
+            std::snprintf(item, sizeof item, "%d  %s", i, sfx_name(i));
+            if (ImGui::Selectable(item, p.notes == i)) {
+                p.notes = i == sfx_program_of(sel) ? -1 : i;
+                c = true;
+            }
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::EndDisabled();
+    tip(sel == 6 ? "The engine's notes follow the throttles."
+                 : "Which of the original effects' notes this one plays on the AdLib (the PC speaker keeps its own).");
     ImGui::Separator();
 
     ImGui::PushItemWidth(260);
@@ -719,16 +749,20 @@ void ui(SDL_Window *window, bool &quit_asked)
     ImGui::SameLine();
     if (ImGui::Button("Copy")) {
         clipboard = p;
+        clipboard.notes = sfx_notes_of(sel, p);  // the notes it plays, whichever slot it goes to
         have_clipboard = true;
+        say(std::string("Copied ") + sfx_name(sel) + ": the instrument, its notes, bend and setting.");
     }
+    tip("Copy everything of this effect: the instrument, the notes it plays, the pitch bend and where it is heard.");
     ImGui::SameLine();
     ImGui::BeginDisabled(!have_clipboard);
     if (ImGui::Button("Paste")) {
-        const SfxOutput keep = p.output;
         p = clipboard;
-        p.output = keep;
+        if (sel == 6 || p.notes == sfx_program_of(sel)) p.notes = -1;  // its own notes
         c = true;
+        say(std::string("Pasted into ") + sfx_name(sel) + (sel == 6 ? " (the engine keeps its own notes)." : "."));
     }
+    tip("Replace this effect with the copied one: the instrument, the notes, the pitch bend and where it is heard.");
     ImGui::EndDisabled();
     ImGui::EndChild();
 
@@ -826,8 +860,8 @@ int write_wavs(const std::string &dir)
         return 1;
     }
     for (int id = 0; id < SFX_COUNT; id++) {
-        const Score sc = capture(id, 40);
-        const std::vector<s16> sp = render_speaker(sc), fm = render_fm(sc, id, bank.fx[id]);
+        const Score sc = capture(id, 40, sfx_notes_of(id, bank.fx[id])), own = capture(id, 40, sfx_program_of(id));
+        const std::vector<s16> sp = render_speaker(own), fm = render_fm(sc, id, bank.fx[id]);
         char name[64];
         std::snprintf(name, sizeof name, "/sfx%02d_speaker.wav", id);
         write_wav(dir + name, sp);
