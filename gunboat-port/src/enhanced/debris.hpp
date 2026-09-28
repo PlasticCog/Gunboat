@@ -15,7 +15,7 @@ void debris_install();  // hooks the host's events
 void debris_move_last(double x, double y, double h);
 
 // Draws the live particles into a rendered region of the view: `target` as rendered (its palette
-// indices), `rgb` its pixels (XRGB, `pitch` bytes a row) made from them with `pal`; `water` the
+// indices, and its depth when it has one: the particles behind a hill are hidden), `rgb` its pixels (XRGB, `pitch` bytes a row) made from them with `pal`; `water` the
 // scene's water colour. A new impact inside the region takes its ground's look from the pixel there.
 void debris_draw(const ViewProjection &proj, const ViewTarget &target, u32 *rgb, int pitch, const u32 *pal,
                  u8 water);

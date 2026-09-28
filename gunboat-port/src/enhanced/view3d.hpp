@@ -24,6 +24,11 @@ struct ViewTarget {
     // rows outside [need_y0, need_y1).
     int need_y0 = 0, need_y1 = 1 << 30, skip0 = 0, skip1 = 0;
     bool far = true;  // draw the scene's far cells (the extended draw distance) when it has them
+    // Optional, w x h: how near the hill drawn at each pixel is (the scale ViewProjection::point gives,
+    // times 256), for drawing things behind the hills into the view (the impact debris); 0 where no
+    // hill shows (the sky, the water, flat ground). Flat ground (height 0) never covers anything on or
+    // above it, so only raised triangles count; a sprite leaves its pixels no nearer than itself.
+    u16 *depth = nullptr;
 };
 
 // Where the horizon line was drawn: its first page row (it is two rows of colour 8) and the sky and

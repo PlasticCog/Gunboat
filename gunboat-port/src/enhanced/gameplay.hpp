@@ -12,4 +12,9 @@ namespace gb {
 struct Settings;
 void gameplay_install(const Settings &s);
 
+// The ground's height at (x, y) quarter units: the highest of the loaded terrain's triangles over the
+// point (group A, then group B, as the renderer takes them), 0 (the water) where there is none. Reads
+// the game's memory only (also used by the impact debris, which is not a gameplay change).
+double terrain_height(double x, double y);
+
 } // namespace gb

@@ -28,9 +28,9 @@ double wrap16(double v)
     return v - 32768.0;
 }
 
-// The ground's height at (x, y) quarter units: the highest of the loaded terrain's triangles over the
-// point (group A, then group B, as the renderer takes them), 0 (the water) where there is none.
-double ground(double x, double y)
+} // namespace
+
+double terrain_height(double x, double y)
 {
     double best = 0;
     auto vertex = [&](int i, double &vx, double &vy, double &vh) {
@@ -64,16 +64,18 @@ double ground(double x, double y)
     return best;
 }
 
+namespace {
+
 // Where the line from the gun to the target at (tx, ty) first passes under the ground, if it does.
 bool blocked(double tx, double ty, double &bx, double &by, double &bh)
 {
     const double gx = ds_u16(DS_camera_qx), gy = ds_u16(DS_camera_qy);
     const double dx = wrap16(tx - gx), dy = wrap16(ty - gy), dist = std::hypot(dx, dy);
     if (dist < 2 * CLEAR) return false;
-    const double h1 = ground(tx, ty) + TARGET_UP;
+    const double h1 = terrain_height(tx, ty) + TARGET_UP;
     for (double s = CLEAR; s < dist - CLEAR; s += STEP) {
         const double f = s / dist, x = gx + dx * f, y = gy + dy * f, line = EYE + (h1 - EYE) * f;
-        const double h = ground(x, y);
+        const double h = terrain_height(x, y);
         if (h > line) {
             bx = x;
             by = y;

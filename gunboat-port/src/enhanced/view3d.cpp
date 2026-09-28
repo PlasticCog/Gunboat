@@ -140,6 +140,7 @@ public:
 
     ViewHorizon run()
     {
+        if (tg_.depth) std::fill(tg_.depth, tg_.depth + size_t(tg_.w) * tg_.h, u16(0));
         sky_and_water();
         water_marks();
         for (int i = 0; i < 0x400; i++) projected_[i] = false;
@@ -158,7 +159,7 @@ private:
     Camera cam_;
     double view_shift_;  // columns the interpolated view lies left of the captured one
     bool projected_[0x400];
-    double vx_[0x400], vy_[0x400];
+    double vx_[0x400], vy_[0x400], vs_[0x400];
 
     // ---- target pixels
     double tx(double x) const { return (x - tg_.ox) * tg_.sx; }
@@ -277,8 +278,8 @@ private:
     {
         if (projected_[i]) return;
         projected_[i] = true;
-        point(sc_.u16_at(u16(DS_vertex_x + 2 * i)), sc_.u16_at(u16(DS_vertex_y + 2 * i)),
-              sc_.u16_at(u16(DS_vertex_height + 2 * i)) & 0xFF, vx_[i], vy_[i]);
+        vs_[i] = point(sc_.u16_at(u16(DS_vertex_x + 2 * i)), sc_.u16_at(u16(DS_vertex_y + 2 * i)),
+                       sc_.u16_at(u16(DS_vertex_height + 2 * i)) & 0xFF, vx_[i], vy_[i]);
     }
 
     // A point at (x, y) quarter units, height h, on the page; returns its scale.
@@ -310,8 +311,10 @@ private:
             const int a = mode & 2 ? i - 1 : i, b = i + 1, c = i + 2;
             if (a < 0 || c >= int(v.size())) return;
             const double x0 = px[size_t(a)];
+            const bool raised = v[size_t(a)].height || v[size_t(b)].height || v[size_t(c)].height;
             triangle(x0, py[size_t(a)], x0 + wrap16((px[size_t(b)] - x0) * 128.0) / 128.0, py[size_t(b)],
-                     x0 + wrap16((px[size_t(c)] - x0) * 128.0) / 128.0, py[size_t(c)], ctrl & 0x3F);
+                     x0 + wrap16((px[size_t(c)] - x0) * 128.0) / 128.0, py[size_t(c)], ctrl & 0x3F,
+                     scale[size_t(a)], scale[size_t(b)], scale[size_t(c)], raised);
         };
         std::vector<std::pair<double, int>> order;
         std::vector<std::pair<double, const FarObject *>> objects;
@@ -365,7 +368,8 @@ private:
         const double x0 = vx_[a];
         const double x1 = x0 + wrap16((vx_[b] - x0) * 128.0) / 128.0;
         const double x2 = x0 + wrap16((vx_[c] - x0) * 128.0) / 128.0;
-        triangle(x0, vy_[a], x1, vy_[b], x2, vy_[c], colour);
+        auto height = [&](int k) { return sc_.u16_at(u16(DS_vertex_height + 2 * k)) & 0xFF; };
+        triangle(x0, vy_[a], x1, vy_[b], x2, vy_[c], colour, vs_[a], vs_[b], vs_[c], height(a) || height(b) || height(c));
     }
 
     // fill_triangle and the span routine (0919:7802, 788e) fill the rows of the vertices' rows
@@ -375,15 +379,19 @@ private:
     // distant terrain (beaches, far shores) keeps the size the original gives it.
     static constexpr double GROW_UP = 0.5, GROW_DOWN = 0.5, GROW_LEFT = 0.0, GROW_RIGHT = 1.0;
 
-    void triangle(double x0, double y0, double x1, double y1, double x2, double y2, u8 c) const
+    // The triangle's vertices' scales s0..s2 and whether it is raised (a vertex above height 0) make
+    // the target's depth there (ViewTarget::depth).
+    void triangle(double x0, double y0, double x1, double y1, double x2, double y2, u8 c, double s0, double s1,
+                  double s2, bool raised) const
     {
-        double X[3] = {tx(x0), tx(x1), tx(x2)}, Y[3] = {ty(y0), ty(y1), ty(y2)};
+        double X[3] = {tx(x0), tx(x1), tx(x2)}, Y[3] = {ty(y0), ty(y1), ty(y2)}, S[3] = {s0, s1, s2};
         // sort by row
         for (int p = 0; p < 2; p++)
             for (int q = 0; q < 2 - p; q++)
                 if (Y[q] > Y[q + 1]) {
                     std::swap(Y[q], Y[q + 1]);
                     std::swap(X[q], X[q + 1]);
+                    std::swap(S[q], S[q + 1]);
                 }
         const double up = GROW_UP * tg_.sy, down = GROW_DOWN * tg_.sy;
         const double left = GROW_LEFT * tg_.sx, right = GROW_RIGHT * tg_.sx;
@@ -392,6 +400,7 @@ private:
         const int j0 = std::max(int(std::ceil(Y[0] - up - 0.5)), 0);
         const int j1 = std::min(int(std::ceil(Y[2] + down - 0.5)), tg_.h);
         const bool flat = Y[2] - Y[0] < 1e-9;
+        const Depth depth = tg_.depth ? depth_plane(X, Y, S, raised) : Depth{};
         // The cross-section of the triangle at row y: [l, r] widened by it.
         auto section = [&](double y, double &l, double &r) {
             const double xa = X[0] + (X[2] - X[0]) * (y - Y[0]) / (Y[2] - Y[0]);
@@ -420,8 +429,51 @@ private:
                     if (Y[1] > lo && Y[1] < hi) section(Y[1], l, r);
                 }
             }
-            fill(j, int(std::ceil(l - left - 0.5)), int(std::ceil(r + right - 0.5)), c);
+            const int i0 = int(std::ceil(l - left - 0.5)), i1 = int(std::ceil(r + right - 0.5));
+            fill(j, i0, i1, c);
+            if (tg_.depth) depth_span(j, i0, i1, depth);
         }
+    }
+
+    // A raised triangle's scale over the target's pixels: s = a x + b y + c at the pixels' centres, kept
+    // within its vertices' (the scale is 1 / distance: nearly linear on the page over a triangle).
+    struct Depth {
+        double a = 0, b = 0, c = 0, lo = 0, hi = 0;
+        bool raised = false;
+    };
+    static Depth depth_plane(const double X[3], const double Y[3], const double S[3], bool raised)
+    {
+        Depth d;
+        d.raised = raised;
+        if (!raised) return d;
+        d.lo = std::min({S[0], S[1], S[2]});
+        d.hi = std::max({S[0], S[1], S[2]});
+        const double dx1 = X[1] - X[0], dy1 = Y[1] - Y[0], dx2 = X[2] - X[0], dy2 = Y[2] - Y[0];
+        const double det = dx1 * dy2 - dx2 * dy1;
+        if (std::fabs(det) < 1e-9) {
+            d.c = d.hi;
+            return d;
+        }
+        d.a = ((S[1] - S[0]) * dy2 - (S[2] - S[0]) * dy1) / det;
+        d.b = (dx1 * (S[2] - S[0]) - dx2 * (S[1] - S[0])) / det;
+        d.c = S[0] - d.a * X[0] - d.b * Y[0];
+        return d;
+    }
+    // The depth of the pixels [i0, i1) of row j: the triangle's, or 0 for flat ground (drawn over a
+    // hill, it is nearer than the hill there, and nothing on or above it lies behind it).
+    void depth_span(int j, int i0, int i1, const Depth &d) const
+    {
+        if (j < 0 || j >= tg_.h) return;
+        i0 = std::max(i0, 0);
+        i1 = std::min(i1, tg_.w);
+        if (i0 >= i1) return;
+        u16 *row = tg_.depth + size_t(j) * tg_.w;
+        if (!d.raised) {
+            std::fill(row + i0, row + i1, u16(0));
+            return;
+        }
+        const double y = j + 0.5;
+        for (int i = i0; i < i1; i++) row[i] = u16(std::clamp(d.a * (i + 0.5) + d.b * y + d.c, d.lo, d.hi) * 256.0);
     }
 
     // ---- draw_group_b (0919:763f): group B from its last primitive down.
@@ -505,16 +557,20 @@ private:
         const double centre = VIEW_X + 128 + d / 128.0;
         const double bottom = 48 + inv / 8.0 + cam_.sprite_h;
         const double w1 = img.part1.w * fx, h1 = img.part1.h * fy;
-        blit(img.part1, centre - w1 / 2, bottom - h1, w1, h1);
+        // its depth, as project_point's scale (a sprite half inside a hill keeps its own pixels clear)
+        const double dist = std::hypot(dx, dy);
+        const u16 depth = u16((dist > 32767.5 / 255.0 ? 32767.5 / dist : 255.0) * 256.0);
+        blit(img.part1, centre - w1 / 2, bottom - h1, w1, h1, depth);
         if (img.part2.w) {
             const double w2 = img.part2.w * fx, h2 = img.part2.h * fy;
             const double off = w2 * img.shift / 512.0;
-            blit(img.part2, centre - w2 / 2 - off, bottom - h1 - h2, w2, h2);
+            blit(img.part2, centre - w2 / 2 - off, bottom - h1 - h2, w2, h2, depth);
         }
     }
 
-    // The image scaled to the page rectangle (x, y, w, h), zero pixels transparent.
-    void blit(const SpritePart &p, double x, double y, double w, double h) const
+    // The image scaled to the page rectangle (x, y, w, h), zero pixels transparent; the depth of its
+    // pixels made no nearer than `depth`.
+    void blit(const SpritePart &p, double x, double y, double w, double h, u16 depth) const
     {
         if (p.w == 0 || p.h == 0 || w <= 0 || h <= 0) return;
         const double X0 = tx(x), Y0 = ty(y), W = w * tg_.sx, H = h * tg_.sy;
@@ -524,9 +580,12 @@ private:
             const int v = std::min(int((j + 0.5 - Y0) / H * p.h), p.h - 1);
             const u8 *src = p.px.data() + size_t(v) * p.w;
             u8 *row = tg_.px + size_t(j) * tg_.w;
+            u16 *drow = tg_.depth ? tg_.depth + size_t(j) * tg_.w : nullptr;
             for (int i = i0; i < i1; i++) {
                 const int u = std::min(int((i + 0.5 - X0) / W * p.w), p.w - 1);
-                if (src[u] && needed(j, i)) row[i] = src[u];
+                if (!src[u]) continue;
+                if (needed(j, i)) row[i] = src[u];
+                if (drow && drow[i] > depth) drow[i] = depth;
             }
         }
     }

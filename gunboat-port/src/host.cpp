@@ -47,6 +47,7 @@ bool (*shot_blocked_handler)(u16);
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
+bool ctrl_held[2];  // the left and right Ctrl, held on the keyboard or by the controller
 bool redraw = true;                      // the window needs a new picture (resized, exposed)
 u32 frame[HOST_FRAME_MAX_W * HOST_FRAME_MAX_H];
 int frame_w = 320, frame_h = 200;
@@ -293,6 +294,13 @@ void key_event(SDL_Scancode sc, bool down)
 // releases are theirs), else the game.
 void key_input(SDL_Scancode sc, bool down, bool repeat)
 {
+    if (sc == SDL_SCANCODE_LCTRL || sc == SDL_SCANCODE_RCTRL) ctrl_held[sc == SDL_SCANCODE_RCTRL] = down;
+    // PORT: Ctrl+Q quits wherever it is pressed, as closing the window does. The original quits on it
+    // in a mission only (input_read_key -> quit_to_dos, which writes no file) and ignores it elsewhere.
+    if (down && sc == SDL_SCANCODE_Q && (ctrl_held[0] || ctrl_held[1])) {
+        host_shutdown();
+        std::exit(0);
+    }
     if (down) {
         if (sc < SDL_SCANCODE_COUNT && consumed_keys[sc]) return;  // its repeats
         if (!repeat && hotkey_handler && hotkey_handler(sc)) {

@@ -186,7 +186,13 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     coordinates by the stuff hit (sparks off metal, wood chips, blood, stone chips, sandbag sand;
     on the ground the drawn pixel decides: a splash on water, grass on green, dust in the ground's
     colour), and the presenter draws them into the enhanced view (true colour, before the cockpit)
-    with the view's projection (`view3d_projection`, interpolated as the view);
+    with the view's projection (`view3d_projection`, interpolated as the view); hills hide them
+    (2026-09-27): the view keeps a depth of its raised terrain triangles (`ViewTarget::depth`, the
+    scale 1/distance interpolated over each triangle; flat ground, height 0, resets it: nothing on
+    or above it can be behind it; a sprite leaves its pixels no nearer than itself, so debris shows
+    over sprites, also those half inside a hill), and a particle's pixel is not drawn where the hill
+    is more than 10% nearer; ground impacts start on the terrain's surface (`terrain_height`, the
+    loaded triangles, shared with gameplay.cpp) and rest on it;
   * checks (`scene_enhanced.py`): the view drawn again at 1x equals the original's pixels on
     94.7% (pilot practice) and 97.0% (night gunnery) of the view (the rest: sub-pixel terrain
     edges, the original's bit-pattern sprite scaling), no capture changes the game's memory,
@@ -278,6 +284,10 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   tags .app folders with Finder attributes, which break the signature). In a bundle the game folder
   is looked for beside the .app (`default_game_dir`); settings in `~/Library/Application
   Support/Gunboat/`. CMake skips `-static-libgcc/-static-libstdc++` on Apple.
+* **Ctrl+Q quits anywhere (2026-09-27):** the host quits (as closing the window) on Ctrl+Q from the
+  keyboard or the controller (`key_input` tracks both Ctrls), in the launcher too; PORT: the original
+  checks it in the mission loop only (`input_read_key` -> `quit_to_dos`, which writes no file). The
+  scripted keys (`GB_KEYS`) still go to the game itself.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).

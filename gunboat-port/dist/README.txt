@@ -63,7 +63,8 @@ enhancements only change how its frames are shown.
   Draw distance  Extended: the terrain and objects beyond the 3 x 3 cells the game draws, out to
                  5 cells: islands and shores on the horizon.
   Impact debris  On: small debris where the shots hit: sparks off metal, wood chips, blood,
-                 stone chips, splashes on the water, grass and dust on land.
+                 stone chips, splashes on the water, grass and dust on land. Hills hide the
+                 debris behind them.
   Widescreen     Wide cockpit: in a wide window the cockpit art is widened to the edges where it
                  has the least detail. Extended world: the world continues beside the cockpit.
                  Off: black borders.
@@ -127,7 +128,7 @@ CONTROLS (from the original)
   F1 - F10              panel switches and crew orders (F9 identify target, F10 open/cease fire)
   D                     detail level           S  sound on/off
   Tab                   return to base         Esc  pause
-  Ctrl+Q                quit
+  Ctrl+Q                quit (anywhere in the port; the original only in a mission)
 
 The original manual describes the missions and the boat in full.
 
@@ -143,6 +144,8 @@ WHAT IS DIFFERENT FROM THE ORIGINAL
   not ported. The AdLib sound effects are an addition of this port (optional).
 * The 3D stations run at 15 frames per second, so that the mission clock runs in real time (the
   original ran as fast as the PC could draw).
+* Ctrl+Q quits the game wherever it is pressed (the original: in a mission only), as closing the
+  window does. Neither saves anything; the original's Ctrl+Q didn't either.
 * Everything else, including the original's quirks, is kept on purpose.
 
 

@@ -285,6 +285,9 @@ bool launcher_run(Settings &s)
                 case SDL_SCANCODE_KP_ENTER:
                 case SDL_SCANCODE_SPACE: result = activate(sel, 0); break;
                 case SDL_SCANCODE_ESCAPE: result = -1; break;
+                case SDL_SCANCODE_Q:  // Ctrl+Q quits, as in the game
+                    if (ev.key.mod & SDL_KMOD_CTRL) result = -1;
+                    break;
                 default: break;
                 }
                 break;

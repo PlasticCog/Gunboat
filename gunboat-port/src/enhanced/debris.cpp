@@ -7,6 +7,7 @@
 #include <cmath>
 #include <vector>
 
+#include "enhanced/gameplay.hpp"
 #include "host.hpp"
 #include "mem.hpp"
 #include "symbols.hpp"
@@ -18,6 +19,9 @@ namespace {
 constexpr double PI = 3.14159265358979323846;
 constexpr double SIZE = 2.5;     // the particles' size, times the table's
 constexpr double LINGER = 0.25;  // seconds a particle lies on the ground, fading, before it is gone
+// A hill hides a particle where it is nearer by this factor (its scale larger): the hill's depth is
+// interpolated over its triangles, and debris flying off a hillside must not vanish into it.
+constexpr double HIDDEN = 1.1;
 
 // What a shot hit. Grass is any green ground (brush, jungle, grass): pale leaves and twigs that drift
 // down, so that they show against the green; Wood has pale fresh splinters among the brown.
@@ -25,7 +29,8 @@ enum class Stuff : u8 { Ground, Water, Grass, Dirt, Metal, Wood, Flesh, Stone, S
 
 // A shot's landing until its particles are made (when the view first shows its place).
 struct Impact {
-    double x, y, h;  // quarter units; height (0 the ground and the water)
+    double x, y, h;  // quarter units; height (0 the flat ground and the water)
+    double floor;    // the height its particles come to rest at: the ground's there
     Stuff stuff;
     bool explosive;  // the grenade launcher and the mortar (weapons 2 and 3)
     Uint64 t;
@@ -33,6 +38,7 @@ struct Impact {
 
 struct Particle {
     double x, y, h;     // at birth
+    double floor;       // the ground's height it falls back to
     double vx, vy, vh;  // per second
     double gravity;     // height units per second squared
     double drag;        // per second: the decay of the horizontal speed
@@ -107,11 +113,14 @@ Stuff stuff_of(u8 kind)
     }
 }
 
-// A shot of `weapon` lands at (x, y) map units: on the ground unless it hits an object next.
+// A shot of `weapon` lands at (x, y) map units: on the ground unless it hits an object next. The game
+// has it land at height 0; on a hillside its debris flies from the hill's surface there (else it would
+// start inside the hill, hidden by it).
 void on_shot_landed(u16 x, u16 y, u8 weapon)
 {
     if (impacts.size() >= 64) impacts.erase(impacts.begin());
-    impacts.push_back({x * 4.0, y * 4.0, 0, Stuff::Ground, weapon == 2 || weapon == 3, SDL_GetTicksNS()});
+    const double h = terrain_height(x * 4.0, y * 4.0);
+    impacts.push_back({x * 4.0, y * 4.0, h, h, Stuff::Ground, weapon == 2 || weapon == 3, SDL_GetTicksNS()});
 }
 
 // The shot that just landed hit an object of kind `kind`: its debris is the object's stuff, flying
@@ -121,6 +130,7 @@ void on_object_hit(u8 kind, u16)
     if (impacts.empty() || kind == 0x30 || kind == 0x31) return;  // the shot passes wrecks 30h/31h
     Impact &im = impacts.back();
     im.h = kind >= 0x2A && kind <= 0x2E ? between(3, 14) : between(1, 4);  // trees: up the trunk
+    im.floor = 0;  // the objects stand at height 0 (their sprites)
     im.stuff = stuff_of(kind);
 }
 
@@ -142,6 +152,7 @@ void spawn(const Impact &im, Stuff stuff, u32 ground)
         p.x = im.x + between(-2, 2);
         p.y = im.y + between(-2, 2);
         p.h = im.h;
+        p.floor = im.floor;
         p.vx = std::cos(a) * v;
         p.vy = std::sin(a) * v;
         p.vh = between(sp.up0, sp.up1) * fast;
@@ -163,14 +174,14 @@ void position(const Particle &p, double age, double &x, double &y, double &h)
     const double k = p.drag > 0 ? (1 - std::exp(-p.drag * age)) / p.drag : age;
     x = p.x + p.vx * k;
     y = p.y + p.vy * k;
-    h = std::max(0.0, p.h + p.vh * age - 0.5 * p.gravity * age * age);
+    h = std::max(p.floor, p.h + p.vh * age - 0.5 * p.gravity * age * age);
 }
 
-// When particle p falls back to the ground (height 0).
+// When particle p falls back to its ground.
 double landing_time(const Particle &p)
 {
     if (p.gravity <= 0) return 1e9;
-    return (p.vh + std::sqrt(p.vh * p.vh + 2 * p.gravity * p.h)) / p.gravity;
+    return (p.vh + std::sqrt(p.vh * p.vh + 2 * p.gravity * std::max(0.0, p.h - p.floor))) / p.gravity;
 }
 
 void blend(u32 *row, int x, u32 c, double a)
@@ -189,6 +200,7 @@ void debris_move_last(double x, double y, double h)
     im.x = x;
     im.y = y;
     im.h = h;
+    im.floor = h;
     im.stuff = Stuff::Ground;
 }
 
@@ -241,7 +253,7 @@ void debris_draw(const ViewProjection &proj, const ViewTarget &target, u32 *rgb,
         position(p, age, x, y, h);
         // Back on the ground: a drop is gone into the water; the rest lies there, fading, a moment.
         double fade = 1.0;
-        if (h <= 0 && age > 0.05) {
+        if (h <= p.floor && age > 0.05) {
             if (p.sinks) continue;
             const double land = landing_time(p);
             fade = 1.0 - (age - land) / LINGER;
@@ -252,11 +264,15 @@ void debris_draw(const ViewProjection &proj, const ViewTarget &target, u32 *rgb,
         if (!to_target(px, py, tx, ty)) continue;
         const double a = fade * (age < 0.6 * p.life ? 1.0 : std::max(0.0, (p.life - age) / (0.4 * p.life)));
         const int size = std::max(1, int(std::lround(s * p.size / 256.0 * target.sy)));
+        // behind a hill: its pixels there are not drawn (ViewTarget::depth; sprites never hide it)
+        const double hidden = s * 256.0 * HIDDEN;
         auto dot = [&](double cx, double cy, double alpha) {
             const int x0 = int(cx - size / 2.0), y0 = int(cy - size / 2.0);
             for (int j = std::max(0, y0); j < std::min(target.h, y0 + size); j++) {
                 u32 *row = reinterpret_cast<u32 *>(reinterpret_cast<u8 *>(rgb) + size_t(j) * pitch);
-                for (int i = std::max(0, x0); i < std::min(target.w, x0 + size); i++) blend(row, i, p.rgb, alpha);
+                const u16 *depth = target.depth ? target.depth + size_t(j) * target.w : nullptr;
+                for (int i = std::max(0, x0); i < std::min(target.w, x0 + size); i++)
+                    if (!depth || depth[i] <= hidden) blend(row, i, p.rgb, alpha);
             }
         };
         dot(tx, ty, a);

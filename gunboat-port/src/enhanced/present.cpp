@@ -55,6 +55,7 @@ struct ViewTex {
     SDL_Texture *tex = nullptr;
     int w = 0, h = 0;
     std::vector<u8> idx;
+    std::vector<u16> depth;  // the hills' (ViewTarget::depth), for the impact debris
 };
 ViewTex win_tex, left_tex, right_tex;
 
@@ -363,6 +364,10 @@ void render_region(ViewTex &vt, double ox, double oy, double pw, double ph, doub
     target.oy = oy;
     target.sx = sx;
     target.sy = sy;
+    if (cfg.debris) {
+        vt.depth.resize(size_t(w) * h);
+        target.depth = vt.depth.data();
+    }
     const bool interpolate = cfg.smooth_motion && prev && prev->valid;
     const ViewHorizon hz = view3d_render(*cur, interpolate ? prev : nullptr, t, target);
     void *pixels;
