@@ -35,6 +35,7 @@ core.
 | `gunboat-port/tools/sfx_editor/` | `gunboat_sfx_editor`: the AdLib sound effects' instruments (C++, SDL3, Dear ImGui) |
 | `gunboat-port/data/sfx.ini` | The AdLib instruments the port ships with, built into the game; the editor saves it when run from `gunboat-port/build` |
 | `.github/workflows/release-linux.yml` | Builds the Linux package of a published release (Ubuntu 22.04, SDL3 static) and attaches it |
+| `.github/workflows/release-mac.yml` | Builds the macOS package of a published release (`Release-mac.sh` on a macOS runner) and attaches it |
 | `reverse_engineering/RE_GUIDE.md` | **Read first**: addresses, segment map, files, how to regenerate |
 | `reverse_engineering/symbols.csv` | The single name list for functions and globals |
 | `reverse_engineering/map/` | Function index and TD3 matches (generated, tracked) |
@@ -88,7 +89,7 @@ core.
 powershell -File gunboat-port/Build.ps1                        # configure, build, ctest (3 tests)
 powershell -File gunboat-port/Release.ps1                      # Windows release zip (exes, SDL3.dll, empty Game/)
 bash gunboat-port/Release.sh                                   # Linux release tar.gz (CI: .github/workflows/release-linux.yml)
-bash gunboat-port/Release-mac.sh                               # macOS release zip (universal .apps, SDL3 static into deps/; brew install cmake ninja)
+bash gunboat-port/Release-mac.sh                               # macOS release zip (universal .apps, SDL3 static into deps/; brew install cmake ninja; CI: release-mac.yml)
 gunboat-port/build/gunboat_sfx_editor.exe [--wav DIR]          # the AdLib effects editor; --wav renders every effect
 gunboat-port/build/gunboat.exe --check                         # finds Game/ by itself
 python gunboat-port/tests/difftest/run_all.py [-k name]        # differential tests (builds gb_difftest)

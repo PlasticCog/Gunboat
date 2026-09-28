@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(gunboat_port VERSION 1.1.3 LANGUAGES C CXX)
+project(gunboat_port VERSION 1.2.0 LANGUAGES C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

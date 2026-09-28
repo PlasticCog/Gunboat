@@ -1,0 +1,50 @@
+# The macOS package of a release: gunboat-port/Release-mac.sh on a macOS runner (universal Gunboat.app
+# and Gunboat Controller.app, arm64 + x86_64, macOS 11+, SDL3 built from its source as a static
+# library, ad-hoc signed), then attached to the release. Runs when a release is published, or by hand
+# for an existing release's tag. No game files are involved: the package's Game folder is empty.
+name: macOS release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The release's tag (for example v1.2.0), or a branch to build without attaching
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Tools
+        run: |
+          brew install ninja
+          cmake --version
+
+      - name: Build and package
+        run: bash gunboat-port/Release-mac.sh
+
+      - name: Smoke test (no display, no game files)
+        run: |
+          b=gunboat-port/build-mac
+          lipo -info $b/gunboat $b/gunboat_controller
+          $b/gunboat --version
+          SDL_VIDEO_DRIVER=dummy SDL_AUDIO_DRIVER=dummy $b/gunboat --host-test
+          unzip -l gunboat-port/release/*.zip
+
+      - name: Attach to the release
+        if: startsWith(env.TAG, 'v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG" gunboat-port/release/*.zip --clobber --repo "$GITHUB_REPOSITORY"
