@@ -12,14 +12,18 @@
 // Additions, where the original is silent (the game tells the host of each hit and each destroyed
 // target, host_object_hit / host_target_destroyed): a target destroyed by a shot sounds the Explosion
 // effect (8; the original plays it only for a class 7 object's wreck 4Bh), enemy infantry killed the
-// Soldier killed effect, and a bullet's hit the Impact effect of the object's material. Each is its
-// own driver copy, started as sfx_play would start the program whose notes it plays.
+// Soldier killed effect, and a bullet's hit the Impact effect of the object's material (materials.hpp).
+// Each is its own driver copy, started as sfx_play would start the program whose notes it plays. And
+// where the original reuses a sound: the grenade launcher and the mortar fire with the explosion's
+// effect 8 (the game tells the host first, host_shell_fired); on the AdLib they play its notes on
+// their own instruments.
 //
 // The game's own driver runs as always, so the game's memory is the original's. Its speaker changes
 // are silenced, except for the effects the bank leaves on the speaker. The copies' steps run on the
 // game's memory in the host's tick observer and put every byte of it back before the game continues.
 #include "enhanced/sfx_adlib.hpp"
 
+#include "enhanced/materials.hpp"
 #include "enhanced/sfx_fm.hpp"
 #include "host.hpp"
 #include "mem.hpp"
@@ -33,33 +37,36 @@ namespace {
 constexpr u16 STATE = DS_sfx_loop_count;  // DA48: the driver's state, up to the program table
 constexpr int STATE_SIZE = DS_sfx_programs - DS_sfx_loop_count;
 constexpr int ENGINE = 6;     // the engine's program loops (sound.md §2.1)
-constexpr int EXPLOSION = 8;  // the mortar, the grenades, explosions
+constexpr int EXPLOSION = 8;  // explosions; in the original also the mortar and the grenade launcher
 constexpr u8 WRECK_WITH_SOUND = 0x4B;  // the wreck whose destruction plays effect 8 in the original
 
 // Object kinds (world.md §6.3). Enemy infantry: 0Ah-0Ch, and 14h in Vietnam (region 0) and the
 // practice world (3) (elsewhere a truck or a missile launcher). People: those, the civilians 19h-1Ah
-// and 24h-26h (ex-POW, SEALs, US infantry). Metal: tanks, APCs, boats, the machine gun, the missile,
-// mines, 14h outside Vietnam and practice, helicopters and their wreck, civilian boats, the car, the
-// PBR, buoys and the capsized boat. Everything else hit (huts, docks, forts, bridges, trees, rocks,
-// statues) is wood and stone.
+// and 24h-26h (ex-POW, SEALs, US infantry).
 bool enemy_infantry(u8 kind)
 {
     const u16 region = ds_u16(DS_region);
     return (kind >= 0x0A && kind <= 0x0C) || (kind == 0x14 && (region == 0 || region == 3));
 }
 bool person(u8 kind) { return enemy_infantry(kind) || kind == 0x19 || kind == 0x1A || (kind >= 0x24 && kind <= 0x26); }
-// The living: people and, in Vietnam, the water buffalo 2Fh (a statue elsewhere).
-bool alive(u8 kind) { return person(kind) || (kind == 0x2F && ds_u16(DS_region) == 0); }
 // The dead: the bodies 33h-35h and, in Vietnam, the dead beast 32h (rubble or a statue elsewhere).
 bool dead(u8 kind) { return (kind >= 0x33 && kind <= 0x35) || (kind == 0x32 && ds_u16(DS_region) == 0); }
 // Dead, destroyed or inanimate: the dead, the wrecks (the downed helicopter 18h, 30h-38h) and the
 // scenery (buoys, trees, stumps, statues, rocks: 28h and above).
 bool lifeless(u8 kind) { return kind == 0x18 || kind >= 0x28; }
-bool metal(u8 kind)
+
+// The impact effect of each material.
+int impact_effect(Material m)
 {
-    return (kind >= 0x01 && kind <= 0x07) || kind == 0x12 || kind == 0x13 || kind == 0x14 || kind == 0x17 ||
-           kind == 0x18 || kind == 0x1E || kind == 0x1F || kind == 0x22 || kind == 0x23 || kind == 0x28 ||
-           kind == 0x29 || kind == 0x37 || kind == 0x38;
+    switch (m) {
+    case Material::Metal: return SFX_IMPACT_METAL;
+    case Material::Wood: return SFX_IMPACT_WOOD;
+    case Material::Tree: return SFX_IMPACT_TREE;
+    case Material::Bridge: return SFX_IMPACT_BRIDGE;
+    case Material::Sand: return SFX_IMPACT_SANDBAGS;
+    case Material::Flesh: return SFX_IMPACT_FLESH;
+    default: return SFX_IMPACT_STONE;
+    }
 }
 
 struct Driver {
@@ -74,6 +81,9 @@ void opl_write(void *, u8 reg, u8 value) { host_sfx_opl_write(reg, value); }
 SfxSynth synth(opl_write, nullptr);
 Driver drivers[SFX_COUNT];  // one per effect
 int running = -1;           // the driver whose step runs now
+int launch = -1;            // a shell fired: its effect, which the explosion effect starting next is
+int game_launch = -1;       // the launch effect the game's own driver plays (its program is effect 8's)
+int last_impact = -1;       // the impact effect the shot being tested started (hit_objects)
 
 int effect_of(u16 pc)
 {
@@ -114,30 +124,55 @@ void start(int id, u16 program, int gain = 100)
     d.active = true;
 }
 
-// sfx_play has started the program at `program`.
-void on_sfx_play(u16 program) { start(effect_of(program), program); }
+void stop(int id)
+{
+    drivers[id].active = false;
+    synth.silence(id);
+}
+
+// sfx_play has started the program at `program`: its effect, or the launch effect a shell fired just
+// before it is (the explosion's notes on the launcher's instrument).
+void on_sfx_play(u16 program)
+{
+    int id = effect_of(program);
+    game_launch = -1;
+    if (launch >= 0 && id == EXPLOSION) id = game_launch = launch;
+    launch = -1;
+    start(id, program);
+}
+
+// The grenade launcher (weapon 2) or the mortar (3) fires: its sound starts next.
+void on_shell_fired(u8 weapon) { launch = weapon == 2 ? SFX_GRENADE_LAUNCHER : SFX_MORTAR; }
 
 // A shot has destroyed a target of kind `old`: enemy infantry cry out; other people, buoys, trees and
 // the like make no sound; the rest explodes, unless the original plays the explosion itself.
 void on_target_destroyed(u8 old, u8 wreck)
 {
-    if (enemy_infantry(old)) start(SFX_SOLDIER_KILLED, program_of(SFX_SOLDIER_KILLED));
-    else if (person(old) || old >= 0x28 || wreck == WRECK_WITH_SOUND) return;
-    else start(EXPLOSION, program_of(EXPLOSION));
+    const int impact = last_impact;
+    last_impact = -1;
+    if (enemy_infantry(old)) {
+        // the soldier's cry, not the bullet's thwack as well (it has not sounded yet: no tick since)
+        if (impact == SFX_IMPACT_FLESH) stop(SFX_IMPACT_FLESH);
+        start(SFX_SOLDIER_KILLED, program_of(SFX_SOLDIER_KILLED));
+    } else if (person(old) || old >= 0x28 || wreck == WRECK_WITH_SOUND) {
+        return;
+    } else {
+        start(EXPLOSION, program_of(EXPLOSION));
+    }
 }
 
-// A shot has hit an object of kind `kind`: a bullet's impact on its material (bridges their own clang),
-// at three quarters of the volume on what is dead, destroyed or inanimate (the dead with the dull wood
-// sound). Not on the living, not for the
-// grenades and the mortar (their own explosion sounds), not on the wrecks the shot passes through.
+// A shot has hit an object of kind `kind`: a bullet's impact on its material (materials.hpp: metal,
+// wood, a tree, a bridge, stone, sandbags, flesh), at three quarters of the volume on what is dead,
+// destroyed or inanimate. Not for the grenades and the mortar (their own explosion sounds), not on the
+// wrecks the shot passes through.
 void on_object_hit(u8 kind, u16)
 {
+    last_impact = -1;
     const u8 weapon = ds_u8(DS_vec_product_hi);  // hit_objects' weapon: 2 and 3 are the explosive ones
-    if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31 || alive(kind)) return;
-    const int id = kind == 0x11 || kind == 0x21     ? SFX_IMPACT_BRIDGE
-                   : metal(kind) && !dead(kind) ? SFX_IMPACT_METAL
-                                                : SFX_IMPACT_WOOD;
+    if (weapon == 2 || weapon == 3 || kind == 0x30 || kind == 0x31) return;
+    const int id = impact_effect(material_of(kind));
     start(id, program_of(id), dead(kind) || lifeless(kind) ? 75 : 100);
+    last_impact = id;
 }
 
 // Every speaker change. A driver copy's: its effect's instrument plays it. The game's driver's: the
@@ -150,7 +185,8 @@ bool filter(u16 divisor, bool &on, bool effects)
         return true;
     }
     if (!effects) return false;
-    const int id = effect_of(ds_u16(DS_sfx_pc));
+    int id = effect_of(ds_u16(DS_sfx_pc));
+    if (id == EXPLOSION && game_launch >= 0) id = game_launch;  // a launch: its own effect's output
     if (id < 0 || synth.bank().fx[id].output == SfxOutput::Speaker) return false;
     on = false;
     return false;
@@ -159,6 +195,7 @@ bool filter(u16 divisor, bool &on, bool effects)
 // After each timer tick (the game's driver has made its step): one step of every effect's driver.
 void tick()
 {
+    launch = -1;  // a shell fired and its sound come together (no tick between): none left over
     if (ds_u8(DS_sfx_timer_on) == 0 || ds_u16(DS_sound_muted) != 0) {
         stop_all();
         return;
@@ -206,6 +243,7 @@ void sfx_adlib_install()
     host_add_sfx_play_observer(on_sfx_play);
     host_add_target_destroyed_observer(on_target_destroyed);
     host_add_object_hit_observer(on_object_hit);
+    host_add_shell_fired_observer(on_shell_fired);
 }
 
 } // namespace gb

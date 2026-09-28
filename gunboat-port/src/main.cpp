@@ -22,8 +22,9 @@
 //                first (sound/adlib_driver.cpp) and the title music plays VALK12.MUS on the OPL2.
 //                speaker: no AdLib driver: the music plays VALKPC.MUS on the PC speaker. Default:
 //                adlib when the game folder has ADLIB.COM, else speaker.
-//   --effects    speaker: the sound effects on the PC speaker, as in the original. adlib: on FM
-//                instruments (src/enhanced/sfx_fm.hpp; the bank sfx.ini, gunboat_sfx_editor).
+//   --effects    adlib: the sound effects on FM instruments (src/enhanced/sfx_fm.hpp; the bank
+//                sfx.ini, gunboat_sfx_editor; the default). speaker: on the PC speaker, as in the
+//                original.
 //   --original   no enhancements: the picture exactly as the original drew it (F11 in the game
 //                switches); --enhanced: all of them. Or one by one: --view hires (the 3D view at the
 //                window's resolution), --motion smooth (60 fps, interpolated), --draw-distance

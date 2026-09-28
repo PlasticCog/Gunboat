@@ -88,6 +88,9 @@ void host_shot_landed(u16 x, u16 y, u8 weapon);
 void host_object_hit(u8 kind, u16 obj);
 // hit_objects: the shot destroyed an object of kind `old` into its wreck `wreck`.
 void host_target_destroyed(u8 old, u8 wreck);
+// fire_station4 / fire_station3: the grenade launcher (weapon 2) or the mortar (3) fires; its sound,
+// effect 8 (the explosion's), starts next.
+void host_shell_fired(u8 weapon);
 // title_menu: the title screen (TITLE1) is on the screen, faded in (the window icon, icon.cpp).
 void host_title_shown();
 // PORT: the gameplay option "hills stop bullets" (gameplay.cpp): hit_objects asks whether a hill stops
@@ -142,6 +145,7 @@ void host_add_sfx_play_observer(void (*observer)(u16 program));
 void host_add_shot_landed_observer(void (*observer)(u16 x, u16 y, u8 weapon));
 void host_add_object_hit_observer(void (*observer)(u8 kind, u16 obj));
 void host_add_target_destroyed_observer(void (*observer)(u8 old, u8 wreck));
+void host_add_shell_fired_observer(void (*observer)(u8 weapon));
 void host_add_title_shown_observer(void (*observer)());
 // Restarts the timer clock from now (the game starts after the launcher, not at host_init).
 void host_reset_clock();

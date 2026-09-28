@@ -42,6 +42,7 @@ std::vector<void (*)(u16)> sfx_play_observers;
 std::vector<void (*)(u16, u16, u8)> shot_landed_observers;
 std::vector<void (*)(u8, u16)> object_hit_observers;
 std::vector<void (*)(u8, u8)> target_destroyed_observers;
+std::vector<void (*)(u8)> shell_fired_observers;
 std::vector<void (*)()> title_shown_observers;
 bool (*shot_blocked_handler)(u16);
 bool speaker_effects;  // the effects driver's timer handler is running (host_speaker_effects)
@@ -508,6 +509,7 @@ void host_add_sfx_play_observer(void (*observer)(u16)) { sfx_play_observers.push
 void host_add_shot_landed_observer(void (*observer)(u16, u16, u8)) { shot_landed_observers.push_back(observer); }
 void host_add_object_hit_observer(void (*observer)(u8, u16)) { object_hit_observers.push_back(observer); }
 void host_add_target_destroyed_observer(void (*observer)(u8, u8)) { target_destroyed_observers.push_back(observer); }
+void host_add_shell_fired_observer(void (*observer)(u8)) { shell_fired_observers.push_back(observer); }
 void host_sfx_play(u16 program)
 {
     for (auto f : sfx_play_observers) f(program);
@@ -523,6 +525,10 @@ void host_object_hit(u8 kind, u16 obj)
 void host_target_destroyed(u8 old, u8 wreck)
 {
     for (auto f : target_destroyed_observers) f(old, wreck);
+}
+void host_shell_fired(u8 weapon)
+{
+    for (auto f : shell_fired_observers) f(weapon);
 }
 void host_add_title_shown_observer(void (*observer)()) { title_shown_observers.push_back(observer); }
 void host_set_shot_blocked_handler(bool (*handler)(u16)) { shot_blocked_handler = handler; }

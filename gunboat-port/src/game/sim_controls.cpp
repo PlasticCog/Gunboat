@@ -2,6 +2,7 @@
 // throttles and the jet, the heading steps, the fire keys of the gun stations and the speed response.
 #include "game/sim.hpp"
 
+#include "host.hpp"
 #include "hud/hud.hpp"
 #include "mem.hpp"
 #include "sound/sound.hpp"
@@ -156,6 +157,9 @@ u16 fire_station4(u16 ax)
     if (ds_u8(DS_stern_weapon) == 0) {
         if (ds_u8(DS_reload_stern) != 8) return ax;
         ds_u8(DS_reload_stern)--;
+        // PORT: tells the host that the grenade launcher fires (its own effect on the AdLib,
+        // sfx_adlib.cpp); nothing in mem[] changes.
+        host_shell_fired(2);
         sfx_play(8);
         bx = 2;
         al = 2;
@@ -184,6 +188,7 @@ u16 fire_station3(u16 ax)
     } else if (w == 0) {
         if (ds_u8(DS_reload_midship) != 0x30) return ax;
         ds_u8(DS_reload_midship)--;
+        host_shell_fired(3);  // PORT: the mortar fires (as the grenade launcher in fire_station4)
         sfx_play(8);
         bx = 3;
         ds_u8(DS_flash_midship) = 2;

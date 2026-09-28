@@ -29,15 +29,21 @@ const Info INFO[SFX_COUNT] = {
     {"Ramming", "The boat rams something"},
     {"Engine", "The engine, looping while it runs; the throttles set its pitch and speed"},
     {"Heavy hit", "A heavy hit, a boat destroyed, a missile hit"},
-    {"Explosion", "The mortar, the grenade launcher, explosions"},
+    {"Explosion", "Explosions (in the original also the mortar and the grenade launcher firing: on the AdLib they have their own effects, 17 and 18)"},
     {"Light hit", "A light hit"},
     {"Incoming", "Incoming fire"},
     {"Incoming 2", "Incoming fire, the longer call"},
     {"Silence", "Plays nothing: the key handler uses it to stop the current effect"},
     {"Soldier killed", "Added for the AdLib (the original is silent): enemy infantry killed. Plays the notes of the light hit (a falling sweep)"},
-    {"Impact: metal", "Added for the AdLib: a bullet hits a vehicle, a boat, a gun, a helicopter, a mine or a buoy. Plays the key click's note"},
-    {"Impact: wood", "Added for the AdLib: a bullet hits a hut, a dock, a fort, a tree or a rock. Plays the key click's note"},
+    {"Impact: metal", "Added for the AdLib: a bullet hits a vehicle, a powerboat, a gun, a helicopter, a mine or a buoy. Plays the key click's note"},
+    {"Impact: wood", "Added for the AdLib: a bullet hits a hut, a dock, a house, a camp or a sampan (Vietnam). Plays the key click's note"},
     {"Impact: bridge", "Added for the AdLib: a bullet hits a bridge: a deep metal clang. Plays the key click's note"},
+    {"Grenade launcher", "Added for the AdLib: the grenade launcher fires (the original plays the explosion). Plays the explosion's notes"},
+    {"Mortar", "Added for the AdLib: the mortar fires (the original plays the explosion). Plays the explosion's notes"},
+    {"Impact: tree", "Added for the AdLib: a bullet hits a tree or a stump. Plays the key click's note"},
+    {"Impact: stone", "Added for the AdLib: a bullet hits a fortification, a statue, rubble or a rock. Plays the key click's note"},
+    {"Impact: sandbags", "Added for the AdLib: a bullet hits a mortar nest's sandbags. Plays the key click's note"},
+    {"Impact: flesh", "Added for the AdLib: a bullet hits a person, a body or an animal (not when it kills a soldier: then Soldier killed). Plays the key click's note"},
 };
 
 SfxOperator op(u8 attack, u8 decay, u8 sustain, u8 release, u8 multiple, u8 level, u8 waveform = 0,
@@ -162,9 +168,15 @@ int sfx_program_of(int id)
 {
     switch (id) {
     case SFX_SOLDIER_KILLED: return 9;
+    case SFX_GRENADE_LAUNCHER:
+    case SFX_MORTAR: return 8;
     case SFX_IMPACT_METAL:
     case SFX_IMPACT_WOOD:
-    case SFX_IMPACT_BRIDGE: return 0;
+    case SFX_IMPACT_BRIDGE:
+    case SFX_IMPACT_TREE:
+    case SFX_IMPACT_STONE:
+    case SFX_IMPACT_SANDBAGS:
+    case SFX_IMPACT_FLESH: return 0;
     default: return id >= 0 && id < SFX_PROGRAMS ? id : 0;
     }
 }
@@ -273,6 +285,53 @@ SfxPatch factory_patch(int id)
         p.car = op(15, 4, 10, 4, 1, 0, 0, false);
         p.feedback = 3;
         p.transpose = -24;
+        p.volume = 85;
+        break;
+    case SFX_GRENADE_LAUNCHER:  // a hollow "thoomp": the explosion's falling notes, cut short
+        p.mod = op(15, 7, 10, 7, 1, 14);
+        p.car = op(15, 7, 15, 7, 1, 0, 0, false);
+        p.feedback = 4;
+        p.transpose = -5;
+        p.jitter = 120;
+        p.volume = 90;
+        break;
+    case SFX_MORTAR:  // a deep "whump", longer than the grenade launcher's
+        p.mod = op(15, 5, 8, 6, 1, 10);
+        p.car = op(15, 6, 15, 6, 1, 0, 0, false);
+        p.feedback = 5;
+        p.transpose = -12;
+        p.jitter = 200;
+        break;
+    case SFX_IMPACT_TREE:  // a soft thock into a trunk
+        p.mod = op(15, 9, 15, 9, 1, 16);
+        p.car = op(15, 8, 15, 8, 1, 0, 0, false);
+        p.feedback = 5;
+        p.transpose = -30;
+        p.jitter = 120;
+        p.volume = 85;
+        break;
+    case SFX_IMPACT_STONE:  // a sharp, gritty crack off masonry
+        p.mod = op(15, 10, 15, 10, 3, 8);
+        p.car = op(15, 8, 15, 9, 1, 0, 0, false);
+        p.feedback = 7;
+        p.transpose = -12;
+        p.jitter = 400;
+        p.volume = 95;
+        break;
+    case SFX_IMPACT_SANDBAGS:  // a muffled thud
+        p.mod = op(15, 11, 15, 10, 1, 20);
+        p.car = op(15, 8, 15, 9, 1, 0, 0, false);
+        p.feedback = 6;
+        p.transpose = -36;
+        p.jitter = 300;
+        p.volume = 95;
+        break;
+    case SFX_IMPACT_FLESH:  // a soft, wet thwack
+        p.mod = op(15, 9, 15, 9, 1, 24);
+        p.car = op(15, 8, 15, 8, 1, 0, 0, false);
+        p.feedback = 3;
+        p.transpose = -36;
+        p.jitter = 80;
         p.volume = 85;
         break;
     default:  // 12: silence

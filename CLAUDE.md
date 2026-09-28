@@ -219,9 +219,16 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     effect, as in the editor. Additions where the original is silent (AdLib only; the game
     notifies `host_object_hit` / `host_target_destroyed` from hit_objects, PORT, no memory
     change): the Explosion (8) for targets destroyed by a shot (the original plays it only for
-    wreck 4Bh), and three new bank effects 13-15 playing the notes of original programs:
-    "Soldier killed" (enemy infantry; effect 9's notes), "Impact: metal" and "Impact: wood" (a
-    bullet's hit by the object's material; effect 0's note; not on flesh, not grenades/mortar).
+    wreck 4Bh), and new bank effects playing the notes of original programs: 13 "Soldier
+    killed" (enemy infantry; effect 9's notes), the impacts (effect 0's note; a bullet's hit by
+    the object's material, `materials.cpp`, shared with the debris; not for grenades/mortar;
+    75% on the dead and inanimate): 14 metal, 15 wood, 16 bridge, 19 tree, 20 stone,
+    21 sandbags, 22 flesh (stopped when the same hit kills a soldier: his cry instead); and 17
+    "Grenade launcher", 18 "Mortar" (2026-09-28): the original fires both with effect 8, the
+    explosion's; `fire_station4/3` tell the host first (`host_shell_fired`, PORT, no memory
+    change) and the AdLib plays that effect 8 on the launcher's own instrument (the game's
+    driver's speaker follows the launch effect's output). The effects default to AdLib
+    (2026-09-28; the music's default stays Auto: AdLib when the game folder has ADLIB.COM).
 * **Release 1.0.0 (2026-09-26):** a GitHub release with `Gunboat-1.0.0-win64.zip` made by
   `Release.ps1` (no game files: the player adds them to `Game`); tag `v1.0.0`.
 * **Release 1.1.0 (2026-09-26):** every video card, the AdLib sound effects (the user's

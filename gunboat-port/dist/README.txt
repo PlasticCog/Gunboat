@@ -70,14 +70,17 @@ enhancements only change how its frames are shown.
                  Off: black borders.
   Picture        4:3 as on a VGA monitor, or square pixels.
   Scaling        Sharp pixels, nearest, smooth, or CRT scanlines.
-  Music          AdLib music (needs ADLIB.COM in the Game folder) or the PC speaker.
+  Music          AdLib music (needs ADLIB.COM in the Game folder; the default when it is
+                 there) or the PC speaker.
   Hills stop     A change to the game, off by default: the hills stop your shots (in the
   bullets        original a shot hits what it lands on, hills or not).
-  Sound effects  PC speaker, as in the original, or AdLib: every effect plays its original
-                 notes on an FM instrument instead, each on its own channel (the guns no
-                 longer cut the engine and the explosions), and AdLib adds sounds where the
-                 original is silent: explosions for destroyed targets, soldiers killed, and
-                 the impacts of your bullets on metal, wood and stone.
+  Sound effects  AdLib (the default): every effect plays its original notes on an FM
+                 instrument, each on its own channel (the guns no longer cut the engine and
+                 the explosions); the grenade launcher and the mortar get their own firing
+                 sounds (the original reuses the explosion's); and AdLib adds sounds where
+                 the original is silent: explosions for destroyed targets, soldiers killed,
+                 and the impacts of your bullets, by what they hit: metal, wood, trees,
+                 bridges, stone, sandbags and flesh. Or the PC speaker, as in the original.
 
 In the game: F11 switches between the enhanced and the original picture, F12 saves a screenshot
 (in the settings folder's Screenshots: the window as shown, the game's own picture, and the game's

@@ -5,7 +5,7 @@
 // gives the speaker sounds with the effect's FM instrument, at the same pitch, for as long as the
 // speaker would sound it. Only what reaches the ear changes.
 //
-// The instruments are a bank of 13 patches. The port ships with the bank in gunboat-port/data/sfx.ini,
+// The instruments are a bank of patches, one per effect: the driver's 13 and the port's additions. The port ships with the bank in gunboat-port/data/sfx.ini,
 // built into the program. The player edits it with the sound-effects editor (tools/sfx_editor), which
 // saves sfx.ini in the settings folder next to gunboat.ini (and, run from a build in the source
 // tree, data/sfx.ini too, so the next build ships the edits); the game reads the player's file at
@@ -20,11 +20,17 @@ namespace gb {
 constexpr int SFX_PROGRAMS = 13;  // the effect programs of the driver (sound.md §2.1)
 // The bank's effects: the driver's 13, then the port's additions for the AdLib, sounded where the
 // original has none (sfx_adlib.cpp), each playing the notes of one of the driver's programs.
-constexpr int SFX_SOLDIER_KILLED = 13;  // enemy infantry killed: effect 9's falling sweep
-constexpr int SFX_IMPACT_METAL = 14;    // a bullet hits a vehicle, boat, gun, helicopter: effect 0's note
-constexpr int SFX_IMPACT_WOOD = 15;     // a bullet hits a hut, dock, fort, tree, rock: effect 0's note
-constexpr int SFX_IMPACT_BRIDGE = 16;   // a bullet hits a bridge: effect 0's note
-constexpr int SFX_COUNT = 17;
+constexpr int SFX_SOLDIER_KILLED = 13;    // enemy infantry killed: effect 9's falling sweep
+constexpr int SFX_IMPACT_METAL = 14;      // a bullet hits a vehicle, boat, gun, helicopter: effect 0's note
+constexpr int SFX_IMPACT_WOOD = 15;       // a bullet hits a hut, dock, house, sampan: effect 0's note
+constexpr int SFX_IMPACT_BRIDGE = 16;     // a bullet hits a bridge: effect 0's note
+constexpr int SFX_GRENADE_LAUNCHER = 17;  // the grenade launcher fires: effect 8's notes (the original's)
+constexpr int SFX_MORTAR = 18;            // the mortar fires: effect 8's notes (the original's)
+constexpr int SFX_IMPACT_TREE = 19;       // a bullet hits a tree: effect 0's note
+constexpr int SFX_IMPACT_STONE = 20;      // a bullet hits a fort, statue, rubble, rock: effect 0's note
+constexpr int SFX_IMPACT_SANDBAGS = 21;   // a bullet hits a mortar nest's sandbags: effect 0's note
+constexpr int SFX_IMPACT_FLESH = 22;      // a bullet hits a person, a body, an animal: effect 0's note
+constexpr int SFX_COUNT = 23;
 // The driver's program (0..12) whose notes effect `id` plays.
 int sfx_program_of(int id);
 // The effects' chip is mixed at twice its output: one FM voice against the speaker's full square wave.

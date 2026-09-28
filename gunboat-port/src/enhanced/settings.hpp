@@ -11,7 +11,8 @@ namespace gb {
 enum class Aspect { Crt43, Square };               // 4:3 like the VGA monitor, or square pixels (16:10)
 enum class Filter { Sharp, Nearest, Smooth, Crt };  // how the 320x200 picture is scaled
 enum class Sound { Auto, Adlib, Speaker };          // Auto: AdLib when the game folder has ADLIB.COM
-// The sound effects: on the PC speaker as in the original, or on AdLib FM instruments (sfx_fm.hpp).
+// The sound effects: on AdLib FM instruments (sfx_fm.hpp; the default), or on the PC speaker as in the
+// original.
 enum class Effects { Speaker, Adlib };
 // In a window wider than the picture, on the 3D stations: black borders, the world drawn beside the
 // picture, or the cockpit widened to the window's edges (widen.hpp).
@@ -34,7 +35,7 @@ struct Settings {
     bool far_view = true;       // the extended draw distance: terrain and objects beyond the game's window
     bool debris = true;         // impact debris: particles where the shots hit (debris.hpp)
     Sound sound = Sound::Auto;
-    Effects effects = Effects::Speaker;
+    Effects effects = Effects::Adlib;
     Video video = Video::Vga;
     int fps = 15;               // frame rate of the 3D stations (the mission clock; host_set_frame_rate)
     // Gameplay changes (gameplay.hpp): they change the game itself, so they are off unless the player
