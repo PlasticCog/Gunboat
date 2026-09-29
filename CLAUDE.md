@@ -321,6 +321,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   hills, F12 screenshots with the note, the user's AdLib instruments. Build.ps1's ctest before it:
   3/3 (the difftest suite included); the full suite on the merged tree: 359 tests, 193,273 cases,
   0 mismatches; the macOS workflow's dry run on main passed (lipo x86_64 + arm64, --host-test).
+* **Release 1.2.1 (2026-09-28):** the new AdLib effects (launches, shell bursts, impacts by
+  material), AdLib effects by default, pitch bends and notes in the bank (the user's instruments),
+  hills stopping shells. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
