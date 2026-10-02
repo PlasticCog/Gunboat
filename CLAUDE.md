@@ -354,6 +354,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Release 1.2.3 (2026-10-02):** the Ctrl+H keyboard reference (pausing the game), the launcher's
   label column. The core unchanged since 1.2.2 (its full suite passed then); before it: `--host-test`
   (the three timer rates) and scene_enhanced (pilot 94.56%, gunnery 97.05%, 0 memory changes).
+* **Release 1.2.4 (2026-10-02):** the gun views' boat side drawn at the view's resolution and moving
+  with it (the user's stutters went with it). The core unchanged since 1.2.2; before it:
+  scene_enhanced (gunnery 97.49%, pilot 94.66%, 0 memory changes) and `--host-test`.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
