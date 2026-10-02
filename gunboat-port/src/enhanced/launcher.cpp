@@ -224,7 +224,10 @@ bool launcher_run(Settings &s)
     recheck(game_dir_of(s));
     if (!game.ok) sel = FOLDER;
     float scale = 2;
-    const float row0 = 64, row_h = 13, value_x = 16 + 15 * 8;
+    // the values start two characters after the longest label (the debug font: 8 pixels a character)
+    size_t longest = 0;
+    for (const char *label : LABELS) longest = std::max(longest, std::strlen(label));
+    const float row0 = 64, row_h = 13, value_x = 16 + float(longest + 2) * 8;
     auto item_y = [&](int i) { return row0 + i * row_h + (i >= PLAY ? 8 : 0); };
     auto item_at = [&](float y) {  // the item under a window y, or -1
         y /= scale;
