@@ -146,15 +146,22 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **PORT decisions of the mission:** frame pacing of the 3D stations (`--fps`, default 15: the
   mission clock in real time; the original ran as fast as the PC drew); `visible_list_rebuild`'s
   runaway copy on an empty terrain window (Mare Island open water) stops with a fatal error
-  (render3d.md). Kept original crashes: `route_point`'s divide error (R6003) when the crew pilot
-  leaves the map's top row. Both are `TODO(verify)` in DOSBox.
+  (render3d.md). The original's R6003 when the captain's route leaves the map's top row (the
+  Vietnam map's river at cells 9 and 11, Mare Island's at 1 and 10: `route_point`'s DIV by 17 of a
+  negative cell) is **not** kept since 2026-10-01 (players' crash reports, GitHub issues #1-#3):
+  `route_advance` turns the captain round there (PORT, simulation.md §4.6); `route_point` still
+  divides as the original.
 * **Phase 5, enhancements: first version done (2026-09-26)**, in `gunboat-port/src/enhanced/`,
   every one optional (the player's settings in `%APPDATA%\Gunboat\gunboat.ini`, written by the
   launcher; command-line overrides; F11 switches enhanced/original in the game):
   * a launcher in the game's window (SDL's debug font): game folder, preset Original / Enhanced,
     each enhancement, picture aspect (4:3 or square pixels), scaling (sharp, nearest, smooth,
     CRT scanlines), window or full screen, sound device;
-  * high-resolution 3D view: at each frame of a 3D station the host's frame hook captures DGROUP,
+  * high-resolution 3D view: at each frame of a 3D station the host's frame hook (`host_frame_drawn`,
+    PORT notification right after `mission_run`'s and `view_restore`'s view copy, since 2026-10-01:
+    captured at the next pass's start instead, the map was made with the guns already turned by
+    key_dispatch, and a strip along the gun frame's edge, the boat's side, showed the original's
+    low-resolution view while a gun turned: 176 of 2,160 presents of a pan, none now) captures DGROUP,
     page 1's view window, which page 0 pixels show the view and from where (view_present run on
     a scratch copy of memory with the window filled with its coordinates) and the visible
     objects' sprites at their natural size (sprite_cache_build at size 17h); `view3d` draws the

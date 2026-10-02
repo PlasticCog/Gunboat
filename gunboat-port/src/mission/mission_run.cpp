@@ -378,6 +378,8 @@ u16 view_restore(u16 si)
     ds_u8(0xF132) = ds_u8(0xB839);
     game_frame(si);
     if (ds_u8(DS_chase_view) == 0) si = view_present(1, ds_u16(DS_view_page), si);
+    // PORT: the station's first frame captured too (as in mission_run's loop); nothing in mem[] changes
+    if (ds_u8(DS_chase_view) == 0) host_frame_drawn();
     set_draw_page(0);
     return si;
 }
@@ -501,6 +503,11 @@ void mission_run()
         game_frame(si);
         if (ds_u8(0xD96B) != 0) gfx_copy_rect(0x28, 0x127, 0x40, 0x7F, 0x28, 0x4B, 1, 0);
         else if (s16(ds_u16(DS_station)) < 5) si = view_present(1, 0, si);
+        // PORT: the frame is on page 0 as the player sees it: the presentation layer captures it now,
+        // before key_dispatch turns the guns. (Captured at the next pass's start, its map of the view
+        // was made with the gun frame at the new heading: a strip along the gun frame's edge showed
+        // the original's low-resolution view while a gun turned.) Nothing in mem[] changes.
+        if (s16(ds_u16(DS_station)) < 5) host_frame_drawn();
         si = key_dispatch(si);
         if (ds_u16(DS_demo_mode) == 0 && ds_u8(0xB7F1) != 0) {  // time compressed: a second key
             input_read_key(&ds_u16(0xF39A));

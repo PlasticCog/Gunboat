@@ -124,6 +124,17 @@ u16 route_advance(u16 dx, u16 cx, u16 bx)
         ds_u8(DS_route_link) = 0;
         const u16 e = u16(u8(dh - 1) & 3);
         bx = u16(bx + ds_u16(u16(DS_route_cell_step + 2 * e)));
+        // PORT: a route leaving the map through its top edge from row 0, or westward from cell 0, gives
+        // a negative cell, which route_point's DIV by 17 cannot take: the original ends there with
+        // R6003, "integer divide by 0" (simulation.md §4.6; the Vietnam map's river leaves the top at
+        // cells 9 and 11, the practice world's at 1 and 10: the captain reaches them whenever the
+        // player leaves the pilot's seat up there, GitHub issues #1-#3). Here the captain turns
+        // round, as where the next tile has no entry waypoint (below).
+        if (bx >= 17 * 256) {
+            ds_u8(DS_route_direction) ^= 1;
+            const RoutePoint q = route_point(set_cl(cx, ds_u8(DS_route_index)), ds_u16(DS_route_cell));
+            return route_advance(q.dx, set_cl(q.cx, ds_u8(DS_route_index)), ds_u16(DS_route_cell));
+        }
         const u16 entry = ds_u16(u16(DS_route_entry_coord + 2 * e));
         ds_u8(ENTRY_X) = u8(entry);
         ds_u8(ENTRY_Y) = u8(entry >> 8);

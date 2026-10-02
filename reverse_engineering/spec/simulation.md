@@ -516,13 +516,20 @@ in header byte 3) are **route waypoints**: `link, x, y` in tile-local coordinate
   value `^= 1` never clears it and the recursion does not end).
   F4 "reverse course" toggles `D684` and re-runs this logic.
 
-**Quirk (port-verified, kept): the north edge.** Leaving a tile of row 0 northward (edge 3,
-−17) gives a negative cell, and `route_point`'s `DIV` by 17 overflows: R6003, the game ends. The
-shipped Mare Island world has such an exit (cell 1, waypoint 0, link 44h: the practice world's
-river leaves the map at the top); the route walks of the differential test reach it when the
-captain follows that river backward. To confirm in DOSBox. Leaving cell 0 westward (−1) fails
-the same way; the other west and east exits wrap to the neighbouring row, and the south exits
-of row 10 read the bytes after the grid as tiles (no error).
+**Bug of the original (port-verified): the north edge.** Leaving a tile of row 0 northward
+(edge 3, −17) gives a negative cell, and `route_point`'s `DIV` by 17 overflows: R6003, the game
+ends. The shipped worlds have such exits: Mare Island (practice) at cell 1 (waypoint 0, link 44h)
+and cell 10 (waypoint 6, link 04h); the Vietnam map (all eight missions) at cell 9 (waypoint 0,
+link 44h) and cell 11 (waypoint 6, link 04h), at Y = 2BE0h. The captain reaches them when he
+steers up there: whenever the player is not in the pilot's seat (a gun station, the map), and he
+searches the route afresh each time the player leaves it. Leaving cell 0 westward (−1) fails the
+same way; the other west and east exits wrap to the neighbouring row, and the south exits of row 10
+read the bytes after the grid as tiles (no error). **The port does not keep it** (PORT, since
+2026-10-01, after three players' reports of R6003 there, GitHub issues #1-#3): `route_advance`
+treats a cell of 4352 or more as a tile without an entry waypoint, so the captain turns round at
+the map's edge. `route_point` itself still divides as the original (its tests unchanged); the
+differential tests accept the turn where the original's divide comes from `route_advance`'s scan
+(`DivideStop.turned`).
 
 ## 5. Motion, mission stops and camera
 

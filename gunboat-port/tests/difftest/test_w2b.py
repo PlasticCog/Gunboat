@@ -14,7 +14,7 @@ events, and the registers the callers use."""
 import struct
 
 from unicorn import UC_HOOK_CODE
-from unicorn.x86_const import UC_X86_REG_AX
+from unicorn.x86_const import UC_X86_REG_AX, UC_X86_REG_SP, UC_X86_REG_SS
 
 import mission_states
 from gbdiff import DS_BASE, Mismatch, lin, put8, put16, seg_of
@@ -103,17 +103,27 @@ def pick_waypoint(m, rng, kind=None):
 
 class DivideStop:
     """Stops the original before route_point's DIV DL (0919:875e) when the quotient does not fit (a
-    cell of 4352 or more): the run ends there with R6003 on both sides, nothing else is compared."""
+    cell of 4352 or more): the run ends there with R6003 on both sides, nothing else is compared.
+    Except where route_advance scans the tile its route leaves to (its call at 0919:88CE): there the
+    port turns the captain round instead (PORT, sim_routes.cpp: the route off the map's top edge),
+    which is counted in `turned`."""
     AT = (0x0919, 0x875E)
+    SCAN_RETURN = 0x88D1  # route_advance's scan of the next tile calls route_point from 0919:88CE
 
     def __init__(self, h):
-        self.h, self.cases = h, 0
+        self.h, self.cases, self.turned = h, 0, 0
+        self.scan = False
 
     def __enter__(self):
         o = self.h.orig
 
         def hook(uc, address, size, _):
             if uc.reg_read(UC_X86_REG_AX) // 0x11 > 0xFF:
+                # route_point has pushed ES and BX: its return address is at SS:SP+4
+                sp = uc.reg_read(UC_X86_REG_SP)
+                ss = uc.reg_read(UC_X86_REG_SS)
+                ret = struct.unpack('<H', uc.mem_read(ss * 16 + ((sp + 4) & 0xFFFF), 2))[0]
+                self.scan = ret == self.SCAN_RETURN
                 o.fail('divide error at 0919:875E')
         at = lin(seg_of(self.AT[0]), self.AT[1])
         self.hook = o.uc.hook_add(UC_HOOK_CODE, hook, None, at, at)
@@ -123,6 +133,7 @@ class DivideStop:
         self.h.orig.uc.hook_del(self.hook)
 
     def check(self, name, m, **kw):
+        self.scan = False
         try:
             return self.h.check(name, m, **kw)
         except Mismatch as e:
@@ -132,10 +143,13 @@ class DivideStop:
         try:
             self.h.port.call(name, kw.get('regs') or {}, kw.get('stack_args', ()))
         except Mismatch as e:
-            if 'R6003' in str(e):
+            if 'R6003' in str(e) and not self.scan:
                 self.cases += 1
                 return None
             raise
+        if self.scan:  # the route off the map: the port's captain turned round (PORT)
+            self.turned += 1
+            return None
         raise Mismatch('%s [%s]: the original divides by zero, the port does not' % (name, kw.get('label', '')))
 
 

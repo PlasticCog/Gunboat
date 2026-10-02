@@ -597,9 +597,13 @@ Uint64 last_frame_ns;
 
 void host_set_frame_rate(int fps) { frame_period_ns = fps > 0 ? SDL_NS_PER_SECOND / Uint64(fps) : 0; }
 
-void host_frame_pace()
+void host_frame_drawn()
 {
     if (frame_hook) frame_hook();
+}
+
+void host_frame_pace()
+{
     if (frame_period_ns == 0) return;
     const Uint64 due = last_frame_ns + frame_period_ns;
     while (SDL_GetTicksNS() < due) host_pump();

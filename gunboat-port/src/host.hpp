@@ -129,8 +129,12 @@ void host_set_game_dir(const char *dir);
 // last slot (or the window needs a redraw), draws with host_renderer() and returns true if it
 // presented.
 void host_set_presenter(bool (*present)(const u32 *xrgb, int w, int h, bool changed));
-// Called by host_frame_pace on entry: a 3D station's frame is complete in memory.
+// Called by host_frame_drawn: a 3D station's frame is complete in memory and on page 0.
 void host_set_frame_hook(void (*hook)());
+// mission_run and view_restore, right after a 3D station's view copy (before key_dispatch turns the
+// guns): the frame on page 0 is the one in memory (PORT notification: the presentation layer
+// captures it; nothing in mem[] changes).
+void host_frame_drawn();
 // Called for each key press (SDL scancode) before the game gets it; true = the key is the
 // presentation layer's (its press and release never reach the game).
 void host_set_hotkey_handler(bool (*handler)(int scancode));

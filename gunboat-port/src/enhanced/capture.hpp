@@ -2,8 +2,8 @@
 // What the enhanced presentation reads from a finished 3D frame (src/enhanced/capture.cpp): a copy
 // of DGROUP (camera, terrain vertices, draw order, visible objects), page 1's view window as the
 // cockpit copied it, where each pixel of page 0 comes from in that window, and the sprites of the
-// visible objects at their natural size. Captured by the host's frame hook (host_frame_pace, once per
-// pass of a 3D station); the game's memory is left exactly as it was.
+// visible objects at their natural size. Captured by the host's frame hook (host_frame_drawn, right
+// after each view copy of a 3D station); the game's memory is left exactly as it was.
 #include <SDL3/SDL_stdinc.h>
 
 #include <memory>
