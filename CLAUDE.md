@@ -345,6 +345,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
   copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while
   ninja was missing); the route, crew, view and mission tests again on the release's Ninja build.
+* **Release 1.2.3 (2026-10-02):** the Ctrl+H keyboard reference (pausing the game), the launcher's
+  label column. The core unchanged since 1.2.2 (its full suite passed then); before it: `--host-test`
+  (the three timer rates) and scene_enhanced (pilot 94.56%, gunnery 97.05%, 0 memory changes).
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
