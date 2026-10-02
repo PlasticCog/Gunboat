@@ -331,6 +331,10 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Release 1.2.1 (2026-09-28):** the new AdLib effects (launches, shell bursts, impacts by
   material), AdLib effects by default, pitch bends and notes in the bank (the user's instruments),
   hills stopping shells. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.
+* **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns
+  round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
+  copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while
+  ninja was missing); the route, crew, view and mission tests again on the release's Ninja build.
 * **Next:** optionally the parked sound devices; more enhancements only as player options.
 * The Codex prototype (an invented patrol mode, `gunboat-port/legacy/`) and the local `archive/`
   were removed on 2026-09-26 when the port replaced them (the prototype is in the git history).
