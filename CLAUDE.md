@@ -331,6 +331,12 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Release 1.2.1 (2026-09-28):** the new AdLib effects (launches, shell bursts, impacts by
   material), AdLib effects by default, pitch bends and notes in the bank (the user's instruments),
   hills stopping shells. Full suite before it: 359 tests, 193,273 cases, 0 mismatches.
+* **Keyboard reference (Ctrl+H, 2026-10-01):** the presenter draws a panel of all the game's keys and
+  the port's own (from simulation.md §3.3 and hud.md: F1-F3 by station, E the engine noise) over the
+  picture, in both presenters, after a screenshot is taken (not in it), at the largest whole scale
+  that fits (fractional below 1); Ctrl+H again closes it, the game goes on meanwhile. `host_ctrl_held`
+  (keyboard or controller Ctrl); controller action `ctrl_h`; `GB_KEYS` routes 1d+23 to it. The
+  original does not use H.
 * **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns
   round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
   copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while

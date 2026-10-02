@@ -138,6 +138,8 @@ void host_frame_drawn();
 // Called for each key press (SDL scancode) before the game gets it; true = the key is the
 // presentation layer's (its press and release never reach the game).
 void host_set_hotkey_handler(bool (*handler)(int scancode));
+// Whether a Ctrl key is held now, on the keyboard or by the controller (for the hotkeys with Ctrl).
+bool host_ctrl_held();
 void host_set_fullscreen(bool on);
 bool host_fullscreen();
 // Sound effects on AdLib (sfx_adlib.cpp): every speaker change goes to the filter first with whether
@@ -164,7 +166,8 @@ void host_reset_clock();
 //   GB_KEYS="<seconds>:<xt>[+<xt>...],..."  presses (in order) and releases (in reverse) the XT
 //                         keys at that many seconds after start-up; "p" after the codes only
 //                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.
-//                         Grey keys are written with their E0 prefix, as e048. F11 (57) and
-//                         F12 (58) go to the presentation layer's hotkeys, as when pressed.
+//                         Grey keys are written with their E0 prefix, as e048. F11 (57), F12
+//                         (58) and Ctrl+H (1d+23) go to the presentation layer's hotkeys, as when
+//                         pressed.
 
 } // namespace gb

@@ -245,8 +245,117 @@ void shot_note(SDL_Renderer *r, int ow, int oh)
     SDL_SetRenderScale(r, 1, 1);
 }
 
+// ---- Ctrl+H: the keyboard reference, over the picture until Ctrl+H again (the game goes on; Esc
+// pauses it). Drawn after a screenshot is taken, so not in it.
+bool help_on, help_shown;
+
+struct HelpLine {
+    const char *key, *what;  // key nullptr: a heading
+};
+const HelpLine HELP_LEFT[] = {
+    {nullptr, "PILOT AND GUNS"},
+    {"Arrows, keypad", "steer, throttle; aim the gun"},
+    {"Enter", "fire; at the wheel: slow down"},
+    {"F1", "pilot: main switch; gun: mount"},
+    {"F2", "pilot: engines; gun: 2nd mount"},
+    {"F3", "pilot: radar; gun: spotlight"},
+    {"", "(a gun fires with both mounts on)"},
+    {nullptr, "STATIONS"},
+    {"X / Z / C", "pilot: look ahead / left / right"},
+    {"V / N / B", "bow / midship / stern gun"},
+    {",", "chase view (arrows: camera)"},
+    {"M", "map"},
+    {"/", "damage report"},
+    {".", "mission assignment"},
+};
+const HelpLine HELP_RIGHT[] = {
+    {nullptr, "ORDERS (when not at the wheel)"},
+    {"F4", "pilot: reverse course"},
+    {"F5 / F6", "pilot: branch left / right"},
+    {"F7 / F8", "pilot: slower / faster"},
+    {"F9", "identify target"},
+    {"F10", "crew: open fire / cease fire"},
+    {nullptr, "GAME"},
+    {"+ / -", "time compression / control rate"},
+    {"Backspace", "(held) fast forward"},
+    {"Esc", "pause"},
+    {"Tab", "return to base"},
+    {"D", "detail level"},
+    {"S / E", "sound / engine noise on, off"},
+    {nullptr, "THIS PORT"},
+    {"F11", "enhanced / original picture"},
+    {"F12", "screenshot"},
+    {"Alt+Enter", "full screen / window"},
+    {"Ctrl+Q", "quit"},
+    {"Ctrl+H", "this list (again: close it)"},
+};
+constexpr int HELP_LEFT_N = int(sizeof HELP_LEFT / sizeof HELP_LEFT[0]);
+constexpr int HELP_RIGHT_N = int(sizeof HELP_RIGHT / sizeof HELP_RIGHT[0]);
+
+// While the reference is up, and once more when it goes: the picture is drawn again even when the
+// game's frame has not changed.
+bool help_dirty()
+{
+    const bool d = help_on || help_shown;
+    help_shown = help_on;
+    return d;
+}
+
+// The reference in SDL's debug font (8 pixels a character), centred, at the largest whole scale that
+// fits the window (smaller than 1 in a tiny window rather than cut off).
+void help_draw(SDL_Renderer *r, int ow, int oh)
+{
+    if (!help_on) return;
+    constexpr float C = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE, LINE = C + 4, PAD = 2 * C, GAP = 3 * C;
+    constexpr float KEY_W = 15 * C;  // the keys' column
+    auto width = [&](const HelpLine *lines, int n) {
+        float w = 0;
+        for (int i = 0; i < n; i++)
+            w = std::max(w, (lines[i].key ? KEY_W : 0) + float(std::strlen(lines[i].what)) * C);
+        return w;
+    };
+    const char *title = "GUNBOAT - THE KEYBOARD", *close = "Ctrl+H closes";
+    const float wl = width(HELP_LEFT, HELP_LEFT_N), wr = width(HELP_RIGHT, HELP_RIGHT_N);
+    const float w = 2 * PAD + wl + GAP + wr, h = 2 * PAD + 2 * LINE + float(std::max(HELP_LEFT_N, HELP_RIGHT_N)) * LINE;
+    const float fit = std::min(ow / (w + 16), oh / (h + 16));
+    const float s = fit >= 1 ? std::floor(fit) : fit;
+    const float x0 = std::floor((ow / s - w) / 2), y0 = std::floor((oh / s - h) / 2);
+    SDL_SetRenderScale(r, s, s);
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(r, 8, 12, 20, 225);
+    const SDL_FRect box = {x0, y0, w, h};
+    SDL_RenderFillRect(r, &box);
+    SDL_SetRenderDrawColor(r, 120, 140, 170, 255);
+    SDL_RenderRect(r, &box);
+    SDL_SetRenderDrawColor(r, 255, 220, 120, 255);
+    SDL_RenderDebugText(r, x0 + PAD, y0 + PAD, title);
+    SDL_SetRenderDrawColor(r, 140, 150, 170, 255);
+    SDL_RenderDebugText(r, x0 + w - PAD - float(std::strlen(close)) * C, y0 + PAD, close);
+    auto column = [&](const HelpLine *lines, int n, float x) {
+        float y = y0 + PAD + 2 * LINE;
+        for (int i = 0; i < n; i++, y += LINE) {
+            if (!lines[i].key) {
+                SDL_SetRenderDrawColor(r, 130, 190, 255, 255);
+                SDL_RenderDebugText(r, x, y, lines[i].what);
+                continue;
+            }
+            SDL_SetRenderDrawColor(r, 255, 235, 160, 255);
+            SDL_RenderDebugText(r, x, y, lines[i].key);
+            SDL_SetRenderDrawColor(r, 230, 232, 240, 255);
+            SDL_RenderDebugText(r, x + KEY_W, y, lines[i].what);
+        }
+    };
+    column(HELP_LEFT, HELP_LEFT_N, x0 + PAD);
+    column(HELP_RIGHT, HELP_RIGHT_N, x0 + PAD + wl + GAP);
+    SDL_SetRenderScale(r, 1, 1);
+}
+
 bool hotkey(int scancode)
 {
+    if (scancode == SDL_SCANCODE_H && host_ctrl_held()) {
+        help_on = !help_on;
+        return true;
+    }
     if (scancode == SDL_SCANCODE_F12) {
         shot_pending = true;  // the host redraws after a hotkey: the shot is taken there
         return true;
@@ -639,6 +748,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
         }
     }
     take_shot(r, frame, w, h);
+    help_draw(r, ow, oh);
     shot_note(r, ow, oh);
     snapshot(r);
     SDL_RenderPresent(r);
@@ -648,7 +758,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 bool present(const u32 *frame, int w, int h, bool changed)
 {
     icon_frame(frame, w, h);
-    if (title_back() || shot_pending) changed = true;
+    if (help_dirty() | title_back() || shot_pending) changed = true;
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
@@ -797,6 +907,7 @@ bool present(const u32 *frame, int w, int h, bool changed)
     }
     stats(now, live, animating);
     take_shot(r, frame, w, h);
+    help_draw(r, l.ow, l.oh);
     shot_note(r, l.ow, l.oh);
     snapshot(r);
     SDL_RenderPresent(r);
