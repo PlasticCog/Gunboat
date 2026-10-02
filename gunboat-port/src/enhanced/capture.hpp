@@ -66,6 +66,13 @@ struct Scene {
     u8 window[VIEW_W * VIEW_H];    // page 1's view window after view_present (gun sprites on it)
     u16 map[64000];                // page 0 offset -> (window row << 8 | column), or NOT_VIEW
     u8 overlay[VIEW_W * VIEW_H];   // 1 where view_present drew over the view (the gun sprites)
+    // The gun stations' moving gun frame (gun_frame_draw, hud.md §6: the boat's side, coming into
+    // the view as the gun turns): mapped as view (the map is made with it turned away) and drawn
+    // again at the view's resolution, at the bearing between two frames (gun_frame_hires).
+    bool gun_frame = false;
+    u8 gun_bearing = 0;  // gun_frame_draw's argument (its low byte)
+    u8 gun_frame_colour = 0;
+    u8 gun_frame_left[32] = {}, gun_frame_right[32] = {};  // 8 x 32 one-bit pieces, MSB left, rows up
     SpriteImage sprites[MAX_ENTRIES];
     bool has_sprite[MAX_ENTRIES];  // the entry is drawn this frame and has its image
     std::shared_ptr<const FarWorld> far;  // the extended draw distance, or null

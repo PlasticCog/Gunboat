@@ -55,4 +55,9 @@ struct ViewProjection {
 };
 ViewProjection view3d_projection(const Scene &cur, const Scene *prev, double t);
 
+// The gun frame of `sc` (if it has one) into a target of the view, for the bearing between `before`
+// (a frame of the same station, or nullptr) and sc at t: its pixels in the frame's colour, and
+// nearest in the target's depth (nothing drawn later shows through it).
+void gun_frame_hires(const ViewTarget &target, const Scene &sc, const Scene *before, double t);
+
 } // namespace gb

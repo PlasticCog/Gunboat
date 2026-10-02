@@ -113,6 +113,7 @@ void check_frame(const Scene &sc)
     t.oy = VIEW_Y;
     t.far = false;  // the original has no far cells
     view3d_render(sc, nullptr, 1.0, t);
+    gun_frame_hires(t, sc, nullptr, 1.0);
     unsigned long long n = 0, same = 0;
     for (int i = 0; i < VIEW_W * VIEW_H; i++) {
         if (sc.overlay[i]) continue;
@@ -137,6 +138,7 @@ void check_frame(const Scene &sc)
         t.h = VIEW_H * 4;
         t.sx = t.sy = 4;
         view3d_render(sc, nullptr, 1.0, t);
+        gun_frame_hires(t, sc, nullptr, 1.0);
         std::snprintf(path, sizeof path, "%s/view%03u_4x.bmp", check.dir, check.saved);
         save_indexed(path, big.data(), VIEW_W * 4, VIEW_H * 4, 1);
         if (sc.far) {  // the same frame with the extended draw distance
@@ -480,6 +482,8 @@ void render_region(ViewTex &vt, double ox, double oy, double pw, double ph, doub
     }
     const bool interpolate = cfg.smooth_motion && prev && prev->valid;
     const ViewHorizon hz = view3d_render(*cur, interpolate ? prev : nullptr, t, target);
+    // the boat's side at the guns, moving with the view
+    gun_frame_hires(target, *cur, interpolate && view3d_compatible(*prev, *cur) ? prev : nullptr, t);
     void *pixels;
     int pitch;
     if (!SDL_LockTexture(vt.tex, nullptr, &pixels, &pitch)) return;

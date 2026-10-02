@@ -685,6 +685,55 @@ bool view3d_compatible(const Scene &a, const Scene &b)
            std::fabs(wrap16(double(a.u16_at(DS_camera_qy)) - b.u16_at(DS_camera_qy))) < 0x800;
 }
 
+void gun_frame_hires(const ViewTarget &tg, const Scene &sc, const Scene *before, double t)
+{
+    if (!sc.gun_frame) return;
+    double b = sc.gun_bearing;
+    if (before && before->gun_frame)
+        b = before->gun_bearing + double(s8(u8(sc.gun_bearing - before->gun_bearing))) * std::clamp(t, 0.0, 1.0);
+    b = std::fmod(b + 512.0, 256.0);
+    const u8 colour = sc.gun_frame_colour;
+    // the page rectangle [x0, x1) x [y0, y1): the target pixels whose centres lie in it
+    auto rect = [&](double x0, double y0, double x1, double y1) {
+        const int i0 = std::max(int(std::ceil((x0 - tg.ox) * tg.sx - 0.5)), 0);
+        const int i1 = std::min(int(std::ceil((x1 - tg.ox) * tg.sx - 0.5)), tg.w);
+        const int j0 = std::max(int(std::ceil((y0 - tg.oy) * tg.sy - 0.5)), 0);
+        const int j1 = std::min(int(std::ceil((y1 - tg.oy) * tg.sy - 0.5)), tg.h);
+        for (int j = j0; j < j1; j++) {
+            if (i0 >= i1) break;
+            std::memset(tg.px + size_t(j) * tg.w + i0, colour, size_t(i1 - i0));
+            if (tg.depth) std::fill(tg.depth + size_t(j) * tg.w + i0, tg.depth + size_t(j) * tg.w + i1, u16(0xFFFF));
+        }
+    };
+    // gfx_draw_bitmap of a piece: the first row at the pen, the next ones upward, MSB left
+    auto piece = [&](const u8 *bits, double x, double y) {
+        for (int k = 0; k < 32; k++)
+            for (int c = 0; c < 8; c++)
+                if (bits[k] & (0x80 >> c)) rect(x + c, y - k, x + c + 1, y - k + 1);
+    };
+    // gun_frame_draw (hud.md §6), the bearing as a real number
+    double d = std::fmod(b - 0x40 + 256.0, 256.0);
+    if (d <= 0x30) {
+        const double v = 2 * (0x30 - d);
+        piece(sc.gun_frame_left, 0x20 + v, 0x7F);
+        if (v > 8) {
+            piece(sc.gun_frame_left, 0x18 + v, 0x5F);
+            rect(0x18 + v, 0x60, 0x20 + v, 0x80);
+            if (v > 0x10) rect(0x28, 0x40, 0x19 + v, 0x80);
+        }
+    }
+    d = std::fmod(b - 0xD0 + 256.0, 256.0);
+    if (d <= 0x30) {
+        const double v = 2 * d + 2;
+        piece(sc.gun_frame_right, 0x128 - v, 0x7F);
+        if (v > 8) {
+            piece(sc.gun_frame_right, 0x130 - v, 0x5F);
+            rect(0x130 - v, 0x60, 0x138 - v, 0x80);
+            if (v > 0x10) rect(0x138 - v, 0x40, 0x128, 0x80);
+        }
+    }
+}
+
 ViewHorizon view3d_render(const Scene &cur, const Scene *prev, double t, const ViewTarget &target)
 {
     if (prev && !view3d_compatible(*prev, cur)) prev = nullptr;

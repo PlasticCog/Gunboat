@@ -76,12 +76,30 @@ void copy_view()
 void capture_map(Scene &sc, Scratch &scratch)
 {
     static u8 pass[3][64000];
+    // A gun station's gun frame: recorded, and turned away for the map (the bearing 88h shows no
+    // piece of it), so that its pixels are mapped as view: the presenter draws it again at the
+    // view's resolution, moving with the view, instead of the low-resolution one of page 0.
+    const u8 station = u8(ds_u16(DS_station));
+    sc.gun_frame = ds_u8(DS_chase_view) == 0 && station >= 2 && station <= 4;
+    u16 gun = 0;
+    u8 offset = 0;
+    if (sc.gun_frame) {  // view_present: heading[gun] - heading[hull] + 20h (the bow - 60h)
+        gun = u16(DS_heading + (station == 2 ? 1 : station == 3 ? 2 : 3));
+        offset = station == 2 ? u8(-0x60) : u8(0x20);
+        sc.gun_bearing = u8(ds_u8(gun) - ds_u8(DS_heading) + offset);
+        sc.gun_frame_colour = ds_u8(DS_gun_frame_colour);
+        for (int k = 0; k < 32; k++) {
+            sc.gun_frame_left[k] = ds_u8(u16(DS_gun_frame_left + k));
+            sc.gun_frame_right[k] = ds_u8(u16(DS_gun_frame_right + k));
+        }
+    }
     for (int k = 0; k < 3; k++) {
         if (k) scratch.restore();
+        if (sc.gun_frame) ds_u8(gun) = u8(ds_u8(DS_heading) + 0x88 - offset);
         fill_window([k](int r, int c) { return u8(k == 1 ? r : k == 2 ? c ^ 0x80 : c); });
         copy_view();
         std::memcpy(pass[k], mp(VRAM_SEG, 0), 64000);
-        if (k == 0) {  // what view_present drew over the window on page 1 (the gun sprites)
+        if (k == 0) {  // what view_present drew over the window on page 1 (the gun sprites, not the frame)
             const u16 page1 = ds_u16(u16(DS_page_segments + 2));
             for (int r = 0; r < VIEW_H; r++)
                 for (int c = 0; c < VIEW_W; c++)

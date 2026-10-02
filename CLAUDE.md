@@ -167,7 +167,13 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
     objects' sprites at their natural size (sprite_cache_build at size 17h); `view3d` draws the
     view again at the window's resolution with the original's projection, draw order, colours and
     sprite scale factors in floating point; the presenter shows it under the original cockpit
-    (drawn with holes where the view shows);
+    (drawn with holes where the view shows); at the gun stations the moving gun frame (the boat's
+    side, `gun_frame_draw`) is part of the view since 2026-10-02: the map is made with the gun turned
+    to bearing 88h (no piece shows), so its pixels are holes, and `gun_frame_hires` (view3d.cpp)
+    draws its 8 x 32 pieces and fills again at the view's resolution, at the gun bearing
+    interpolated with the view (before, it stepped at 15 frames/s against the smoothly moving world:
+    its edge seemed to jitter); the view check now compares its pixels too and finds them equal at
+    1x (gunnery 97.49% of 3.80M pixels, worst frame 95.62%; before 97.05% of 3.41M, 93.25%);
   * smooth motion: the view drawn at 60 fps between the last two captured frames (the camera
     and moving objects interpolated, one game frame behind); the game keeps its 15 frames/s;
   * widescreen, three choices: off; the world beside the 4:3 picture (not for the pilot's
