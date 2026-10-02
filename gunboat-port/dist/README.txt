@@ -134,7 +134,7 @@ CONTROLS (from the original)
   D                     detail level           S  sound on/off
   Tab                   return to base         Esc  pause
   Ctrl+Q                quit (anywhere in the port; the original only in a mission)
-  Ctrl+H                this list in the game (Ctrl+H again closes it)
+  Ctrl+H                this list in the game; the game pauses until Ctrl+H again
 
 The original manual describes the missions and the boat in full.
 

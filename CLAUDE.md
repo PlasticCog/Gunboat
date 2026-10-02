@@ -334,7 +334,11 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Keyboard reference (Ctrl+H, 2026-10-01):** the presenter draws a panel of all the game's keys and
   the port's own (from simulation.md §3.3 and hud.md: F1-F3 by station, E the engine noise) over the
   picture, in both presenters, after a screenshot is taken (not in it), at the largest whole scale
-  that fits (fractional below 1); Ctrl+H again closes it, the game goes on meanwhile. `host_ctrl_held`
+  that fits (fractional below 1); Ctrl+H again closes it. The game is held meanwhile (2026-10-02,
+  `host_set_paused`: `host_pump` keeps handling input and presenting but runs no ticks, so no sound,
+  drops the game's key presses (releases go through), and shifts the clock by the time held, so
+  nothing catches up; checked: 6 s paused added 0 ticks, the mission clock resumed where it stood;
+  the game's memory untouched). `host_ctrl_held`
   (keyboard or controller Ctrl); controller action `ctrl_h`; `GB_KEYS` routes 1d+23 to it. The
   original does not use H.
 * **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns

@@ -140,6 +140,11 @@ void host_frame_drawn();
 void host_set_hotkey_handler(bool (*handler)(int scancode));
 // Whether a Ctrl key is held now, on the keyboard or by the controller (for the hotkeys with Ctrl).
 bool host_ctrl_held();
+// The presentation layer holds the game (the keyboard reference): host_pump goes on handling input
+// and presenting, but runs no timer ticks (so no sound either) until it is released, and the game's
+// key presses meanwhile are dropped (their releases still go through); the time held does not count.
+// The game's memory is untouched.
+void host_set_paused(bool on);
 void host_set_fullscreen(bool on);
 bool host_fullscreen();
 // Sound effects on AdLib (sfx_adlib.cpp): every speaker change goes to the filter first with whether

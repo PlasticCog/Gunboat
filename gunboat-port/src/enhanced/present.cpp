@@ -245,8 +245,8 @@ void shot_note(SDL_Renderer *r, int ow, int oh)
     SDL_SetRenderScale(r, 1, 1);
 }
 
-// ---- Ctrl+H: the keyboard reference, over the picture until Ctrl+H again (the game goes on; Esc
-// pauses it). Drawn after a screenshot is taken, so not in it.
+// ---- Ctrl+H: the keyboard reference, over the picture until Ctrl+H again; the game is held
+// meanwhile (host_set_paused). Drawn after a screenshot is taken, so not in it.
 bool help_on, help_shown;
 
 struct HelpLine {
@@ -314,7 +314,7 @@ void help_draw(SDL_Renderer *r, int ow, int oh)
             w = std::max(w, (lines[i].key ? KEY_W : 0) + float(std::strlen(lines[i].what)) * C);
         return w;
     };
-    const char *title = "GUNBOAT - THE KEYBOARD", *close = "Ctrl+H closes";
+    const char *title = "GUNBOAT - THE KEYBOARD", *close = "Paused. Ctrl+H: back to the game";
     const float wl = width(HELP_LEFT, HELP_LEFT_N), wr = width(HELP_RIGHT, HELP_RIGHT_N);
     const float w = 2 * PAD + wl + GAP + wr, h = 2 * PAD + 2 * LINE + float(std::max(HELP_LEFT_N, HELP_RIGHT_N)) * LINE;
     const float fit = std::min(ow / (w + 16), oh / (h + 16));
@@ -354,6 +354,7 @@ bool hotkey(int scancode)
 {
     if (scancode == SDL_SCANCODE_H && host_ctrl_held()) {
         help_on = !help_on;
+        host_set_paused(help_on);  // the game waits while the reference is open
         return true;
     }
     if (scancode == SDL_SCANCODE_F12) {

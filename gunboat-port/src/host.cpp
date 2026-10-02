@@ -50,6 +50,7 @@ bool speaker_effects;  // the effects driver's timer handler is running (host_sp
 bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
 bool ctrl_held[2];  // the left and right Ctrl, held on the keyboard or by the controller
+bool paused;        // host_set_paused
 bool redraw = true;                      // the window needs a new picture (resized, exposed)
 u32 frame[HOST_FRAME_MAX_W * HOST_FRAME_MAX_H];
 int frame_w = 320, frame_h = 200;
@@ -314,6 +315,7 @@ void key_input(SDL_Scancode sc, bool down, bool repeat)
             redraw = true;
             return;
         }
+        if (paused) return;  // the game is held: its key presses are dropped
         key_event(sc, true);
     } else {
         if (sc < SDL_SCANCODE_COUNT && consumed_keys[sc]) {
@@ -545,10 +547,48 @@ void host_title_shown()
     for (auto f : title_shown_observers) f();
 }
 
+// The picture presented if one is due (at most once per ~8 ms; VSync paces it further).
+void present_if_due(bool &worked)
+{
+    const Uint64 now = SDL_GetTicksNS();
+    if (!frame_source || now - last_present_ns < 8 * SDL_NS_PER_MS) return;
+    int w = frame_w, h = frame_h;
+    bool changed = frame_source(frame, &w, &h) || redraw;
+    if (w != frame_w || h != frame_h) {  // another mode: the texture follows the frame's size
+        host_set_frame_source(frame_source, w, h);
+        changed = true;
+    }
+    bool shown = false;
+    if (presenter) {
+        shown = presenter(frame, frame_w, frame_h, changed);
+    } else if (changed) {
+        present();
+        shown = true;
+    }
+    if (shown) {
+        redraw = false;
+        last_present_ns = SDL_GetTicksNS();
+        worked = true;
+    }
+}
+
 void host_pump()
 {
     process_events();
     scripted_keys();
+    // Held (the keyboard reference): input and pictures go on, the game's time does not.
+    if (paused) {
+        const Uint64 from = SDL_GetTicksNS();
+        while (paused) {
+            snapshot();
+            bool shown = false;
+            present_if_due(shown);
+            SDL_DelayNS(4 * SDL_NS_PER_MS);
+            process_events();
+            scripted_keys();
+        }
+        clock_base_ns += SDL_GetTicksNS() - from;  // the time held does not count: no catching up
+    }
 
     bool worked = false;
     Uint64 now = SDL_GetTicksNS();
@@ -565,28 +605,7 @@ void host_pump()
     }
 
     snapshot();  // the screen as shown now, also while it does not change
-
-    // Present at most once per ~8 ms; VSync paces it further.
-    if (frame_source && now - last_present_ns >= 8 * SDL_NS_PER_MS) {
-        int w = frame_w, h = frame_h;
-        bool changed = frame_source(frame, &w, &h) || redraw;
-        if (w != frame_w || h != frame_h) {  // another mode: the texture follows the frame's size
-            host_set_frame_source(frame_source, w, h);
-            changed = true;
-        }
-        bool shown = false;
-        if (presenter) {
-            shown = presenter(frame, frame_w, frame_h, changed);
-        } else if (changed) {
-            present();
-            shown = true;
-        }
-        if (shown) {
-            redraw = false;
-            last_present_ns = SDL_GetTicksNS();
-            worked = true;
-        }
-    }
+    present_if_due(worked);
     if (!worked) {
         const Uint64 next = tick_due_ns(ticks_run + 1);
         now = SDL_GetTicksNS();
@@ -694,6 +713,7 @@ void host_set_presenter(bool (*present)(const u32 *, int, int, bool))
 void host_set_frame_hook(void (*hook)()) { frame_hook = hook; }
 void host_set_hotkey_handler(bool (*handler)(int)) { hotkey_handler = handler; }
 bool host_ctrl_held() { return ctrl_held[0] || ctrl_held[1]; }
+void host_set_paused(bool on) { paused = on; }
 
 void host_set_fullscreen(bool on)
 {
