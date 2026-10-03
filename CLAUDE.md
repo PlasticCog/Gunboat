@@ -378,7 +378,15 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   went on into the front end (phase 2) after its mission; Ctrl+H during the question does nothing
   (the presenter takes every hotkey but F11/F12 then: its panel would let the game go on). The first
   resume crashed: the opl3 chip's pointers (fixed as above). Full suite after the core's split
-  (mission_loop, campaign, practice_end): 359 tests, 193,273 cases, 0 mismatches.
+  (mission_loop, campaign, practice_end): 359 tests, 193,273 cases, 0 mismatches. The scripted
+  runs keep their own file (`GB_QUICKSAVE=file`, host.hpp; the scene scripts set it in their
+  snapshot folder): a first scene_enhanced run with the user's save in the settings folder sat at
+  the question until its keys' Enter resumed that save (its numbers void), and a run's mission
+  start would have removed the player's save.
+* **Release 1.2.5 (2026-10-03):** quicksaves (Ctrl+S / Ctrl+L, the Ctrl+H panel's buttons, two per
+  mission) kept on disk and offered at the next start. Before it: the full suite (above),
+  `--host-test`, scene_enhanced with the runs' own quicksave (pilot 94.64%, gunnery 97.55%, 0
+  memory changes, no frame with the question; the user's save untouched).
 * **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns
   round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
   copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while

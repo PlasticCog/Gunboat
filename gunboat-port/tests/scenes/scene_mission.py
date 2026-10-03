@@ -37,7 +37,7 @@ def run(name, keys, seconds, out):
     shutil.rmtree(snaps, ignore_errors=True)
     snaps.mkdir(parents=True)
     env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(snaps),
-               GB_KEYS=INTRO_KEYS + ',' + keys)
+               GB_KEYS=INTRO_KEYS + ',' + keys, GB_QUICKSAVE=str(snaps / 'quicksave.sav'))  # not the player's
     try:
         subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Game'),
                         '--no-launcher', '--original', '--window'],

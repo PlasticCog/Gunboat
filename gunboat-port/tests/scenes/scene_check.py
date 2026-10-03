@@ -73,7 +73,8 @@ def main():
     if not a.no_run:
         shutil.rmtree(snaps, ignore_errors=True)
         snaps.mkdir(parents=True)
-        env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(snaps))
+        env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(snaps),
+                   GB_QUICKSAVE=str(snaps / 'quicksave.sav'))  # not the player's quicksave
         if a.keys:
             env['GB_KEYS'] = a.keys
         exe = PORT / 'build' / 'gunboat.exe'

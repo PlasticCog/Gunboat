@@ -57,6 +57,7 @@ bool demo() { return ds_u16(DS_demo_mode) != 0; }
 
 std::string save_path()
 {
+    if (const char *file = SDL_getenv("GB_QUICKSAVE"); file && *file) return file;  // developer aid, host.hpp
     char *dir = SDL_GetPrefPath("", "Gunboat");
     std::string p = dir ? std::string(dir) + "quicksave.sav" : std::string("quicksave.sav");
     SDL_free(dir);

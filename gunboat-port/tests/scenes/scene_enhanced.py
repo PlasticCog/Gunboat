@@ -40,8 +40,10 @@ def run(name, keys, seconds, out):
     d.mkdir(parents=True, exist_ok=True)
     for f in d.glob('*.bmp'):
         f.unlink()
+    (d / 'quicksave.sav').unlink(missing_ok=True)  # the run's own quicksave (GB_QUICKSAVE), not the player's
     env = dict(os.environ, SDL_VIDEO_DRIVER='dummy', SDL_AUDIO_DRIVER='dummy', GB_SNAPSHOT_DIR=str(d),
-               GB_VIEW_CHECK='1', GB_VIEW_CHECK_DIR=str(d), GB_PRESENT_STATS='1', GB_KEYS=INTRO_KEYS + ',' + keys)
+               GB_VIEW_CHECK='1', GB_VIEW_CHECK_DIR=str(d), GB_PRESENT_STATS='1', GB_KEYS=INTRO_KEYS + ',' + keys,
+               GB_QUICKSAVE=str(d / 'quicksave.sav'))
     try:
         p = subprocess.run([str(PORT / 'build' / 'gunboat.exe'), '--game-dir', str(ROOT / 'Game'),
                             '--no-launcher', '--enhanced', '--window', '--aspect', '4:3', '--filter', 'sharp'], env=env, timeout=seconds, capture_output=True, text=True)

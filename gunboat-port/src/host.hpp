@@ -193,7 +193,11 @@ void host_reset_clock();
 //                         keys at that many seconds after start-up; "p" after the codes only
 //                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.
 //                         Grey keys are written with their E0 prefix, as e048. F11 (57), F12
-//                         (58), Ctrl+H (1d+23), Ctrl+S (1d+1f) and Ctrl+L (1d+26) go to the
-//                         presentation layer's hotkeys, as when pressed.
+//                         (58), Ctrl+H (1d+23), Ctrl+S (1d+1f), Ctrl+L (1d+26), Enter (1c) and
+//                         Esc (01) go to the presentation layer's hotkeys first, as when pressed
+//                         (Enter and Esc are taken only by the quicksave's resume question).
+//   GB_QUICKSAVE=file     the quicksave file instead of the settings folder's quicksave.sav: the
+//                         scripted test runs use their own, so they neither offer the player's
+//                         save nor remove it when their mission starts.
 
 } // namespace gb
