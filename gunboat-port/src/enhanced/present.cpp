@@ -402,11 +402,75 @@ void help_draw(SDL_Renderer *r, int ow, int oh)
     SDL_SetRenderScale(r, 1, 1);
 }
 
+// ---- the resume question at start-up (quicksave.cpp): a quicksave of an earlier run on disk
+SDL_FRect resume_yes_button, resume_no_button;
+bool prompt_shown;
+
+bool prompt_dirty()
+{
+    std::string text;
+    const bool on = quicksave_prompt(text);
+    const bool d = on || prompt_shown;
+    prompt_shown = on;
+    return d;
+}
+
+void prompt_draw(SDL_Renderer *r, int ow, int oh)
+{
+    std::string text;
+    if (!quicksave_prompt(text)) return;
+    constexpr float C = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE, LINE = C + 6, PAD = 3 * C, BUTTON_H = 2 * C + 6;
+    const char *title = "RESUME YOUR QUICKSAVE?";
+    const char *foot = "Not now: it is kept until you finish that mission or start another.";
+    const float w = 2 * PAD + float(std::max(std::strlen(foot), text.size())) * C;
+    const float h = 2 * PAD + 3 * LINE + BUTTON_H + LINE;
+    const float fit = std::min(ow / (w + 16), oh / (h + 16));
+    const float s = fit >= 1 ? std::floor(fit) : fit;
+    const float x0 = std::floor((ow / s - w) / 2), y0 = std::floor((oh / s - h) / 2);
+    SDL_SetRenderScale(r, s, s);
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(r, 8, 12, 20, 235);
+    const SDL_FRect box = {x0, y0, w, h};
+    SDL_RenderFillRect(r, &box);
+    SDL_SetRenderDrawColor(r, 120, 140, 170, 255);
+    SDL_RenderRect(r, &box);
+    SDL_SetRenderDrawColor(r, 255, 220, 120, 255);
+    SDL_RenderDebugText(r, x0 + PAD, y0 + PAD, title);
+    SDL_SetRenderDrawColor(r, 230, 232, 240, 255);
+    SDL_RenderDebugText(r, x0 + PAD, y0 + PAD + LINE * 1.5f, text.c_str());
+    struct Button {
+        SDL_FRect *out;
+        const char *label;
+        float x;
+    } buttons[2] = {{&resume_yes_button, "Resume  Enter", x0 + PAD},
+                    {&resume_no_button, "Not now  Esc", x0 + PAD + 22 * C}};
+    const float by = y0 + PAD + LINE * 3;
+    for (Button &b : buttons) {
+        const SDL_FRect bb = {b.x, by, float(std::strlen(b.label) + 4) * C, BUTTON_H};
+        SDL_SetRenderDrawColor(r, 40, 70, 110, 255);
+        SDL_RenderFillRect(r, &bb);
+        SDL_SetRenderDrawColor(r, 150, 180, 230, 255);
+        SDL_RenderRect(r, &bb);
+        SDL_SetRenderDrawColor(r, 255, 255, 255, 255);
+        SDL_RenderDebugText(r, bb.x + 2 * C, bb.y + (BUTTON_H - C) / 2, b.label);
+        *b.out = {bb.x * s, bb.y * s, bb.w * s, bb.h * s};
+    }
+    SDL_SetRenderDrawColor(r, 140, 150, 170, 255);
+    SDL_RenderDebugText(r, x0 + PAD, by + BUTTON_H + LINE * 0.7f, foot);
+    SDL_SetRenderScale(r, 1, 1);
+}
+
 // The panel's buttons: a click on one closes the panel (the game goes on) and asks for its action.
 bool click(float x, float y)
 {
-    if (!help_on) return false;
     auto inside = [&](const SDL_FRect &b) { return x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h; };
+    std::string asked;
+    if (quicksave_prompt(asked)) {
+        if (inside(resume_yes_button)) quicksave_answer(true);
+        else if (inside(resume_no_button)) quicksave_answer(false);
+        return true;
+    }
+    if (!help_on) return false;
     const bool save = inside(qs_save_button), load = inside(qs_load_button);
     if (!save && !load) return false;
     help_on = false;
@@ -424,6 +488,19 @@ void after_load()
 
 bool hotkey(int scancode)
 {
+    std::string asked;
+    if (quicksave_prompt(asked)) {  // the resume question: Enter or Y resumes, Esc or N does not
+        if (scancode == SDL_SCANCODE_RETURN || scancode == SDL_SCANCODE_KP_ENTER || scancode == SDL_SCANCODE_Y) {
+            quicksave_answer(true);
+            return true;
+        }
+        if (scancode == SDL_SCANCODE_ESCAPE || scancode == SDL_SCANCODE_N) {
+            quicksave_answer(false);
+            return true;
+        }
+        // the other hotkeys wait (Ctrl+H's panel would let the game go on), F11 and F12 apart
+        if (scancode != SDL_SCANCODE_F11 && scancode != SDL_SCANCODE_F12) return true;
+    }
     if (scancode == SDL_SCANCODE_H && host_ctrl_held()) {
         help_on = !help_on;
         host_set_paused(help_on);  // the game waits while the reference is open
@@ -833,6 +910,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
     }
     take_shot(r, frame, w, h);
     help_draw(r, ow, oh);
+    prompt_draw(r, ow, oh);
     note_draw(r, ow, oh);
     snapshot(r);
     SDL_RenderPresent(r);
@@ -842,7 +920,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 bool present(const u32 *frame, int w, int h, bool changed)
 {
     icon_frame(frame, w, h);
-    if (help_dirty() | title_back() | note_dirty() || shot_pending) changed = true;
+    if (help_dirty() | title_back() | note_dirty() | prompt_dirty() || shot_pending) changed = true;
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
@@ -992,6 +1070,7 @@ bool present(const u32 *frame, int w, int h, bool changed)
     stats(now, live, animating);
     take_shot(r, frame, w, h);
     help_draw(r, l.ow, l.oh);
+    prompt_draw(r, l.ow, l.oh);
     note_draw(r, l.ow, l.oh);
     snapshot(r);
     SDL_RenderPresent(r);

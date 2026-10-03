@@ -13,6 +13,7 @@ u16 view_present(u16 src_page, u16 dst_page, u16 si);  // 05bd:1fd4  far C; miss
 // screens and view_restore take the loop's SI on to game_frame and return the SI they leave
 // (view_present's copy).
 void mission_run();                 // 05bd:000a  far C
+void mission_loop(u16 si);          // PORT: mission_run's loop and end (a quicksave's resume enters it)
 u16 pilot_screen(u16 si);          // 05bd:048c
 u16 chase_view_screen(u16 si);     // 05bd:07da
 u16 bow_screen(u16 si);            // 05bd:08be

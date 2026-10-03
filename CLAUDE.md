@@ -350,8 +350,9 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
 * **Quicksave (Ctrl+S / Ctrl+L, 2026-10-02, `quicksave.cpp`):** two saves per mission, loads as often
   as wanted (back to the latest), a new mission (or the end of one) forgets it; not in the demo. The
   state: mem[] (all of the game, the port's rule), the VGA DAC and display start, the effects
-  driver's speaker (`spk_hw_state`), and the host's speaker and AdLib chip (`host_machine_save`:
-  the opl3 struct copied into the same chip). Taken and put back at the top of a pass of
+  driver's speaker (`spk_hw_state`), and the host's speaker, AdLib chip and timer rate
+  (`host_machine_save`: the opl3 struct with its internal pointers as offsets, so it loads into a
+  chip at another address, another run). Taken and put back at the top of a pass of
   `mission_run`'s loop (`host_mission_pass(si)`, PORT notification with `host_mission_started` /
   `host_mission_ended`; the loop's SI comes back with a load); the keys and the Ctrl+H panel's two
   buttons (mouse clicks: `host_set_click_handler`) only ask for it; a load resets the captured
@@ -359,6 +360,25 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   (the screenshot note made general). Checked headless (F12 memory): a load returned to the latest
   save exactly (ticks), twice alike, a third save refused; the panel's buttons grey and lit as
   they should. The mouse path is untested headless.
+* **Quicksaves survive a restart (2026-10-03):** each save is also written to `quicksave.sav` in the
+  settings folder (written whole to `.new`, then renamed: a 44-byte header, the DAC, the machine
+  state, mem[]; ~1.1 MB), and removed when its mission ends or another starts (not by the demo). At
+  start-up, after main's set-up (`config_load`, `kbd_install`, `mem_alloc_all`), game_main asks
+  `host_resume(&si)` (PORT; the tests' stub says 0): a save of the same GB.EXE (FNV-1a), with VGA
+  and the same music device (INT 65h hooked or not) is offered in a panel ("Resume your quicksave?",
+  its mission and mission time; Enter / Y / Resume, Esc / N / Not now; mouse; the controller's keys;
+  `GB_KEYS` routes 1Ch and 01h to it), the game held meanwhile; a mismatch shows a note and keeps
+  the file. Resumed, mem[] and the machine are the save's and the mission goes on in
+  `mission_loop(si)` (PORT: mission_run's loop and end as a function of their own), then as after
+  that mission: `practice_end` (back to the title) or `campaign(true, si)` (main's inner loop as a
+  function: the front end next). Not now keeps the file for the next start. Checked headless: a
+  gunnery practice saved at 04:00:04 and quit, resumed in a new run at 04:00:08 four seconds later,
+  same palette; Esc left the file untouched and went to the title; the resumed mission ended (Tab)
+  back to the title and removed the file; a save relabelled as campaign (path 2, practice_mode 0)
+  went on into the front end (phase 2) after its mission; Ctrl+H during the question does nothing
+  (the presenter takes every hotkey but F11/F12 then: its panel would let the game go on). The first
+  resume crashed: the opl3 chip's pointers (fixed as above). Full suite after the core's split
+  (mission_loop, campaign, practice_end): 359 tests, 193,273 cases, 0 mismatches.
 * **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns
   round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
   copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while

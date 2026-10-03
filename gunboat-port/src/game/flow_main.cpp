@@ -56,6 +56,15 @@ void disk_check(u16 name, u16 mode, bool first_disk)
     } while (ok == 0);
 }
 
+// After a practice mission: back towards the title.
+void practice_end()
+{
+    gfx_set_copy_page(1);
+    engine_sound_off();
+    disk_check(S_DATAA, S_RB_A, true);
+    ds_u16(DS_phase) = 0;
+}
+
 // The practice missions (main 0000:0042): the station of the choice, the mission, back to the title.
 void practice()
 {
@@ -67,10 +76,28 @@ void practice()
     gfx_set_copy_page(2);
     disk_check(S_DATAB, S_RB_B, false);
     mission_run();
-    gfx_set_copy_page(1);
-    engine_sound_off();
-    disk_check(S_DATAA, S_RB_A, true);
-    ds_u16(DS_phase) = 0;
+    practice_end();
+}
+
+// The campaign (main's inner loop): the front end and its mission, forever (the ways out are
+// quit_to_dos and fatal_exit). PORT: a function of its own, so that a quicksave's resume can go on
+// with it after the saved mission: then the first pass resumes that mission's loop with its SI.
+[[noreturn]] void campaign(bool resume, u16 si)
+{
+    for (;;) {
+        if (resume) {
+            resume = false;
+            mission_loop(si);
+        } else {
+            ds_u16(DS_phase) = 2;
+            front_end();
+            ds_u16(DS_phase) = 3;
+            ds_u16(DS_station) = 1;
+            gfx_set_copy_page(2);
+            mission_run();
+        }
+        gfx_set_copy_page(1);
+    }
 }
 
 } // namespace
@@ -195,6 +222,16 @@ void game_main()
     ds_u16(DS_phase) = 0;
     kbd_install();
     mem_alloc_all();
+    // PORT: a quicksave kept from an earlier run (quicksave.cpp): if the player resumes it, mem[] is
+    // the saved game, and its mission goes on where it was saved; after it the game goes on as after
+    // that mission (the debrief and the front end, or back to the title).
+    u16 si = 0;
+    const u16 resume = host_resume(&si);
+    if (resume == 2) campaign(true, si);
+    if (resume == 1) {
+        mission_loop(si);
+        practice_end();
+    }
     for (;;) {
         ds_u16(DS_flow_scratch) = title_menu();
         if (ds_u16(DS_flow_scratch) != 0) {
@@ -217,15 +254,7 @@ void game_main()
             practice();
             continue;
         }
-        for (;;) {
-            ds_u16(DS_phase) = 2;
-            front_end();
-            ds_u16(DS_phase) = 3;
-            ds_u16(DS_station) = 1;
-            gfx_set_copy_page(2);
-            mission_run();
-            gfx_set_copy_page(1);
-        }
+        campaign(false, 0);
     }
 }
 

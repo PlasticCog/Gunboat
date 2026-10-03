@@ -447,6 +447,13 @@ void mission_run()
     if (ds_u16(DS_station) == 2) si = bow_screen(si);
     if (ds_u16(DS_station) == 4) si = stern_screen(si);
     engine_sound_on();
+    mission_loop(si);
+}
+
+// PORT: mission_run's loop and its end, a function of its own so that a quicksave kept from an
+// earlier run can go on from it (game_main; the loop's only state outside mem[] is SI).
+void mission_loop(u16 si)
+{
     while (ds_u16(DS_station) != 9) {
         // PORT: the top of a pass, between two frames: a quicksave or quickload asked for is made
         // here (quicksave.cpp; a load brings back mem[] and the loop's SI); otherwise nothing changes.

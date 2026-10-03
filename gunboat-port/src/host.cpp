@@ -9,6 +9,7 @@
 #include <SDL3/SDL_main.h>
 
 #include <cstdarg>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
@@ -176,8 +177,8 @@ void scripted_keys()
         if (*p != '+') break;
         p++;
     }
-    // F11, F12 and (with Ctrl, 1Dh, held) H, S and L go to the presentation layer's hotkeys first, as
-    // when pressed (a taken key's release goes nowhere).
+    // F11, F12, (with Ctrl, 1Dh, held) H, S and L, and Enter and Esc (the resume question) go to the
+    // presentation layer's hotkeys first, as when pressed (a taken key's release goes nowhere).
     bool taken[8] = {};
     for (int i = 0; i < n; i++)  // releases alone: F11 and F12 were taken when pressed
         taken[i] = !press && hotkey_handler && (keys[i] == 0x57 || keys[i] == 0x58);
@@ -189,6 +190,8 @@ void scripted_keys()
                                     : keys[i] == 0x23 ? SDL_SCANCODE_H
                                     : keys[i] == 0x1F ? SDL_SCANCODE_S
                                     : keys[i] == 0x26 ? SDL_SCANCODE_L
+                                    : keys[i] == 0x1C ? SDL_SCANCODE_RETURN
+                                    : keys[i] == 0x01 ? SDL_SCANCODE_ESCAPE
                                                       : SDL_SCANCODE_UNKNOWN;
             taken[i] = sc != SDL_SCANCODE_UNKNOWN && hotkey_handler && hotkey_handler(sc);
             if (taken[i]) continue;
@@ -744,24 +747,74 @@ void host_mission_ended()
     if (mission_ended) mission_ended();
 }
 
+namespace {
+// The chip's pointers (slot: channel, chip, mod, trem; channel: slotz, pair, chip, out) all point
+// into the chip itself. A saved chip holds them as offsets from its start plus 1 (0: none, as some
+// channels' pair), so that it loads into this run's chip wherever it lies (a quicksave on disk).
+template <class T> void rebase(T *&p, uintptr_t from, uintptr_t to)
+{
+    if (p) p = reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(p) - from + to);
+}
+
+void opl_rebase(opl3_chip &c, uintptr_t from, uintptr_t to)
+{
+    for (opl3_slot &s : c.slot) {
+        rebase(s.channel, from, to);
+        rebase(s.chip, from, to);
+        rebase(s.mod, from, to);
+        rebase(s.trem, from, to);
+    }
+    for (opl3_channel &ch : c.channel) {
+        for (opl3_slot *&s : ch.slotz) rebase(s, from, to);
+        rebase(ch.pair, from, to);
+        rebase(ch.chip, from, to);
+        for (int16_t *&o : ch.out) rebase(o, from, to);
+    }
+}
+} // namespace
+
 std::vector<u8> host_machine_save()
 {
-    std::vector<u8> v(sizeof opl + sizeof spk_div + 1);
-    std::memcpy(v.data(), &opl, sizeof opl);
-    std::memcpy(v.data() + sizeof opl, &spk_div, sizeof spk_div);
-    v[sizeof opl + sizeof spk_div] = spk_on;
+    std::vector<u8> v(sizeof opl + sizeof spk_div + 1 + sizeof pit_divisor);
+    u8 *p = v.data();
+    static opl3_chip chip;  // static: 20 KB
+    chip = opl;
+    opl_rebase(chip, reinterpret_cast<uintptr_t>(&opl), 1);
+    std::memcpy(p, &chip, sizeof chip);
+    p += sizeof opl;
+    std::memcpy(p, &spk_div, sizeof spk_div);
+    p += sizeof spk_div;
+    *p++ = spk_on;
+    std::memcpy(p, &pit_divisor, sizeof pit_divisor);
     return v;
 }
 
 void host_machine_load(const std::vector<u8> &v)
 {
-    if (v.size() != sizeof opl + sizeof spk_div + 1) return;
-    std::memcpy(&opl, v.data(), sizeof opl);  // the same chip: its internal pointers stay valid
-    std::memcpy(&spk_div, v.data() + sizeof opl, sizeof spk_div);
-    spk_on = v[sizeof opl + sizeof spk_div] != 0;
+    if (v.size() != sizeof opl + sizeof spk_div + 1 + sizeof pit_divisor) return;
+    const u8 *p = v.data();
+    std::memcpy(&opl, p, sizeof opl);  // one build's chip: the same layout
+    opl_rebase(opl, 1, reinterpret_cast<uintptr_t>(&opl));
+    p += sizeof opl;
+    std::memcpy(&spk_div, p, sizeof spk_div);
+    p += sizeof spk_div;
+    spk_on = *p++ != 0;
+    u32 d;
+    std::memcpy(&d, p, sizeof d);
+    if (d != pit_divisor) {  // as host_set_timer: the clock goes on from now at the new rate
+        clock_base_ns = tick_due_ns(ticks_run);
+        ticks_run = 0;
+        pit_divisor = d;
+    }
 }
 
 void host_set_click_handler(bool (*handler)(float, float)) { click_handler = handler; }
+
+namespace {
+u16 (*resume_handler)(u16 *);
+}
+void host_set_resume_handler(u16 (*handler)(u16 *)) { resume_handler = handler; }
+u16 host_resume(u16 *si) { return resume_handler ? resume_handler(si) : 0; }
 
 void host_set_fullscreen(bool on)
 {

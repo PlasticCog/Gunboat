@@ -136,7 +136,10 @@ CONTROLS (from the original)
   Ctrl+Q                quit (anywhere in the port; the original only in a mission)
   Ctrl+H                this list in the game; the game pauses until Ctrl+H again
   Ctrl+S / Ctrl+L       quicksave / quickload: two saves per mission, loading as often as you
-                        like (back to the latest save); a new mission gives two saves again
+                        like (back to the latest save); a new mission gives two saves again.
+                        The save survives quitting: the next start offers to resume it
+                        (Enter) or keep it for later (Esc). Quicksaves need the VGA card;
+                        a resume needs the same music device as when it was saved.
 
 The original manual describes the missions and the boat in full.
 

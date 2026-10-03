@@ -155,8 +155,13 @@ void host_mission_started();
 u16 host_mission_pass(u16 si);
 void host_mission_ended();
 void host_set_mission_handlers(void (*started)(), u16 (*pass)(u16 si), void (*ended)());
-// The emulated machine's state outside mem[] that the host keeps (the speaker, the AdLib chip), for a
-// quicksave; put back as it was.
+// PORT: game_main, after its set-up: a quicksave kept from an earlier run, resumed if the player
+// wants it. Returns 0 (none: nothing changes), or the path its mission came from, 1 a practice
+// mission, 2 the campaign; then mem[] (and the machine) are the saved game and *si the loop's SI.
+u16 host_resume(u16 *si);
+void host_set_resume_handler(u16 (*handler)(u16 *si));
+// The emulated machine's state outside mem[] that the host keeps (the speaker, the AdLib chip, the
+// timer's rate), for a quicksave; put back as it was, also in another run of the same build.
 std::vector<u8> host_machine_save();
 void host_machine_load(const std::vector<u8> &state);
 // A left mouse click in the window, in the renderer's output pixels; true if the handler took it.
