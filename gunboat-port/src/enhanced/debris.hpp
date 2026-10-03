@@ -10,6 +10,7 @@
 namespace gb {
 
 void debris_install();  // hooks the host's events
+void debris_clear();    // no particles (after a quickload)
 // The shot that just landed was stopped at (x, y) quarter units, height h (a hill: gameplay.cpp): its
 // debris flies from there, as of the ground drawn there.
 void debris_move_last(double x, double y, double h);

@@ -243,8 +243,18 @@ void tick()
 
 } // namespace
 
+static bool sfx_installed;
+
+void sfx_adlib_reset()
+{
+    if (!sfx_installed) return;
+    stop_all();
+    launch = game_launch = last_impact = -1;
+}
+
 void sfx_adlib_install()
 {
+    sfx_installed = true;
     SfxBank bank;
     sfx_bank_load(sfx_bank_path(), bank);
     synth.set_bank(bank);

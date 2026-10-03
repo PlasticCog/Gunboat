@@ -347,6 +347,18 @@ Regenerating the map from scratch: `reverse_engineering/RE_GUIDE.md`, "Regenerat
   the game's memory untouched). `host_ctrl_held`
   (keyboard or controller Ctrl); controller action `ctrl_h`; `GB_KEYS` routes 1d+23 to it. The
   original does not use H.
+* **Quicksave (Ctrl+S / Ctrl+L, 2026-10-02, `quicksave.cpp`):** two saves per mission, loads as often
+  as wanted (back to the latest), a new mission (or the end of one) forgets it; not in the demo. The
+  state: mem[] (all of the game, the port's rule), the VGA DAC and display start, the effects
+  driver's speaker (`spk_hw_state`), and the host's speaker and AdLib chip (`host_machine_save`:
+  the opl3 struct copied into the same chip). Taken and put back at the top of a pass of
+  `mission_run`'s loop (`host_mission_pass(si)`, PORT notification with `host_mission_started` /
+  `host_mission_ended`; the loop's SI comes back with a load); the keys and the Ctrl+H panel's two
+  buttons (mouse clicks: `host_set_click_handler`) only ask for it; a load resets the captured
+  frames, the debris and the AdLib effects' copies. Notes in the picture's corner say what happened
+  (the screenshot note made general). Checked headless (F12 memory): a load returned to the latest
+  save exactly (ticks), twice alike, a third save refused; the panel's buttons grey and lit as
+  they should. The mouse path is untested headless.
 * **Release 1.2.2 (2026-10-01):** the R6003 crash at the map's top edge fixed (the captain turns
   round; issues #1-#3), the gun views' boat-side strip fixed (the capture right after the view
   copy). Full suite on these sources: 359 tests, 193,273 cases, 0 mismatches (built with make while

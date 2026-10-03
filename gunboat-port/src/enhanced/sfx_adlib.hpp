@@ -5,5 +5,6 @@ namespace gb {
 
 // Loads the bank and hooks the host's speaker (settings: effects = adlib).
 void sfx_adlib_install();
+void sfx_adlib_reset();  // every effect's own copy stopped (after a quickload); nothing if not installed
 
 } // namespace gb

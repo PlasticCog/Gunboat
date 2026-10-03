@@ -10,6 +10,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <vector>
 
@@ -51,6 +52,10 @@ bool (*hotkey_handler)(int);
 bool consumed_keys[SDL_SCANCODE_COUNT];  // presses the hotkey handler took: their releases too
 bool ctrl_held[2];  // the left and right Ctrl, held on the keyboard or by the controller
 bool paused;        // host_set_paused
+void (*mission_started)();
+u16 (*mission_pass)(u16);
+void (*mission_ended)();
+bool (*click_handler)(float, float);
 bool redraw = true;                      // the window needs a new picture (resized, exposed)
 u32 frame[HOST_FRAME_MAX_W * HOST_FRAME_MAX_H];
 int frame_w = 320, frame_h = 200;
@@ -171,8 +176,8 @@ void scripted_keys()
         if (*p != '+') break;
         p++;
     }
-    // F11, F12 and (with Ctrl, 1Dh, held) H go to the presentation layer's hotkeys first, as when
-    // pressed (a taken key's release goes nowhere).
+    // F11, F12 and (with Ctrl, 1Dh, held) H, S and L go to the presentation layer's hotkeys first, as
+    // when pressed (a taken key's release goes nowhere).
     bool taken[8] = {};
     for (int i = 0; i < n; i++)  // releases alone: F11 and F12 were taken when pressed
         taken[i] = !press && hotkey_handler && (keys[i] == 0x57 || keys[i] == 0x58);
@@ -182,6 +187,8 @@ void scripted_keys()
             const SDL_Scancode sc = keys[i] == 0x57   ? SDL_SCANCODE_F11
                                     : keys[i] == 0x58 ? SDL_SCANCODE_F12
                                     : keys[i] == 0x23 ? SDL_SCANCODE_H
+                                    : keys[i] == 0x1F ? SDL_SCANCODE_S
+                                    : keys[i] == 0x26 ? SDL_SCANCODE_L
                                                       : SDL_SCANCODE_UNKNOWN;
             taken[i] = sc != SDL_SCANCODE_UNKNOWN && hotkey_handler && hotkey_handler(sc);
             if (taken[i]) continue;
@@ -358,6 +365,12 @@ void process_events()
                 break;
             }
             key_input(ev.key.scancode, true, false);
+            break;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if (ev.button.button == SDL_BUTTON_LEFT && click_handler) {
+                SDL_ConvertEventToRenderCoordinates(renderer, &ev);
+                if (click_handler(ev.button.x, ev.button.y)) redraw = true;
+            }
             break;
         case SDL_EVENT_KEY_UP:
             key_input(ev.key.scancode, false, false);
@@ -714,6 +727,41 @@ void host_set_frame_hook(void (*hook)()) { frame_hook = hook; }
 void host_set_hotkey_handler(bool (*handler)(int)) { hotkey_handler = handler; }
 bool host_ctrl_held() { return ctrl_held[0] || ctrl_held[1]; }
 void host_set_paused(bool on) { paused = on; }
+
+void host_set_mission_handlers(void (*started)(), u16 (*pass)(u16), void (*ended)())
+{
+    mission_started = started;
+    mission_pass = pass;
+    mission_ended = ended;
+}
+void host_mission_started()
+{
+    if (mission_started) mission_started();
+}
+u16 host_mission_pass(u16 si) { return mission_pass ? mission_pass(si) : si; }
+void host_mission_ended()
+{
+    if (mission_ended) mission_ended();
+}
+
+std::vector<u8> host_machine_save()
+{
+    std::vector<u8> v(sizeof opl + sizeof spk_div + 1);
+    std::memcpy(v.data(), &opl, sizeof opl);
+    std::memcpy(v.data() + sizeof opl, &spk_div, sizeof spk_div);
+    v[sizeof opl + sizeof spk_div] = spk_on;
+    return v;
+}
+
+void host_machine_load(const std::vector<u8> &v)
+{
+    if (v.size() != sizeof opl + sizeof spk_div + 1) return;
+    std::memcpy(&opl, v.data(), sizeof opl);  // the same chip: its internal pointers stay valid
+    std::memcpy(&spk_div, v.data() + sizeof opl, sizeof spk_div);
+    spk_on = v[sizeof opl + sizeof spk_div] != 0;
+}
+
+void host_set_click_handler(bool (*handler)(float, float)) { click_handler = handler; }
 
 void host_set_fullscreen(bool on)
 {

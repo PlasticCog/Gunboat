@@ -102,6 +102,9 @@ void host_sfx_play(u16) {}
 void host_target_destroyed(u8, u8) {}
 void host_object_hit(u8, u16) {}
 void host_shell_fired(u8) {}
+void host_mission_started() {}
+u16 host_mission_pass(u16 si) { return si; }
+void host_mission_ended() {}
 void host_frame_drawn() {}
 void host_shot_landed(u16, u16, u8) {}
 void host_title_shown() {}

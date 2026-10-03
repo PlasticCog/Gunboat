@@ -6,6 +6,8 @@
 // No game logic lives here. Converted to C++ from the Test Drive III port's host.h/host.c (MIT,
 // (c) 2026 Krzysztof Kania; THIRD_PARTY.md). The differential tests link a stub instead
 // (tests/difftest/host_stub.cpp).
+#include <vector>
+
 #include "types.hpp"
 
 struct SDL_Window;    // SDL3's opaque types, for the presentation layer (src/enhanced/)
@@ -145,6 +147,20 @@ bool host_ctrl_held();
 // key presses meanwhile are dropped (their releases still go through); the time held does not count.
 // The game's memory is untouched.
 void host_set_paused(bool on);
+// PORT notifications of mission_run (quicksave.cpp): a mission starts; the top of each pass of its
+// loop, where the game is between two frames (the handler gets the loop's SI and returns the SI the
+// loop goes on with: the same, or a quickload's); the mission ends. Nothing in mem[] changes unless
+// the player asked for a quickload.
+void host_mission_started();
+u16 host_mission_pass(u16 si);
+void host_mission_ended();
+void host_set_mission_handlers(void (*started)(), u16 (*pass)(u16 si), void (*ended)());
+// The emulated machine's state outside mem[] that the host keeps (the speaker, the AdLib chip), for a
+// quicksave; put back as it was.
+std::vector<u8> host_machine_save();
+void host_machine_load(const std::vector<u8> &state);
+// A left mouse click in the window, in the renderer's output pixels; true if the handler took it.
+void host_set_click_handler(bool (*handler)(float x, float y));
 void host_set_fullscreen(bool on);
 bool host_fullscreen();
 // Sound effects on AdLib (sfx_adlib.cpp): every speaker change goes to the filter first with whether
@@ -172,7 +188,7 @@ void host_reset_clock();
 //                         keys at that many seconds after start-up; "p" after the codes only
 //                         presses (held), "r" only releases: "9:48p,20:48r" holds Up for 11 s.
 //                         Grey keys are written with their E0 prefix, as e048. F11 (57), F12
-//                         (58) and Ctrl+H (1d+23) go to the presentation layer's hotkeys, as when
-//                         pressed.
+//                         (58), Ctrl+H (1d+23), Ctrl+S (1d+1f) and Ctrl+L (1d+26) go to the
+//                         presentation layer's hotkeys, as when pressed.
 
 } // namespace gb

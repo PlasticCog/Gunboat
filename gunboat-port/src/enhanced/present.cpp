@@ -26,6 +26,7 @@
 #include "enhanced/debris.hpp"
 #include "enhanced/gameplay.hpp"
 #include "enhanced/icon.hpp"
+#include "enhanced/quicksave.hpp"
 #include "enhanced/sfx_adlib.hpp"
 #include "enhanced/view3d.hpp"
 #include "enhanced/widen.hpp"
@@ -178,7 +179,17 @@ void frame_hook()
 // picture (drawn after the shot, so not in it) and the window's title name it a few seconds.
 bool shot_pending;
 Uint64 title_until;
-char shot_name[32];
+
+// A note in the picture's top right corner for a few seconds (a screenshot saved, a quicksave).
+char note_text[96];
+Uint64 note_until;
+bool note_shown;
+
+void show_note(const char *text)
+{
+    std::snprintf(note_text, sizeof note_text, "%s", text);
+    note_until = SDL_GetTicksNS() + 3 * SDL_NS_PER_SECOND;
+}
 
 void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
 {
@@ -197,7 +208,7 @@ void take_shot(SDL_Renderer *r, const u32 *frame, int w, int h)
         if (!SDL_GetPathInfo((dir + name + ".bmp").c_str(), &info)) break;
     }
     const std::string base = dir + name;
-    std::snprintf(shot_name, sizeof shot_name, "%s", name);
+    show_note((std::string("Screenshot saved: ") + name).c_str());
     title_until = SDL_GetTicksNS() + 3 * SDL_NS_PER_SECOND;
     if (SDL_Surface *shown = SDL_RenderReadPixels(r, nullptr)) {
         SDL_SaveBMP(shown, (base + ".bmp").c_str());
@@ -227,12 +238,20 @@ bool title_back()
     return true;
 }
 
-// The note in the picture's top right corner, in SDL's debug font at about the game's text size.
-void shot_note(SDL_Renderer *r, int ow, int oh)
+// While the note is up, and once more when it goes: the picture is drawn again.
+bool note_dirty()
 {
-    if (!title_until) return;
-    char text[64];
-    std::snprintf(text, sizeof text, "Screenshot saved: %s", shot_name);
+    const bool on = note_until && SDL_GetTicksNS() < note_until;
+    const bool d = on || note_shown;
+    note_shown = on;
+    return d;
+}
+
+// The note in the picture's top right corner, in SDL's debug font at about the game's text size.
+void note_draw(SDL_Renderer *r, int ow, int oh)
+{
+    if (!note_until || SDL_GetTicksNS() >= note_until) return;
+    const char *text = note_text;
     const float s = float(std::max(1, oh / 400));
     const float cw = SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE;
     const float tw = std::strlen(text) * cw, pad = 4;
@@ -250,6 +269,7 @@ void shot_note(SDL_Renderer *r, int ow, int oh)
 // ---- Ctrl+H: the keyboard reference, over the picture until Ctrl+H again; the game is held
 // meanwhile (host_set_paused). Drawn after a screenshot is taken, so not in it.
 bool help_on, help_shown;
+SDL_FRect qs_save_button, qs_load_button;  // the panel's buttons as last drawn, in output pixels
 
 struct HelpLine {
     const char *key, *what;  // key nullptr: a heading
@@ -290,6 +310,7 @@ const HelpLine HELP_RIGHT[] = {
     {"Alt+Enter", "full screen / window"},
     {"Ctrl+Q", "quit"},
     {"Ctrl+H", "this list (again: close it)"},
+    {"Ctrl+S / L", "quicksave / quickload"},
 };
 constexpr int HELP_LEFT_N = int(sizeof HELP_LEFT / sizeof HELP_LEFT[0]);
 constexpr int HELP_RIGHT_N = int(sizeof HELP_RIGHT / sizeof HELP_RIGHT[0]);
@@ -318,7 +339,9 @@ void help_draw(SDL_Renderer *r, int ow, int oh)
     };
     const char *title = "GUNBOAT - THE KEYBOARD", *close = "Paused. Ctrl+H: back to the game";
     const float wl = width(HELP_LEFT, HELP_LEFT_N), wr = width(HELP_RIGHT, HELP_RIGHT_N);
-    const float w = 2 * PAD + wl + GAP + wr, h = 2 * PAD + 2 * LINE + float(std::max(HELP_LEFT_N, HELP_RIGHT_N)) * LINE;
+    constexpr float BUTTON_H = 2 * C + 6, QS_H = LINE + BUTTON_H + LINE;  // the quicksave section
+    const float w = 2 * PAD + wl + GAP + wr,
+                h = 2 * PAD + 2 * LINE + float(std::max(HELP_LEFT_N, HELP_RIGHT_N)) * LINE + QS_H;
     const float fit = std::min(ow / (w + 16), oh / (h + 16));
     const float s = fit >= 1 ? std::floor(fit) : fit;
     const float x0 = std::floor((ow / s - w) / 2), y0 = std::floor((oh / s - h) / 2);
@@ -349,7 +372,54 @@ void help_draw(SDL_Renderer *r, int ow, int oh)
     };
     column(HELP_LEFT, HELP_LEFT_N, x0 + PAD);
     column(HELP_RIGHT, HELP_RIGHT_N, x0 + PAD + wl + GAP);
+    // QUICKSAVE: two buttons (they also answer Ctrl+S / Ctrl+L), greyed when they cannot act
+    const float qy = y0 + h - PAD - QS_H + LINE / 2;
+    const int left = quicksave_saves_left();
+    const bool mission = quicksave_in_mission();
+    char heading[64];
+    std::snprintf(heading, sizeof heading, "QUICKSAVE (%d per mission: %s left)", 2, !mission ? "-" : left == 0 ? "none" : left == 1 ? "one" : "two");
+    SDL_SetRenderDrawColor(r, 130, 190, 255, 255);
+    SDL_RenderDebugText(r, x0 + PAD, qy, heading);
+    std::string load_label = "Quickload  Ctrl+L";
+    if (quicksave_have()) load_label += "   back to " + quicksave_time();
+    struct Button {
+        SDL_FRect *out;
+        std::string label;
+        bool on;
+        float x;
+    } buttons[2] = {{&qs_save_button, "Quicksave  Ctrl+S", mission && left > 0, x0 + PAD},
+                    {&qs_load_button, load_label, mission && quicksave_have(), x0 + PAD + wl + GAP}};
+    for (Button &b : buttons) {
+        const SDL_FRect box = {b.x, qy + LINE, float(b.label.size() + 4) * C, BUTTON_H};
+        SDL_SetRenderDrawColor(r, b.on ? 40 : 24, b.on ? 70 : 30, b.on ? 110 : 40, 255);
+        SDL_RenderFillRect(r, &box);
+        SDL_SetRenderDrawColor(r, b.on ? 150 : 70, b.on ? 180 : 80, b.on ? 230 : 95, 255);
+        SDL_RenderRect(r, &box);
+        SDL_SetRenderDrawColor(r, b.on ? 255 : 110, b.on ? 255 : 115, b.on ? 255 : 125, 255);
+        SDL_RenderDebugText(r, box.x + 2 * C, box.y + (BUTTON_H - C) / 2, b.label.c_str());
+        *b.out = {box.x * s, box.y * s, box.w * s, box.h * s};  // in output pixels, for the clicks
+    }
     SDL_SetRenderScale(r, 1, 1);
+}
+
+// The panel's buttons: a click on one closes the panel (the game goes on) and asks for its action.
+bool click(float x, float y)
+{
+    if (!help_on) return false;
+    auto inside = [&](const SDL_FRect &b) { return x >= b.x && x < b.x + b.w && y >= b.y && y < b.y + b.h; };
+    const bool save = inside(qs_save_button), load = inside(qs_load_button);
+    if (!save && !load) return false;
+    help_on = false;
+    host_set_paused(false);
+    if (save) quicksave_request_save();
+    else quicksave_request_load();
+    return true;
+}
+
+// After a quickload: the frames captured before it are not this game's any more.
+void after_load()
+{
+    cur->valid = prev->valid = false;
 }
 
 bool hotkey(int scancode)
@@ -357,6 +427,15 @@ bool hotkey(int scancode)
     if (scancode == SDL_SCANCODE_H && host_ctrl_held()) {
         help_on = !help_on;
         host_set_paused(help_on);  // the game waits while the reference is open
+        return true;
+    }
+    if ((scancode == SDL_SCANCODE_S || scancode == SDL_SCANCODE_L) && host_ctrl_held()) {
+        if (help_on) {  // from the panel: it closes, the game goes on and does it
+            help_on = false;
+            host_set_paused(false);
+        }
+        if (scancode == SDL_SCANCODE_S) quicksave_request_save();
+        else quicksave_request_load();
         return true;
     }
     if (scancode == SDL_SCANCODE_F12) {
@@ -754,7 +833,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
     }
     take_shot(r, frame, w, h);
     help_draw(r, ow, oh);
-    shot_note(r, ow, oh);
+    note_draw(r, ow, oh);
     snapshot(r);
     SDL_RenderPresent(r);
     return true;
@@ -763,7 +842,7 @@ bool present_plain(const u32 *frame, int w, int h, bool changed)
 bool present(const u32 *frame, int w, int h, bool changed)
 {
     icon_frame(frame, w, h);
-    if (help_dirty() | title_back() || shot_pending) changed = true;
+    if (help_dirty() | title_back() | note_dirty() || shot_pending) changed = true;
     if (w != 320 || h != 200 || card_machine() != Machine::Vga) return present_plain(frame, w, h, changed);
     SDL_Renderer *r = host_renderer();
     const Layout l = layout(r);
@@ -913,7 +992,7 @@ bool present(const u32 *frame, int w, int h, bool changed)
     stats(now, live, animating);
     take_shot(r, frame, w, h);
     help_draw(r, l.ow, l.oh);
-    shot_note(r, l.ow, l.oh);
+    note_draw(r, l.ow, l.oh);
     snapshot(r);
     SDL_RenderPresent(r);
     return true;
@@ -959,6 +1038,10 @@ void enhanced_install(const Settings &s)
     host_set_fullscreen(s.fullscreen);
     host_set_frame_hook(frame_hook);
     host_set_hotkey_handler(hotkey);
+    host_set_click_handler(click);
+    quicksave_set_note(show_note);
+    quicksave_set_after_load(after_load);
+    quicksave_install();
     host_set_presenter(present);
     debris_install();
     gameplay_install(s);

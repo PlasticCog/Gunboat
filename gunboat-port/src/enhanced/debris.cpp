@@ -195,6 +195,12 @@ void debris_move_last(double x, double y, double h)
     im.stuff = Stuff::Ground;
 }
 
+void debris_clear()
+{
+    impacts.clear();
+    particles.clear();
+}
+
 void debris_install()
 {
     host_add_shot_landed_observer(on_shot_landed);

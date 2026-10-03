@@ -135,6 +135,8 @@ CONTROLS (from the original)
   Tab                   return to base         Esc  pause
   Ctrl+Q                quit (anywhere in the port; the original only in a mission)
   Ctrl+H                this list in the game; the game pauses until Ctrl+H again
+  Ctrl+S / Ctrl+L       quicksave / quickload: two saves per mission, loading as often as you
+                        like (back to the latest save); a new mission gives two saves again
 
 The original manual describes the missions and the boat in full.
 

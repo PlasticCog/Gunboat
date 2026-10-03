@@ -393,6 +393,7 @@ u16 view_restore(u16 si)
 // key_dispatch leaves; game_frame and the station screens get it (caller_si).
 void mission_run()
 {
+    host_mission_started();  // PORT: for the quicksaves (quicksave.cpp); nothing in mem[] changes
     ds_u16(DS_map_a_far) = u16(ds_u16(DS_bow_art1_far) + 0x0B54);  // offset only
     ds_u16(u16(DS_map_a_far + 2)) = ds_u16(u16(DS_bow_art1_far + 2));
     ds_u16(DS_small_far) = u16(ds_u16(DS_bow_art1_far) + 0x170C);
@@ -447,6 +448,9 @@ void mission_run()
     if (ds_u16(DS_station) == 4) si = stern_screen(si);
     engine_sound_on();
     while (ds_u16(DS_station) != 9) {
+        // PORT: the top of a pass, between two frames: a quicksave or quickload asked for is made
+        // here (quicksave.cpp; a load brings back mem[] and the loop's SI); otherwise nothing changes.
+        si = host_mission_pass(si);
         // PORT: the host's time and input for this pass (the original runs as fast as the PC draws;
         // host_frame_pace sets the 3D stations' frame rate; the tests count one tick here)
         if (s16(ds_u16(DS_station)) < 5) host_frame_pace();
@@ -526,6 +530,7 @@ void mission_run()
     ds_u16(DS_quiz_digit) = u16(ds_u16(DS_quiz_digit) + 0x14);
     sfx_play_far(0x0C);
     engine_sound_off();
+    host_mission_ended();  // PORT: the quicksaves end with the mission; nothing in mem[] changes
 }
 
 } // namespace gb

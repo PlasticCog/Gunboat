@@ -63,6 +63,8 @@ const Action ACTIONS[] = {
     {"f11", "Game", "F11: enhanced / original picture", {SDL_SCANCODE_F11, NO}},
     {"f12", "Game", "F12: screenshot", {SDL_SCANCODE_F12, NO}},
     {"ctrl_h", "Game", "Ctrl+H: keyboard reference", {SDL_SCANCODE_LCTRL, SDL_SCANCODE_H}},
+    {"ctrl_s", "Game", "Ctrl+S: quicksave", {SDL_SCANCODE_LCTRL, SDL_SCANCODE_S}},
+    {"ctrl_l", "Game", "Ctrl+L: quickload", {SDL_SCANCODE_LCTRL, SDL_SCANCODE_L}},
     {"y", "Keys", "Y (answers)", {SDL_SCANCODE_Y, NO}},
     {"key_n", "Keys", "N (answers; the midship gun in a mission)", {SDL_SCANCODE_N, NO}},
     {"a", "Keys", "A", {SDL_SCANCODE_A, NO}},
